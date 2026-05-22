@@ -62,7 +62,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="w-full max-w-md overflow-hidden glass-panel rounded-2xl border border-white/20 select-none text-white shadow-2xl"
+            className="w-full max-w-md overflow-hidden panel-glass-dashed select-none text-white shadow-2xl"
           >
             <div className="flex justify-between items-center px-6 py-4 border-b border-white/10">
               <div className="flex items-center gap-2">
@@ -72,7 +72,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                className="btn-icon p-1 hover:bg-white/10"
               >
                 <X size={20} />
               </button>
@@ -80,7 +80,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
 
             <div className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <span className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">{t('login.email')}</span>
+                <span className="label-sm">{t('login.email')}</span>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" size={15} />
                   <input
@@ -90,13 +90,13 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="admin@gmail.com"
-                    className="w-full bg-white/5 border border-white/10 text-sm pl-9 pr-3 py-3 rounded-xl text-white focus:outline-none focus:border-brand-accent placeholder:text-white/25"
+                    className="input-base text-sm pl-9 pr-3 py-3"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <span className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">{t('login.password')}</span>
+                <span className="label-sm">{t('login.password')}</span>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" size={15} />
                   <input
@@ -106,7 +106,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="yunus123"
-                    className="w-full bg-white/5 border border-white/10 text-sm pl-9 pr-3 py-3 rounded-xl text-white focus:outline-none focus:border-brand-accent placeholder:text-white/25"
+                    className="input-base text-sm pl-9 pr-3 py-3"
                   />
                 </div>
               </div>
@@ -120,7 +120,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-brand-accent text-brand-emerald font-semibold text-xs py-3.5 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 shimmer-btn shadow-lg cursor-pointer text-center disabled:opacity-60"
+                className="btn-primary w-full py-3.5 rounded-xl text-center text-xs disabled:opacity-60"
               >
                 {isSubmitting ? t('login.submitting') : t('login.submit')}
               </button>

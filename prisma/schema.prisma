@@ -109,3 +109,11 @@ model ExperienceBooking {
   @@index([experienceId])
   @@map("experience_bookings")
 }
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}

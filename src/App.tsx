@@ -361,7 +361,7 @@ export default function App() {
       <div className="w-full max-w-[1440px] h-full glass-frame relative flex flex-col justify-between z-20 overflow-hidden md:border border-white/20 md:shadow-2xl md:rounded-[2rem]">
         
         {/* Navigation Header strictly matching Navigation Flow specs */}
-        <nav className="flex justify-between items-center w-full px-4 sm:px-8 py-2 z-40 bg-white/5 backdrop-blur-sm border-b border-white/10 shadow-sm">
+        <nav className="nav-glass">
           
           {/* Logo container (Parent div, contains span with 'WoodNest' text exactly, clicking returns to Locations) */}
           <div 
@@ -494,10 +494,10 @@ export default function App() {
 
                   {/* Right Column Section: Reservation Control Card */}
                   <div className="w-full lg:w-[400px] flex items-center justify-center h-full">
-                    <div className="glass-panel rounded-2xl p-4 sm:p-5 w-full flex flex-col gap-3 sm:gap-4 border border-white/15 shadow-2xl relative">
+                    <div className="panel-glass p-4 sm:p-5 w-full flex flex-col gap-3 sm:gap-4 shadow-2xl relative">
                       <div className="flex justify-between items-start">
                         <div>
-                          <span className="text-[10px] text-brand-accent uppercase tracking-widest font-semibold">{t('loc.currentSanctuary')}</span>
+                          <span className="label-accent">{t('loc.currentSanctuary')}</span>
                           <h2 className="text-2xl font-bold text-white tracking-tight mt-0.5 leading-snug">
                             {t(`cabin.${currentCabin.id}.name`)}
                           </h2>
@@ -516,9 +516,9 @@ export default function App() {
                       <div className="grid grid-cols-2 gap-3.5">
                         <div 
                           onClick={() => setCheckInDay(prev => Math.max(1, prev - 1))}
-                          className="border border-white/15 rounded-xl p-3 bg-white/5 flex flex-col justify-between cursor-pointer hover:bg-white/10 transition-all select-none"
+                          className="panel-card"
                         >
-                          <span className="text-[9px] text-white/50 uppercase tracking-widest font-semibold mb-1">{t('loc.checkIn')}</span>
+                          <span className="label-sm mb-1">{t('loc.checkIn')}</span>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
                               <Calendar size={13} className="text-brand-accent" />
@@ -533,9 +533,9 @@ export default function App() {
 
                         <div 
                           onClick={() => setCheckOutDay(prev => Math.min(31, prev + 1))}
-                          className="border border-white/15 rounded-xl p-3 bg-white/5 flex flex-col justify-between cursor-pointer hover:bg-white/10 transition-all select-none"
+                          className="panel-card"
                         >
-                          <span className="text-[9px] text-white/50 uppercase tracking-widest font-semibold mb-1">{t('loc.checkOut')}</span>
+                          <span className="label-sm mb-1">{t('loc.checkOut')}</span>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
                               <Calendar size={13} className="text-brand-accent" />
@@ -550,22 +550,22 @@ export default function App() {
                       </div>
 
                       {/* Guests control */}
-                      <div className="border border-white/15 rounded-xl p-3 bg-white/5 flex justify-between items-center">
+                      <div className="border border-border-highlight rounded-card p-3 bg-surface-glass flex justify-between items-center">
                         <div>
-                          <span className="text-[9px] text-white/50 uppercase tracking-widest font-semibold block">{t('loc.totalGuests')}</span>
+                          <span className="label-sm block">{t('loc.totalGuests')}</span>
                           <span className="font-semibold text-sm">{guests} {t('loc.guestsAttending')}</span>
                         </div>
                         <div className="flex gap-2 bg-white/10 rounded-lg p-1">
                           <button
                             onClick={() => setGuests(prev => Math.max(1, prev - 1))}
-                            className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                            className="icon-btn-sm"
                           >
                             -
                           </button>
                           <span className="w-4 text-center text-xs font-bold self-center">{guests}</span>
                           <button
                             onClick={() => setGuests(prev => Math.min(5, prev + 1))}
-                            className="w-6 h-6 rounded bg-white/5 hover:bg-white/10 flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                            className="icon-btn-sm"
                           >
                             +
                           </button>
@@ -573,7 +573,7 @@ export default function App() {
                       </div>
 
                       {/* Timings summary */}
-                      <div className="flex justify-between text-xs border-b border-white/10 pb-4 text-white/70">
+                      <div className="flex justify-between text-xs divider-subtle pt-4 pb-4 text-text-secondary">
                         <div>
                           <span className="text-[9px] text-white/40 block leading-none mb-1">{t('loc.checkInWindow')}</span>
                           <span className="font-medium">{t('loc.after2pm')}</span>
@@ -595,7 +595,7 @@ export default function App() {
                         
                         <button
                           onClick={() => handleOpenBooking(currentCabin, `${checkInDay}`, `${checkOutDay}`, guests)}
-                          className="bg-brand-accent text-brand-emerald font-semibold text-xs py-3.5 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.03] active:scale-95 shimmer-btn shadow-lg cursor-pointer"
+                          className="btn-primary py-3.5 px-6 rounded-xl text-xs"
                         >
                           {t('loc.reserveCabin')}
                         </button>
@@ -612,7 +612,7 @@ export default function App() {
                   {/* Left Column Section: Matching Layout structure precisely */}
                   <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-4 lg:space-y-6">
                     <div>
-                      <div className="inline-flex items-center gap-2 bg-brand-accent/15 border border-brand-accent/30 rounded-full px-3.5 py-1 text-[11px] font-semibold text-brand-accent uppercase tracking-wider mb-4">
+                      <div className="badge-accent mb-4">
                         <Compass className="animate-spin-slow" size={12} />
                         <span>{t('rooms.badge')}</span>
                       </div>
@@ -628,7 +628,7 @@ export default function App() {
 
                     {/* Room Specs & Details block */}
                     <div className="bg-black/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 space-y-3">
-                      <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg">
+                      <div className="flex justify-between items-center bg-surface-glass p-3 rounded-input">
                         <div className="text-xs text-white/60">{t('rooms.selected')}: <span className="font-semibold text-white">{currentCabin.name}</span></div>
                         <div className="flex gap-1.5 items-center">
                           <button 
@@ -640,7 +640,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-4 gap-2.5 text-center bg-white/5 p-3 rounded-xl border border-white/5 text-[10px]">
+                      <div className="stat-box">
                         <div>
                           <span className="text-white/40 block mb-0.5 uppercase tracking-widest text-[8px]">{t('rooms.guests')}</span>
                           <span className="font-semibold text-white/95 text-xs">{t(`cabin.${currentCabin.id}.guests`)}</span>
@@ -664,7 +664,7 @@ export default function App() {
                   {/* Right Column Section: Guest Experience & Booking */}
                   <div className="w-full lg:w-[410px] space-y-4">
                     {/* Guest review diary block */}
-                    <div className="bg-black/20 backdrop-blur-md p-5 rounded-2xl border border-white/10 space-y-3 shadow-lg">
+                    <div className="panel-glass-dashed">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-[10px] text-brand-accent uppercase tracking-widest font-semibold flex items-center gap-1.5">
                           <MessageSquare size={12} /> {t('rooms.guestRegister')}
@@ -680,12 +680,12 @@ export default function App() {
                             placeholder={t('rooms.placeholderName')} 
                             value={newReviewAuthor} 
                             onChange={e => setNewReviewAuthor(e.target.value)}
-                            className="bg-white/5 border border-white/10 px-2 py-1 text-[10px] rounded focus:outline-none focus:border-brand-accent text-white flex-1"
+                            className="input-sm flex-1"
                           />
                           <select 
                             value={newReviewRating} 
                             onChange={e => setNewReviewRating(Number(e.target.value))}
-                            className="bg-white/5 border border-white/10 px-1 py-1 text-[10px] rounded focus:outline-none text-white/80 cursor-pointer"
+                            className="input-sm cursor-pointer"
                           >
                             <option value="5">★★★★★</option>
                             <option value="4">★★★★☆</option>
@@ -699,7 +699,7 @@ export default function App() {
                             placeholder={t('rooms.placeholderComment')} 
                             value={newReviewComment}
                             onChange={e => setNewReviewComment(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 px-2 py-1.5 pr-8 text-[10px] rounded focus:outline-none focus:border-brand-accent text-white"
+                            className="input-sm w-full py-1.5 pr-8"
                           />
                           <button type="submit" className="absolute right-1 top-1 p-1 text-brand-accent hover:text-white transition-colors">
                             <Send size={12} />
@@ -713,7 +713,7 @@ export default function App() {
                       {/* Recent Reviews dynamic list */}
                       <div className="space-y-2 max-h-[140px] overflow-y-auto no-scrollbar pt-1">
                         {reviews.slice(0, 3).map((rev) => (
-                          <div key={rev.id} className="text-[11px] bg-white/5 p-2 rounded border border-white/5">
+                          <div key={rev.id} className="text-[11px] bg-surface-glass p-2 rounded border border-border-subtle">
                             <div className="flex justify-between text-[10px] mb-0.5">
                               <span className="font-semibold text-white/90">{rev.userName}</span>
                               <span className="text-amber-400">{'★'.repeat(rev.rating)}</span>
@@ -741,7 +741,7 @@ export default function App() {
                   {/* Left Column Section */}
                   <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-4 lg:space-y-6">
                     <div>
-                      <div className="inline-flex items-center gap-2 bg-brand-accent/15 border border-brand-accent/30 rounded-full px-3.5 py-1 text-[11px] font-semibold text-brand-accent uppercase tracking-wider mb-4">
+                      <div className="badge-accent mb-4">
                         <Flame className="animate-pulse" size={12} />
                         <span>{t('atm.badge')}</span>
                       </div>
@@ -809,7 +809,7 @@ export default function App() {
                   {/* Left Column Section: Matching Layout structure precisely */}
                   <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-4 lg:space-y-4">
                     <div>
-                      <div className="inline-flex items-center gap-2 bg-brand-accent/15 border border-brand-accent/30 rounded-full px-3.5 py-1 text-[11px] font-semibold text-brand-accent uppercase tracking-wider mb-4">
+                      <div className="badge-accent mb-4">
                         <Sparkles size={11} className="animate-pulse" />
                         <span>{t('exp.badge')}</span>
                       </div>
@@ -833,7 +833,7 @@ export default function App() {
                             className={`flex-1 text-[10px] font-semibold tracking-wider uppercase py-2 px-1 rounded-lg border transition-all ${
                               selectedExpId === e.id 
                                 ? 'bg-brand-accent text-brand-emerald border-brand-accent' 
-                                : 'bg-white/5 border-white/10 hover:bg-white/10 text-white/70 hover:text-white'
+                                : 'bg-surface-glass border-border-glass hover:bg-surface-glass-hover text-text-secondary hover:text-white'
                             }`}
                           >
                             {t(`exp.${e.id}.name`).split(' ')[0]} / {t(`exp.${e.id}.name`).split(' ').slice(1).join(' ')}
@@ -865,10 +865,10 @@ export default function App() {
 
                   {/* Right Column Section: Custom Experience Planning Card matching reservation structure */}
                   <div className="w-full lg:w-[410px] items-center">
-                    <div className="glass-panel rounded-2xl p-4 w-full flex flex-col gap-3 border border-white/15 shadow-2xl relative">
+                    <div className="panel-glass p-4 w-full flex flex-col gap-3 shadow-2xl relative">
                       <div className="flex justify-between items-start">
                         <div>
-                          <span className="text-[10px] text-brand-accent uppercase tracking-widest font-semibold font-mono">{t('exp.planner')}</span>
+                          <span className="label-accent font-mono">{t('exp.planner')}</span>
                           <h2 className="text-2xl font-bold text-white tracking-tight mt-0.5 leading-snug">
                             {t(`exp.${currentExp.id}.name`)}
                           </h2>
@@ -880,9 +880,9 @@ export default function App() {
                       <div className="grid grid-cols-2 gap-3.5">
                         <div 
                           onClick={() => setExpDay(prev => Math.max(1, prev - 1))}
-                          className="border border-white/15 rounded-xl p-3 bg-white/5 flex flex-col justify-between cursor-pointer hover:bg-white/10 transition-all select-none"
+                          className="panel-card"
                         >
-                          <span className="text-[9px] text-white/50 uppercase tracking-widest font-semibold mb-1">{t('exp.targetDate')}</span>
+                          <span className="label-sm mb-1">{t('exp.targetDate')}</span>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
                               <Calendar size={13} className="text-brand-accent" />
@@ -894,9 +894,9 @@ export default function App() {
 
                         <div 
                           onClick={() => setExpGuests(prev => Math.min(6, prev + 1))}
-                          className="border border-white/15 rounded-xl p-2.5 bg-white/5 flex flex-col justify-between cursor-pointer hover:bg-white/10 transition-all select-none"
+                          className="panel-card-sm"
                         >
-                          <span className="text-[9px] text-white/50 uppercase tracking-widest font-semibold mb-1">{t('exp.activitySize')}</span>
+                          <span className="label-sm mb-1">{t('exp.activitySize')}</span>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
                               <span className="font-semibold text-sm">{expGuests} {t('exp.attendees')}</span>
@@ -906,7 +906,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="bg-white/5 rounded-xl p-3 border border-white/5 space-y-1.5 text-xs text-white/70">
+                      <div className="bg-surface-glass rounded-card p-3 border border-border-subtle space-y-1.5 text-xs text-text-secondary">
                         <div className="flex justify-between">
                           <span>{t('exp.baseFee')}</span>
                           <span>${currentExp.price}</span>
@@ -945,7 +945,7 @@ export default function App() {
                   {/* Left Column Section: Matching Layout structure precisely */}
                   <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-4 lg:space-y-4">
                     <div>
-                      <div className="inline-flex items-center gap-2 bg-brand-accent/15 border border-brand-accent/30 rounded-full px-3.5 py-1 text-[11px] font-semibold text-brand-accent uppercase tracking-wider mb-4">
+                      <div className="badge-accent mb-4">
                         <Sparkles size={11} className="animate-pulse" />
                         <span>{t('contact.badge')}</span>
                       </div>
@@ -980,10 +980,10 @@ export default function App() {
 
                   {/* Right Column Section: Dynamic Inbound Contact Form matching identical Reservation structure layout */}
                   <div className="w-full lg:w-[410px] items-center">
-                    <form onSubmit={handleContactDispatch} className="glass-panel rounded-2xl p-4 w-full flex flex-col gap-3 border border-white/15 shadow-2xl relative">
+                    <form onSubmit={handleContactDispatch} className="panel-glass p-4 w-full flex flex-col gap-3 shadow-2xl relative">
                       <div className="flex justify-between items-start">
                         <div>
-                          <span className="text-[10px] text-brand-accent uppercase tracking-widest font-semibold font-mono">{t('contact.secureInquire')}</span>
+                          <span className="label-accent font-mono">{t('contact.secureInquire')}</span>
                           <h2 className="text-2xl font-bold text-white tracking-tight mt-0.5 leading-snug">
                             {t('contact.panel')}
                           </h2>
@@ -994,23 +994,23 @@ export default function App() {
                       {/* Inputs styled perfectly matching theme input inputs */}
                       <div className="space-y-3 pt-1">
                         <div className="space-y-1">
-                          <span className="text-[10px] text-white/50 uppercase tracking-widest font-semibold font-mono">{t('contact.yourName')}</span>
+                          <span className="label-sm font-mono">{t('contact.yourName')}</span>
                           <input 
                             type="text" 
                             required 
                             placeholder={t('contact.placeholderName2')} 
                             value={contactName}
                             onChange={(e) => setContactName(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 text-xs px-3 py-2.5 rounded-xl text-white focus:outline-none focus:border-brand-accent"
+                            className="input-base text-xs"
                           />
                         </div>
 
                         <div className="space-y-1">
-                          <span className="text-[10px] text-white/50 uppercase tracking-widest font-semibold font-mono">{t('contact.topic')}</span>
+                          <span className="label-sm font-mono">{t('contact.topic')}</span>
                           <select 
                             value={contactCategory}
                             onChange={(e) => setContactCategory(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 text-xs px-2.5 py-2.5 rounded-xl text-white/80 focus:outline-none cursor-pointer"
+                            className="input-base text-xs cursor-pointer"
                           >
                             <option value="Check-in Guidelines">{t('contact.topicOpt1')}</option>
                             <option value="Cabin upgrades">{t('contact.topicOpt2')}</option>
@@ -1019,14 +1019,14 @@ export default function App() {
                         </div>
 
                         <div className="space-y-1">
-                          <span className="text-[10px] text-white/50 uppercase tracking-widest font-semibold font-mono">{t('contact.message')}</span>
+                          <span className="label-sm font-mono">{t('contact.message')}</span>
                           <textarea 
                             required 
                             rows={3}
                             placeholder={t('contact.placeholderMsg')} 
                             value={contactMessage}
                             onChange={(e) => setContactMessage(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 text-xs p-3 rounded-xl text-white focus:outline-none focus:border-brand-accent resize-none placeholder:text-white/30"
+                            className="input-base text-xs resize-none min-h-[100px]"
                           />
                         </div>
                       </div>
@@ -1047,7 +1047,7 @@ export default function App() {
                       <button
                         type="submit"
                         disabled={isContactSending}
-                        className="w-full bg-brand-accent text-brand-emerald font-semibold text-xs py-3.5 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 shimmer-btn shadow-lg cursor-pointer flex justify-center items-center gap-2"
+                        className="btn-primary w-full py-3.5 rounded-xl text-xs flex justify-center items-center gap-2"
                       >
                         {isContactSending ? t('contact.dispatching') : (
                           <>
@@ -1066,7 +1066,7 @@ export default function App() {
         </div>
 
         {/* Dynamic footer status bar indicator preserving locations screen visual 100% */}
-        <div className="flex justify-between items-center p-4 sm:px-8 sm:py-3 bg-white/5 border-t border-white/10 text-xs text-white/40 font-mono z-20">
+        <div className="flex justify-between items-center p-4 sm:px-8 sm:py-3 bg-surface-glass divider-subtle text-xs text-text-faint font-mono z-20">
           <div className="hidden sm:flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>{t('global.activeGrid')}</span>

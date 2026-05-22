@@ -19,7 +19,7 @@ export function ClimateControl({ initialTemp, initialHumidity }: ClimateControlP
   const { t } = useLanguage();
 
   return (
-    <div className="glass-panel rounded-2xl p-4 text-white/90 select-none border border-white/10 space-y-3">
+    <div className="panel-glass p-4 text-white/90 select-none space-y-3">
       <div className="flex justify-between items-center">
         <div>
           <h4 className="font-semibold text-sm tracking-wide">{t('climate.title')}</h4>
@@ -37,7 +37,7 @@ export function ClimateControl({ initialTemp, initialHumidity }: ClimateControlP
       {/* Thermostat dial view */}
       <div className="grid grid-cols-12 gap-4 items-center py-2">
         <div className="col-span-5 flex flex-col items-center justify-center border-r border-white/10">
-          <span className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">{t('climate.thermostat')}</span>
+          <span className="label-sm">{t('climate.thermostat')}</span>
           <div className="flex items-baseline mt-1">
             <span className="text-3xl font-bold font-mono tracking-tighter">{temperature}</span>
             <span className="text-sm text-brand-accent ml-0.5">°C</span>

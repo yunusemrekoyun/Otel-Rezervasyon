@@ -85,7 +85,7 @@ export function BookingModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="w-full max-w-lg overflow-hidden glass-panel rounded-2xl border border-white/20 select-none text-white shadow-2xl"
+          className="w-full max-w-lg overflow-hidden panel-glass-dashed select-none text-white shadow-2xl"
         >
           {/* Header */}
           <div className="flex justify-between items-center px-6 py-4 border-b border-white/10">
@@ -95,7 +95,7 @@ export function BookingModal({
             </div>
             <button
               onClick={onClose}
-              className="p-1 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              className="btn-icon p-1 hover:bg-white/10"
             >
               <X size={20} />
             </button>
@@ -123,25 +123,25 @@ export function BookingModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 bg-white/5 rounded-xl p-4 border border-white/5">
+            <div className="grid grid-cols-2 gap-3 panel-glass p-4">
               <div className="flex items-center gap-3">
                 <Calendar className="text-white/50 h-5 w-5 shrink-0" />
                 <div>
-                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">{t('booking.arrivalExp')}</p>
+                  <p className="label-sm">{t('booking.arrivalExp')}</p>
                   <p className="text-sm font-medium">May {checkInDate}, 2026</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Calendar className="text-white/50 h-5 w-5 shrink-0" />
                 <div>
-                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">{t('booking.departureObj')}</p>
+                  <p className="label-sm">{t('booking.departureObj')}</p>
                   <p className="text-sm font-medium">May {checkOutDate}, 2026</p>
                 </div>
               </div>
               <div className="col-span-2 border-t border-white/10 pt-3 mt-1 flex items-center gap-3">
                 <Users className="text-white/50 h-5 w-5 shrink-0" />
                 <div>
-                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">{t('booking.partySize')}</p>
+                  <p className="label-sm">{t('booking.partySize')}</p>
                   <p className="text-sm font-medium">{guestsCount} {t('booking.guestCount')}</p>
                 </div>
               </div>
@@ -190,7 +190,7 @@ export function BookingModal({
             <button
               onClick={handleConfirmReservation}
               disabled={isSubmitting}
-              className="px-6 py-2.5 bg-brand-accent text-brand-emerald rounded-full text-sm font-semibold hover:bg-white hover:scale-102 transition-all duration-300"
+              className="btn-primary px-6 py-2.5 rounded-full text-sm"
             >
               {isSubmitting ? t('booking.initiating') : t('booking.initiate')}
             </button>

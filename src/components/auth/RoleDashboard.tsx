@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation';
 import { 
   LogOut, ShieldCheck, LayoutDashboard, Users, CalendarCheck, 
   Settings, ClipboardList, Bell, LineChart, FileText, CreditCard, 
-  User, Calendar, MessageSquare, CheckSquare, DoorOpen, Package 
+  User, Calendar, MessageSquare, CheckSquare, DoorOpen, Package, Palette 
 } from 'lucide-react';
 import type { AuthUser } from '@/lib/auth/session';
 import type { RoleSlug } from '@/lib/auth/constants';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useTheme, THEMES } from '@/theme/ThemeContext';
 
 interface RoleDashboardProps {
   user: AuthUser;
@@ -31,6 +32,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'users', label: 'Kullanıcı Yönetimi', description: 'Tüm personel, muhasebe ve müşteri hesaplarını yönetebileceğiniz alan.', icon: Users },
       { id: 'reservations', label: 'Tüm Rezervasyonlar', description: 'Sistemdeki tüm rezervasyonları görüntüleyebilir, iptal veya onay işlemlerini yapabilirsiniz.', icon: CalendarCheck },
       { id: 'settings', label: 'Sistem Ayarları', description: 'Kabin fiyatlandırmaları, site ayarları ve genel yapılandırmalar.', icon: Settings },
+      { id: 'appearance', label: 'Görünüm', description: 'Sitenin global renk paletini ve temasını değiştirin.', icon: Palette },
     ],
     personel: [
       { id: 'dashboard', label: 'Personel Paneli', description: 'Günlük vardiya özetiniz ve aktif bildirimleriniz.', icon: ClipboardList },
@@ -60,7 +62,8 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'overview', label: 'Overview', description: 'Track hotel general status, occupancy rates and daily summaries here.', icon: LayoutDashboard },
       { id: 'users', label: 'User Management', description: 'Area where you can manage all staff, accounting and customer accounts.', icon: Users },
       { id: 'reservations', label: 'All Reservations', description: 'You can view all reservations in the system, cancel or approve them.', icon: CalendarCheck },
-      { id: 'settings', label: 'System Settings', description: 'Cabin pricing, site settings and general configurations.', icon: Settings },
+      { id: 'settings', label: 'Settings', description: 'Cabin pricing, site configurations and general structures.', icon: Settings },
+      { id: 'appearance', label: 'Appearance', description: 'Change the global color palette and theme of the site.', icon: Palette },
     ],
     personel: [
       { id: 'dashboard', label: 'Staff Panel', description: 'Your daily shift summary and active notifications.', icon: ClipboardList },
@@ -91,6 +94,7 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   
   const roleMenus = ROLE_MENUS[language][user.roleSlug] || ROLE_MENUS[language].musteri;
   const [activeTabId, setActiveTabId] = useState(roleMenus[0]?.id);
@@ -123,9 +127,9 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
     <div className="flex flex-col md:flex-row min-h-screen bg-[#070f12] text-white font-sans overflow-hidden">
       
       {/* Sidebar */}
-      <aside className="w-full md:w-72 glass-panel border-r border-white/10 flex flex-col z-20 shadow-2xl relative md:min-h-screen">
-        <div className="p-6 border-b border-white/10 shrink-0">
-          <div className="inline-flex items-center gap-2 bg-brand-accent/15 border border-brand-accent/30 rounded-full px-3.5 py-1 text-[11px] font-semibold text-brand-accent uppercase tracking-wider mb-4">
+      <aside className="w-full md:w-72 panel-glass border-r border-white/10 flex flex-col z-20 shadow-2xl relative md:min-h-screen rounded-none">
+        <div className="p-6 divider-subtle shrink-0">
+          <div className="badge-accent mb-4">
             <ShieldCheck size={13} />
             <span>{user.roleName} {language === 'tr' ? 'Panel' : 'Dashboard'}</span>
           </div>
@@ -143,7 +147,7 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 cursor-pointer ${
                   isActive 
                     ? 'bg-brand-accent/15 text-brand-accent border border-brand-accent/20 shadow-lg' 
-                    : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'
+                    : 'text-text-secondary hover:text-white hover:bg-surface-glass border border-transparent'
                 }`}
               >
                 <Icon size={18} className={isActive ? 'text-brand-accent' : 'text-white/40'} />
@@ -153,10 +157,10 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           })}
         </nav>
 
-        <div className="p-4 border-t border-white/10 shrink-0 space-y-3">
+        <div className="p-4 divider-subtle shrink-0 space-y-3">
           <button
             onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
-            className="w-full flex items-center justify-between px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold hover:bg-white/10 transition-all cursor-pointer"
+            className="btn-secondary w-full justify-between px-4 py-2 text-xs"
           >
             <span>{language === 'tr' ? 'Language' : 'Dil'}</span>
             <span className="bg-brand-accent/20 text-brand-accent px-2 py-0.5 rounded border border-brand-accent/30">
@@ -167,7 +171,7 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/10 text-white px-4 py-3 text-xs font-semibold hover:bg-white/10 hover:text-red-400 transition-all disabled:opacity-50 cursor-pointer"
+            className="btn-danger w-full px-4 py-3 text-xs"
           >
             <LogOut size={16} />
             <span>{isLoggingOut ? (language === 'tr' ? 'Çıkılıyor...' : 'Logging out...') : (language === 'tr' ? 'Güvenli Çıkış' : 'Secure Logout')}</span>
@@ -188,21 +192,48 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
             </p>
           </div>
 
-          <div className="glass-panel p-8 rounded-2xl border border-white/10 bg-white/5 border-dashed">
-            <div className="flex flex-col items-center justify-center text-center py-16 space-y-4 opacity-70">
-              <div className="bg-white/5 p-4 rounded-full border border-white/10">
-                <ActiveIcon size={32} className="text-white/40" />
-              </div>
-              <div>
-                <p className="text-sm text-white/60 font-medium">
-                  {language === 'tr' ? 'Bu ekran henüz yapım aşamasındadır.' : 'This screen is currently under construction.'}
-                </p>
-                <p className="text-xs text-white/40 mt-1">
-                  {language === 'tr' ? `${activeTab.label} ile ilgili işlemler buraya eklenecektir.` : `Operations related to ${activeTab.label} will be added here.`}
-                </p>
+          {activeTabId === 'appearance' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {THEMES.map((t) => (
+                <div 
+                  key={t.id}
+                  onClick={() => setTheme(t.id as any)}
+                  className={`relative p-4 rounded-card border cursor-pointer transition-all ${
+                    theme === t.id 
+                      ? 'bg-surface-glass border-brand-accent shadow-lg shadow-brand-accent/10' 
+                      : 'bg-surface-glass border-border-subtle hover:border-border-glass hover:bg-surface-glass-hover'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-sm font-medium">{t.name}</span>
+                    {theme === t.id && (
+                      <span className="w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_8px_rgba(255,183,128,0.8)]" />
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1 h-8 rounded-md" style={{ backgroundColor: t.base }} title="Base Color" />
+                    <div className="w-8 h-8 rounded-md" style={{ backgroundColor: t.accent }} title="Accent Color" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="panel-glass-dashed">
+              <div className="flex flex-col items-center justify-center text-center py-16 space-y-4 opacity-70">
+                <div className="bg-surface-glass p-4 rounded-badge border border-border-glass">
+                  <ActiveIcon size={32} className="text-white/40" />
+                </div>
+                <div>
+                  <p className="text-sm text-white/60 font-medium">
+                    {language === 'tr' ? 'Bu ekran henüz yapım aşamasındadır.' : 'This screen is currently under construction.'}
+                  </p>
+                  <p className="text-xs text-white/40 mt-1">
+                    {language === 'tr' ? `${activeTab.label} ile ilgili işlemler buraya eklenecektir.` : `Operations related to ${activeTab.label} will be added here.`}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
         </div>
       </main>

@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
-import { Geist } from 'next/font/google';
+import { Space_Grotesk } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { LanguageProvider } from '@/i18n/LanguageContext';
+import { ThemeProvider } from '@/theme/ThemeContext';
+import { prisma } from '@/lib/prisma';
 import './globals.css';
 
-const geist = Geist({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
-  variable: '--font-geist',
+  variable: '--font-space-grotesk',
 });
 
 export const metadata: Metadata = {
@@ -14,17 +16,31 @@ export const metadata: Metadata = {
   description: "Luxury cabins and nature's perfect hideaways with immersive booking experiences.",
 };
 
-export default function RootLayout({
+export const dynamic = 'force-dynamic';
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: ReactNode;
 }>) {
+  let initialTheme = 'woodnest';
+  try {
+    const themeSetting = await prisma.systemSetting.findUnique({ where: { key: 'theme' } });
+    if (themeSetting?.value) {
+      initialTheme = themeSetting.value;
+    }
+  } catch (error) {
+    console.error('Error fetching theme from DB:', error);
+  }
+
   return (
-    <html lang="en">
-      <body className={geist.variable}>
-        <LanguageProvider>
-          {children}
-        </LanguageProvider>
+    <html lang="en" data-theme={initialTheme}>
+      <body className={spaceGrotesk.variable}>
+        <ThemeProvider initialTheme={initialTheme as any}>
+          <LanguageProvider>
+            {children}
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

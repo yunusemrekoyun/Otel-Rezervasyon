@@ -222,7 +222,7 @@ export function SoundMixer() {
   }, []);
 
   return (
-    <div className="glass-panel rounded-2xl p-4 text-white/90 select-none border border-white/10 space-y-3">
+    <div className="panel-glass p-4 text-white/90 select-none space-y-3">
       <div className="flex justify-between items-center">
         <div>
           <h4 className="font-semibold text-sm tracking-wide">{t('sound.title')}</h4>
@@ -232,8 +232,8 @@ export function SoundMixer() {
           onClick={togglePlayback}
           className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all duration-300 ${
             isPlaying
-              ? 'bg-amber-500/20 text-brand-accent border border-brand-accent/40 hover:bg-amber-500/30'
-              : 'bg-white text-brand-emerald hover:bg-white/90'
+              ? 'bg-brand-accent/20 text-brand-accent border border-brand-accent/30'
+              : 'bg-white/5 text-white/60 hover:text-white border border-white/10'
           }`}
         >
           {isPlaying ? (
