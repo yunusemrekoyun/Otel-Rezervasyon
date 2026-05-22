@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Lock, Mail, ShieldCheck, X } from 'lucide-react';
 import type { AuthUser } from '@/lib/auth/session';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useLanguage();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -53,7 +55,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <motion.form
             onSubmit={handleSubmit}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -65,7 +67,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
             <div className="flex justify-between items-center px-6 py-4 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="text-brand-accent h-5 w-5" />
-                <h3 className="text-lg font-medium tracking-tight">Login Now</h3>
+                <h3 className="text-lg font-medium tracking-tight">{t('login.title')}</h3>
               </div>
               <button
                 type="button"
@@ -78,7 +80,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
 
             <div className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <span className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Email</span>
+                <span className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">{t('login.email')}</span>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" size={15} />
                   <input
@@ -94,7 +96,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
               </div>
 
               <div className="space-y-1.5">
-                <span className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Password</span>
+                <span className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">{t('login.password')}</span>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" size={15} />
                   <input
@@ -120,7 +122,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
                 disabled={isSubmitting}
                 className="w-full bg-brand-accent text-brand-emerald font-semibold text-xs py-3.5 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 shimmer-btn shadow-lg cursor-pointer text-center disabled:opacity-60"
               >
-                {isSubmitting ? 'Checking Secure Session...' : 'Enter Secure Role Panel'}
+                {isSubmitting ? t('login.submitting') : t('login.submit')}
               </button>
             </div>
           </motion.form>

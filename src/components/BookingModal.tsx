@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, Users, Coffee, Check, ShieldCheck } from 'lucide-react';
 import { Cabin } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export function BookingModal({
   guestsCount,
 }: BookingModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useLanguage();
 
   if (!isOpen) return null;
 
@@ -77,7 +79,7 @@ export function BookingModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -89,7 +91,7 @@ export function BookingModal({
           <div className="flex justify-between items-center px-6 py-4 border-b border-white/10">
             <div className="flex items-center gap-2">
               <ShieldCheck className="text-brand-accent h-5 w-5 animate-pulse" />
-              <h3 className="text-lg font-medium tracking-tight">Booking Summary</h3>
+              <h3 className="text-lg font-medium tracking-tight">{t('booking.title')}</h3>
             </div>
             <button
               onClick={onClose}
@@ -112,7 +114,7 @@ export function BookingModal({
                 <p className="text-xs text-brand-accent font-semibold tracking-wider uppercase mb-1">
                   {cabin.location}
                 </p>
-                <h4 className="font-semibold text-base leading-snug">{cabin.name}</h4>
+                <h4 className="font-semibold text-base leading-snug">{t(`cabin.${cabin.id}.name`)}</h4>
                 <div className="flex items-center gap-1.5 mt-1 text-xs text-white/70">
                   <span>★ {cabin.rating}</span>
                   <span>•</span>
@@ -125,22 +127,22 @@ export function BookingModal({
               <div className="flex items-center gap-3">
                 <Calendar className="text-white/50 h-5 w-5 shrink-0" />
                 <div>
-                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Check-in</p>
+                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">{t('booking.arrivalExp')}</p>
                   <p className="text-sm font-medium">May {checkInDate}, 2026</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Calendar className="text-white/50 h-5 w-5 shrink-0" />
                 <div>
-                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Check-out</p>
+                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">{t('booking.departureObj')}</p>
                   <p className="text-sm font-medium">May {checkOutDate}, 2026</p>
                 </div>
               </div>
               <div className="col-span-2 border-t border-white/10 pt-3 mt-1 flex items-center gap-3">
                 <Users className="text-white/50 h-5 w-5 shrink-0" />
                 <div>
-                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Guests</p>
-                  <p className="text-sm font-medium">{guestsCount} adult guests</p>
+                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">{t('booking.partySize')}</p>
+                  <p className="text-sm font-medium">{guestsCount} {t('booking.guestCount')}</p>
                 </div>
               </div>
             </div>
@@ -148,11 +150,11 @@ export function BookingModal({
             {/* Price Calculations */}
             <div className="space-y-2.5">
               <div className="flex justify-between text-sm text-white/80">
-                <span>${cabin.price} × {nights} nights</span>
+                <span>${cabin.price} × {nights} {t('booking.night')}</span>
                 <span>${rawPrice}</span>
               </div>
               <div className="flex justify-between text-sm text-white/80">
-                <span>Cleaning Fee</span>
+                <span>{t('exp.insurance')}</span>
                 <span>${cleaningFee}</span>
               </div>
               <div className="flex justify-between text-sm text-white/80">
@@ -160,7 +162,7 @@ export function BookingModal({
                 <span>${serviceFee}</span>
               </div>
               <div className="border-t border-white/10 pt-3 mt-1 flex justify-between text-base font-semibold">
-                <span>Total Budget</span>
+                <span>{t('booking.estTotal')}</span>
                 <span className="text-brand-accent text-lg">${totalPrice}</span>
               </div>
             </div>
@@ -183,14 +185,14 @@ export function BookingModal({
               onClick={onClose}
               className="px-4 py-2 text-sm text-white/60 hover:text-white transition-colors"
             >
-              Cancel
+              {t('booking.cancel')}
             </button>
             <button
               onClick={handleConfirmReservation}
               disabled={isSubmitting}
               className="px-6 py-2.5 bg-brand-accent text-brand-emerald rounded-full text-sm font-semibold hover:bg-white hover:scale-102 transition-all duration-300"
             >
-              {isSubmitting ? 'Confirming...' : 'Confirm Reservation'}
+              {isSubmitting ? t('booking.initiating') : t('booking.initiate')}
             </button>
           </div>
         </motion.div>

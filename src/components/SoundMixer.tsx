@@ -2,12 +2,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Volume2, VolumeX, Play, Square, Sparkles, Flame, TreePine, CloudRain, ShieldCheck } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export function SoundMixer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [campfireVol, setCampfireVol] = useState(40);
   const [rainVol, setRainVol] = useState(25);
   const [windVol, setWindVol] = useState(30);
+  const { t } = useLanguage();
 
   // Audio Context reference
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -220,11 +222,11 @@ export function SoundMixer() {
   }, []);
 
   return (
-    <div className="glass-panel rounded-2xl p-5 text-white/90 select-none border border-white/10 space-y-4">
+    <div className="glass-panel rounded-2xl p-4 text-white/90 select-none border border-white/10 space-y-3">
       <div className="flex justify-between items-center">
         <div>
-          <h4 className="font-semibold text-sm tracking-wide">Forest Synthesizer</h4>
-          <p className="text-[10px] text-white/50">Simulate ambient soundscapes directly in your browser</p>
+          <h4 className="font-semibold text-sm tracking-wide">{t('sound.title')}</h4>
+          <p className="text-[10px] text-white/50">{t('sound.desc')}</p>
         </div>
         <button
           onClick={togglePlayback}
@@ -237,12 +239,12 @@ export function SoundMixer() {
           {isPlaying ? (
             <>
               <Square size={13} fill="currentColor" />
-              <span>Mute Synth</span>
+              <span>{t('sound.mute')}</span>
             </>
           ) : (
             <>
               <Play size={13} fill="currentColor" />
-              <span>Engage Ambient</span>
+              <span>{t('sound.engage')}</span>
             </>
           )}
         </button>
@@ -253,7 +255,7 @@ export function SoundMixer() {
         <div className="space-y-1">
           <div className="flex justify-between items-center text-xs">
             <span className="flex items-center gap-1.5 text-orange-300">
-              <Flame size={14} className="animate-pulse" /> Campfire Crackle
+              <Flame size={14} className="animate-pulse" /> {t('sound.campfire')}
             </span>
             <span className="font-mono text-[10px] text-white/60">{campfireVol}%</span>
           </div>
@@ -272,7 +274,7 @@ export function SoundMixer() {
         <div className="space-y-1">
           <div className="flex justify-between items-center text-xs">
             <span className="flex items-center gap-1.5 text-cyan-300">
-              <CloudRain size={14} /> Soft Forest Rain
+              <CloudRain size={14} /> {t('sound.rain')}
             </span>
             <span className="font-mono text-[10px] text-white/60">{rainVol}%</span>
           </div>
@@ -291,7 +293,7 @@ export function SoundMixer() {
         <div className="space-y-1">
           <div className="flex justify-between items-center text-xs">
             <span className="flex items-center gap-1.5 text-teal-300">
-              <TreePine size={14} /> Canopy Whispering Wind
+              <TreePine size={14} /> {t('sound.wind')}
             </span>
             <span className="font-mono text-[10px] text-white/60">{windVol}%</span>
           </div>
@@ -310,7 +312,7 @@ export function SoundMixer() {
       {isPlaying && (
         <div className="flex items-center gap-2 pt-1 text-[10px] text-emerald-300">
           <ShieldCheck size={12} />
-          <span>Analogue synth loop actively rendering in real-time</span>
+          <span>{t('sound.active')}</span>
         </div>
       )}
     </div>

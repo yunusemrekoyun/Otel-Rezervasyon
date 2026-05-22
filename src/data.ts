@@ -2,95 +2,119 @@ import { Cabin, ExperienceItem, Review } from './types';
 
 export const cabins: Cabin[] = [
   {
-    id: 'evergreen-pine',
-    name: 'Evergreen Pine Family Lodge',
-    location: 'Hardanger, Norway',
-    price: 359,
-    rating: 4.7,
-    reviewsCount: 1842,
-    description: 'A breathtaking secluded luxury cabin nestled in a dense, misty pine forest. High glass windows let you connect with nature while keeping you cozy beside the fire.',
-    imageUrl: 'https://images.unsplash.com/photo-1542718610-a1d656d1884c?q=80&w=1200&auto=format&fit=crop', // A-frame cozy cabin in deep woods
-    amenities: ['Outdoor Hot Tub', 'Fireplace', 'Heated Floors', 'Mountain View', 'Private Kitchen', 'Tesla Charger', 'High-speed Wi-Fi', 'Sauna'],
+    id: 'single-room',
+    name: 'Tek Kişilik Standart Oda',
+    location: 'Şehir Merkezi',
+    price: 45,
+    rating: 4.2,
+    reviewsCount: 1450,
+    description: 'Şehir merkezinde, tek kişilik konaklamalar ve iş seyahatleri için tasarlanmış temiz, pratik ve uygun fiyatlı konaklama seçeneği.',
+    imageUrl: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80&w=1200&auto=format&fit=crop', // Business single room
+    images: [
+      'https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1505691938895-1758d7feb511?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1598928506311-c55dedbfc1a2?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1522771731478-44bf104a8f4c?q=80&w=1200&auto=format&fit=crop'
+    ],
+    amenities: ['Ücretsiz Wi-Fi', 'Klima', 'Minibar', 'LCD TV', 'Çalışma Masası', 'Şehir Manzarası'],
     specs: {
-      guests: '2-5 guests',
-      beds: '3 Queen beds',
-      baths: '2.5 Baths',
-      size: '145 m²'
-    },
-    climate: {
-      temperature: 19,
-      humidity: 58,
-      windSpeed: 12,
-      airQuality: 'Excellent (9 AQI)'
-    }
-  },
-  {
-    id: 'lakeside-reflective',
-    name: 'Mirror Lake Glass Sanctuary',
-    location: 'Lofoten, Norway',
-    price: 480,
-    rating: 4.9,
-    reviewsCount: 924,
-    description: 'An architectural marvel featuring mirrored glass walls that seamlessly disappear into the serene Norwegian lake reflection. Experience complete silence and starry nights.',
-    imageUrl: 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1200&auto=format&fit=crop', // Winter mirror house / lake cabin
-    amenities: ['Floating Deck', 'Glass Panoramic Walls', 'Indoor Wood Fireplace', 'Kayak & SUP Access', 'En-suite Glass Bath', 'Organic Espresso Bar', 'Heated Infinity Pool'],
-    specs: {
-      guests: '2 guests',
-      beds: '1 King bed',
-      baths: '1.5 Baths',
-      size: '88 m²'
-    },
-    climate: {
-      temperature: 21,
-      humidity: 62,
-      windSpeed: 8,
-      airQuality: 'Pristine (4 AQI)'
-    }
-  },
-  {
-    id: 'treetops-nest',
-    name: 'WoodNest Canopy Treetop',
-    location: 'Odda, Norway',
-    price: 420,
-    rating: 4.8,
-    reviewsCount: 1105,
-    description: 'Suspended 6 meters above the forest floor, clamped to a single living pine tree. A masterclass in organic architecture with stunning panoramic views of the fjord.',
-    imageUrl: 'https://images.unsplash.com/photo-1508193638397-1c4234db14d8?q=80&w=1200&auto=format&fit=crop', // Forest trees / cozy retreat
-    amenities: ['6m Suspended Bridge', 'Rainforest Shower', 'Sateen Linens', 'Fjord-view Balcony', 'Stargazing skylight', 'Underfloor heating', 'Bespoke Scandinavian interior'],
-    specs: {
-      guests: '1-3 guests',
-      beds: '1 King, 1 Twin',
-      baths: '1 Bath',
-      size: '65 m²'
-    },
-    climate: {
-      temperature: 20,
-      humidity: 52,
-      windSpeed: 15,
-      airQuality: 'Excellent (7 AQI)'
-    }
-  },
-  {
-    id: 'arctic-aurora',
-    name: 'Aurora Dome & Celestial Nest',
-    location: 'Tromsø, Norway',
-    price: 520,
-    rating: 4.9,
-    reviewsCount: 763,
-    description: 'A geodetic glass dome designed for 360-degree views of the magical Aurora Borealis. Wake up under the dancing green lights in fully climate-controlled luxury.',
-    imageUrl: 'https://images.unsplash.com/photo-1483168527879-c66136b56105?q=80&w=1200&auto=format&fit=crop', // Misty forest / starry sky
-    amenities: ['360° Heated Dome', 'Telescope', 'Premium Hot Tub', 'Snowshoe Equipment', 'Private Chef option', 'Under-floor Heating', 'Northern Lights alarm'],
-    specs: {
-      guests: '2 guests',
-      beds: '1 Super King bed',
-      baths: '1 Bath',
-      size: '72 m²'
+      guests: '1 Misafir',
+      beds: '1 Tek Kişilik Yatak',
+      baths: '1 Banyo',
+      size: '18 m²'
     },
     climate: {
       temperature: 22,
-      humidity: 45,
-      windSpeed: 5,
-      airQuality: 'Pure Arctic (2 AQI)'
+      humidity: 50,
+      windSpeed: 0,
+      airQuality: 'İyi'
+    }
+  },
+  {
+    id: 'double-room',
+    name: 'Çift Kişilik Standart Oda',
+    location: 'Şehir Merkezi',
+    price: 65,
+    rating: 4.3,
+    reviewsCount: 2310,
+    description: 'Kütahya merkezde, çiftler ve kısa süreli tatiller için ideal, konforlu ve samimi bir konaklama deneyimi sunan standart odamız.',
+    imageUrl: 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?q=80&w=1200&auto=format&fit=crop', // Standard double room
+    images: [
+      'https://images.unsplash.com/photo-1566665797739-1674de7a421a?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=1200&auto=format&fit=crop'
+    ],
+    amenities: ['Ücretsiz Wi-Fi', 'Klima', 'Saç Kurutma Makinesi', 'Geniş Yatak', 'Uydu Yayınlı TV'],
+    specs: {
+      guests: '2 Misafir',
+      beds: '1 Çift Kişilik Yatak',
+      baths: '1 Banyo',
+      size: '22 m²'
+    },
+    climate: {
+      temperature: 22,
+      humidity: 50,
+      windSpeed: 0,
+      airQuality: 'İyi'
+    }
+  },
+  {
+    id: 'family-room',
+    name: 'Geniş Aile Odası',
+    location: 'Şehir Merkezi',
+    price: 90,
+    rating: 4.4,
+    reviewsCount: 840,
+    description: 'Öğrenci grupları ve aileler için uygun, rahat bir oturma alanı sağlayan, ekonomik ve geniş odamız. Kafeler sokağına sadece birkaç adım mesafede.',
+    imageUrl: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=1200&auto=format&fit=crop', // Family/Triple room
+    images: [
+      'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=1200&auto=format&fit=crop'
+    ],
+    amenities: ['Oturma Alanı', 'Hızlı Wi-Fi', 'Büyük Ekran TV', 'Ekstra Yatak İmkanı', 'Balkon Seçeneği'],
+    specs: {
+      guests: '3-4 Misafir',
+      beds: '1 Çift, 2 Tekli Yatak',
+      baths: '1 Geniş Banyo',
+      size: '35 m²'
+    },
+    climate: {
+      temperature: 21,
+      humidity: 55,
+      windSpeed: 0,
+      airQuality: 'İyi'
+    }
+  },
+  {
+    id: 'sultan-suite',
+    name: 'Sultan Suit (Jakuzili)',
+    location: 'Kütahya Garden Premium',
+    price: 130,
+    rating: 4.7,
+    reviewsCount: 650,
+    description: 'Çiftlere özel, tamamen yenilenmiş lüks "Sultan Oda". Ortopedik yatak, oda içi jakuzi ve ekstra konfor detaylarıyla premium bir kaçamak sunuyor.',
+    imageUrl: 'https://images.unsplash.com/photo-1583847268964-b28ce8f52f49?q=80&w=1200&auto=format&fit=crop', // Premium suite with nice bath/jacuzzi hint
+    images: [
+      'https://images.unsplash.com/photo-1583847268964-b28ce8f52f49?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1560448205-4d9b3e6bb6db?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1600607688969-a5bfcd64bd28?q=80&w=1200&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1534595038511-9f219fe0c979?q=80&w=1200&auto=format&fit=crop'
+    ],
+    amenities: ['Oda İçi Jakuzi', 'Ortopedik Yatak', 'Özel Buklet Malzemeleri', 'Premium Dekorasyon', 'Sessiz Konum', 'İkram Tepsisi', 'Geniş Ekran Smart TV'],
+    specs: {
+      guests: '2 Misafir',
+      beds: '1 King Ortopedik Yatak',
+      baths: '1 Jakuzili Banyo',
+      size: '42 m²'
+    },
+    climate: {
+      temperature: 24,
+      humidity: 50,
+      windSpeed: 0,
+      airQuality: 'Mükemmel'
     }
   }
 ];
@@ -98,56 +122,56 @@ export const cabins: Cabin[] = [
 export const reviews: Review[] = [
   {
     id: 'rev-1',
-    userName: 'Elena Rostova',
+    userName: 'Ayşe Yılmaz',
     rating: 5,
     date: 'May 12, 2026',
-    comment: 'The silence here is absolute. Waking up to the morning fog moving through the pines was a spiritual experience. Impeccable Scandinavian craftsmanship.',
+    comment: 'Fiyatına göre çok iyi bir otel. Çalışanlar inanılmaz güler yüzlü ve samimi. Kafeler sokağına ve merkeze yürüyerek gitmek çok büyük avantaj.',
     avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop'
   },
   {
     id: 'rev-2',
-    userName: 'Marcus Vance',
+    userName: 'Burak Demir',
     rating: 5,
     date: 'April 28, 2026',
-    comment: 'Exceeded every expectation. The design integration is pure genius. The climate controls inside the pod were flawless even with howling winds outside.',
+    comment: 'Eşimle Sultan odada konakladık. Jakuzi ve ortopedik yatak gerçekten harikaydı, oda yenilenmiş ve çok konforluydu. Kahvaltısı da gayet yeterliydi.',
     avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100&auto=format&fit=crop'
   },
   {
     id: 'rev-3',
-    userName: 'Sophie Lindqvist',
-    rating: 4,
+    userName: 'Mehmet K.',
+    rating: 3,
     date: 'March 15, 2026',
-    comment: 'Living amongst the treetops made us feel so tiny and connected to nature. Highly recommend doing the wood-fired hot tub at dusk as the stars come out!',
-    avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=100&auto=format&fit=crop'
+    comment: 'Personel ilgili ama odamızın banyosu biraz eski kalmıştı ve temizlik standartları biraz daha iyi olabilirdi. Konumu için tekrar tercih edilebilir.',
+    avatarUrl: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=100&auto=format&fit=crop'
   }
 ];
 
 export const experiencesData: ExperienceItem[] = [
   {
-    id: 'kayaking',
-    name: 'Midnight Fjord Kayaking',
-    price: 120,
-    duration: '3 hours',
-    rating: 4.9,
-    teaser: 'Paddle under the amber twilight',
-    description: 'Glide on absolute stillness as the midnight sun paints epic Norwegian glaciers in glowing rose-golds. Includes premium thermal gear, carbon paddles, and expert guiding.',
-  },
-  {
-    id: 'hottub',
-    name: 'Private Cedars Hot Tub & Sauna',
-    price: 85,
-    duration: 'unlimited',
+    id: 'city-tour',
+    name: 'Kütahya Merkez & Kafeler Sokağı',
+    price: 0,
+    duration: 'Sınırsız',
     rating: 4.8,
-    teaser: 'Stargaze with cold-plunge steps',
-    description: 'Relax in a high-end natural spring wooden tub heated to 41°C. Complemented with locally prepared pine-infused steam essences and luxury organic robes.',
+    teaser: 'Şehrin kalbinde',
+    description: 'Aracınızı otoparka bırakın ve birkaç adımda Kütahya’nın canlı merkezine, popüler kafelere ve restoranlara kolayca ulaşın.',
   },
   {
-    id: 'trek',
-    name: 'Alpine Nordic Highland Trekking',
-    price: 150,
-    duration: '5 hours',
+    id: 'sultan-jacuzzi',
+    name: 'Sultan Oda Jakuzi Keyfi',
+    price: 35,
+    duration: 'Oda İçi',
     rating: 4.9,
-    teaser: 'Prehistoric moss forest heights',
-    description: 'Hike through wild birch preserves up to spectacular ridge platforms looking down into deep fjord channels. Includes artisan packed lunch jars.',
+    teaser: 'Çiftlere özel premium rahatlık',
+    description: 'Yenilenmiş Sultan odalarımızda yer alan özel jakuzide, günün yorgunluğunu atın ve lüks konaklamanın tadını çıkarın.',
+  },
+  {
+    id: 'history-tour',
+    name: 'Tarihi Germiyan Sokağı & Saat Kulesi',
+    price: 0,
+    duration: 'Yürüme Mesafesi',
+    rating: 4.7,
+    teaser: 'Tarihi doku ve kültür',
+    description: 'Otelimizden yürüyerek Kütahya’nın ünlü Kent Tarihi Müzesi’ni, Saat Kulesi’ni ve otantik Germiyan Sokağı’nı keşfedin.',
   },
 ];

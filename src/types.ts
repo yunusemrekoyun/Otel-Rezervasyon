@@ -7,6 +7,7 @@ export interface Cabin {
   reviewsCount: number;
   description: string;
   imageUrl: string;
+  images?: string[];
   amenities: string[];
   specs: {
     guests: string;
