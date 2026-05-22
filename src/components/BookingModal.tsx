@@ -1,0 +1,200 @@
+'use client';
+
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { X, Calendar, Users, Coffee, Check, ShieldCheck } from 'lucide-react';
+import { Cabin } from '../types';
+
+interface BookingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  cabin: Cabin;
+  checkInDate: string;
+  checkOutDate: string;
+  guestsCount: number;
+}
+
+export function BookingModal({
+  isOpen,
+  onClose,
+  cabin,
+  checkInDate,
+  checkOutDate,
+  guestsCount,
+}: BookingModalProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!isOpen) return null;
+
+  const calculateNights = () => {
+    const inDay = Number(checkInDate);
+    const outDay = Number(checkOutDate);
+
+    if (!Number.isFinite(inDay) || !Number.isFinite(outDay) || outDay <= inDay) {
+      return 3;
+    }
+
+    return outDay - inDay;
+  };
+
+  const nights = calculateNights();
+  const rawPrice = cabin.price * nights;
+  const cleaningFee = 85;
+  const serviceFee = 45;
+  const totalPrice = rawPrice + cleaningFee + serviceFee;
+
+  const handleConfirmReservation = async () => {
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cabinId: cabin.id,
+          checkInDay: Number(checkInDate),
+          checkOutDay: Number(checkOutDate),
+          guestsCount,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.message || 'Reservation could not be confirmed.');
+      }
+
+      alert(`Booking successful for ${cabin.name}. Reference: ${payload.confirmationId}. Digital key queued to YunusemreKoyun26@gmail.com.`);
+      onClose();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Reservation could not be confirmed.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          className="w-full max-w-lg overflow-hidden glass-panel rounded-2xl border border-white/20 select-none text-white shadow-2xl"
+        >
+          {/* Header */}
+          <div className="flex justify-between items-center px-6 py-4 border-b border-white/10">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="text-brand-accent h-5 w-5 animate-pulse" />
+              <h3 className="text-lg font-medium tracking-tight">Booking Summary</h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 space-y-6">
+            <div className="flex gap-4 items-center">
+              <img
+                src={cabin.imageUrl}
+                alt={cabin.name}
+                referrerPolicy="no-referrer"
+                className="w-24 h-20 object-cover rounded-lg border border-white/10"
+              />
+              <div>
+                <p className="text-xs text-brand-accent font-semibold tracking-wider uppercase mb-1">
+                  {cabin.location}
+                </p>
+                <h4 className="font-semibold text-base leading-snug">{cabin.name}</h4>
+                <div className="flex items-center gap-1.5 mt-1 text-xs text-white/70">
+                  <span>★ {cabin.rating}</span>
+                  <span>•</span>
+                  <span>{cabin.specs.size}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 bg-white/5 rounded-xl p-4 border border-white/5">
+              <div className="flex items-center gap-3">
+                <Calendar className="text-white/50 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Check-in</p>
+                  <p className="text-sm font-medium">May {checkInDate}, 2026</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="text-white/50 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Check-out</p>
+                  <p className="text-sm font-medium">May {checkOutDate}, 2026</p>
+                </div>
+              </div>
+              <div className="col-span-2 border-t border-white/10 pt-3 mt-1 flex items-center gap-3">
+                <Users className="text-white/50 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Guests</p>
+                  <p className="text-sm font-medium">{guestsCount} adult guests</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Price Calculations */}
+            <div className="space-y-2.5">
+              <div className="flex justify-between text-sm text-white/80">
+                <span>${cabin.price} × {nights} nights</span>
+                <span>${rawPrice}</span>
+              </div>
+              <div className="flex justify-between text-sm text-white/80">
+                <span>Cleaning Fee</span>
+                <span>${cleaningFee}</span>
+              </div>
+              <div className="flex justify-between text-sm text-white/80">
+                <span>WoodNest Eco Service Fee</span>
+                <span>${serviceFee}</span>
+              </div>
+              <div className="border-t border-white/10 pt-3 mt-1 flex justify-between text-base font-semibold">
+                <span>Total Budget</span>
+                <span className="text-brand-accent text-lg">${totalPrice}</span>
+              </div>
+            </div>
+
+            {/* Complimentary Addon badge */}
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 flex items-center gap-3">
+              <div className="bg-emerald-500/15 p-1.5 rounded-full text-emerald-400">
+                <Check size={16} />
+              </div>
+              <div className="text-xs">
+                <p className="font-semibold text-emerald-300">Complimentary Welcome Basket</p>
+                <p className="text-white/60">Local treats, wood fuel supply & complimentary hot sauna access.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-white/5 border-t border-white/10 flex justify-between items-center">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-white/60 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmReservation}
+              disabled={isSubmitting}
+              className="px-6 py-2.5 bg-brand-accent text-brand-emerald rounded-full text-sm font-semibold hover:bg-white hover:scale-102 transition-all duration-300"
+            >
+              {isSubmitting ? 'Confirming...' : 'Confirm Reservation'}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}

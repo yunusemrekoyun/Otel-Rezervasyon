@@ -1,0 +1,6 @@
+{
+  "name": "WoodNest",
+  "description": "Luxury cabins and nature's perfect hideaways with animated immersive experiences.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

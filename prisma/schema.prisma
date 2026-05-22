@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Role {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  users     User[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  passwordHash       String              @map("password_hash")
+  isActive           Boolean             @default(true) @map("is_active")
+  roleId             String              @map("role_id")
+  role               Role                @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  sessions           Session[]
+  reservations       Reservation[]
+  contactRequests    ContactRequest[]
+  experienceBookings ExperienceBooking[]
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  @@index([roleId])
+  @@map("users")
+}
+
+model Session {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  tokenHash  String    @unique @map("token_hash")
+  userAgent  String?   @map("user_agent")
+  ipAddress  String?   @map("ip_address")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  lastUsedAt DateTime  @default(now()) @map("last_used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Reservation {
+  id             String   @id @default(cuid())
+  userId         String?  @map("user_id")
+  cabinId        String   @map("cabin_id")
+  cabinName      String   @map("cabin_name")
+  checkInDate    DateTime @map("check_in_date")
+  checkOutDate   DateTime @map("check_out_date")
+  guestsCount    Int      @map("guests_count")
+  nights         Int
+  subtotal       Int
+  cleaningFee    Int      @map("cleaning_fee")
+  serviceFee     Int      @map("service_fee")
+  totalPrice     Int      @map("total_price")
+  status         String   @default("pending")
+  confirmationId String   @unique @map("confirmation_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([cabinId])
+  @@map("reservations")
+}
+
+model ContactRequest {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  name      String
+  category  String
+  message   String
+  ticketId  String   @unique @map("ticket_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("contact_requests")
+}
+
+model ExperienceBooking {
+  id                  String   @id @default(cuid())
+  userId              String?  @map("user_id")
+  experienceId        String   @map("experience_id")
+  experienceName      String   @map("experience_name")
+  date                DateTime
+  guests              Int
+  basePrice           Int      @map("base_price")
+  insuranceAndGearFee Int      @map("insurance_and_gear_fee")
+  totalPrice          Int      @map("total_price")
+  confirmationId      String   @unique @map("confirmation_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+  user                User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([experienceId])
+  @@map("experience_bookings")
+}
