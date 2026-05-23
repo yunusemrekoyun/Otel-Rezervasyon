@@ -5,8 +5,9 @@ export const translations = {
     // Nav
     'nav.locations': 'MERKEZİ KONUM',
     'nav.rooms': 'ODALAR',
+    'nav.reserve': 'REZERVASYON',
     'nav.atmosphere': 'KONFOR',
-    'nav.experiences': 'REZERVASYON',
+    'nav.experiences': 'DENEYİMLER',
     'nav.contact': 'İLETİŞİM',
     'nav.login': 'Giriş Yap',
     'nav.logout': 'Çıkış Yap',
@@ -192,8 +193,9 @@ export const translations = {
     // Nav
     'nav.locations': 'LOCATION',
     'nav.rooms': 'ROOMS',
+    'nav.reserve': 'RESERVE',
     'nav.atmosphere': 'COMFORT',
-    'nav.experiences': 'RESERVATIONS',
+    'nav.experiences': 'EXPERIENCES',
     'nav.contact': 'CONTACT',
     'nav.login': 'Login',
     'nav.logout': 'Log Out',

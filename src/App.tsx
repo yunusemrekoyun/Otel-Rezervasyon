@@ -3,27 +3,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, Variants } from 'motion/react';
-import { 
-  Star, Pencil, Calendar, Sparkles, Navigation, Heart, ShieldCheck, 
-  Compass, MessageSquare, Send, CheckCircle2, ChevronLeft, ChevronRight, 
+import {
+  Star, Calendar, Sparkles, ShieldCheck,
+  Compass, MessageSquare, Send, CheckCircle2, ChevronLeft, ChevronRight,
   MapPin, Mail, Phone, Lock, Eye, CalendarCheck, HelpCircle, Flame, Droplets, Fan,
-  Leaf, Menu
+  Leaf, Menu, BedDouble, Wifi, Coffee, Clock
 } from 'lucide-react';
-import { cabins, experiencesData, reviews as initialReviews } from './data';
-import { Cabin, Review } from './types';
-import { BookingModal } from './components/BookingModal';
+import { experiencesData, reviews as initialReviews } from './data';
+import { Review } from './types';
 import { LoginModal } from './components/auth/LoginModal';
+import { RoomsScreen } from './components/RoomsScreen';
+import { AtmosphereScreen } from './components/AtmosphereScreen';
+import { ReservationScreen } from './components/ReservationScreen';
 import { useLanguage } from './i18n/LanguageContext';
 
-type ScreenType = 'locations' | 'rooms' | 'atmosphere' | 'experiences' | 'contact';
-const SCREENS: ScreenType[] = ['locations', 'rooms', 'atmosphere', 'experiences', 'contact'];
+type ScreenType = 'locations' | 'rooms' | 'reserve' | 'atmosphere' | 'experiences' | 'contact';
+const SCREENS: ScreenType[] = ['locations', 'rooms', 'reserve', 'atmosphere', 'experiences', 'contact'];
 
 const TARGET_TIME_RATIOS: Record<ScreenType, number> = {
   locations: 0,
-  rooms: 0.20,
-  atmosphere: 0.40,
-  experiences: 0.60,
-  contact: 0.80
+  rooms: 0.17,
+  reserve: 0.33,
+  atmosphere: 0.50,
+  experiences: 0.67,
+  contact: 0.83,
 };
 
 const screenVariants: Variants = {
@@ -67,16 +70,6 @@ export default function App() {
     setScreenState(newScreen);
   };
   
-  // Cabins interaction state
-  const [selectedCabinIndex, setSelectedCabinIndex] = useState(0);
-  const currentCabin = cabins[selectedCabinIndex];
-
-  // Global dates & booking state
-  const [checkInDay, setCheckInDay] = useState(11);
-  const [checkOutDay, setCheckOutDay] = useState(25);
-  const [guests, setGuests] = useState(3);
-  const [isLiked, setIsLiked] = useState(false);
-
   // Peak occupants loading state counter
   const [count, setCount] = useState(0);
 
@@ -102,19 +95,10 @@ export default function App() {
   const [contactError, setContactError] = useState('');
   const [isContactSending, setIsContactSending] = useState(false);
 
-  // Booking confirmation modal state
-  const [selectedCabinForModal, setSelectedCabinForModal] = useState<Cabin | null>(null);
-  const [modalCheckIn, setModalCheckIn] = useState('11');
-  const [modalCheckOut, setModalCheckOut] = useState('25');
-  const [modalGuests, setModalGuests] = useState(3);
-  const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  
-  // Lightbox state
-  const [lightboxState, setLightboxState] = useState<{ cabinIndex: number, photoIndex: number } | null>(null);
 
-  // Disable background scrolling when any modal is open
-  const isModalOpen = isBookingOpen || isLoginOpen || lightboxState !== null;
+  // Disable background scrolling when login modal is open
+  const isModalOpen = isLoginOpen;
   const isModalOpenRef = useRef(isModalOpen);
 
   useEffect(() => {
@@ -189,8 +173,27 @@ export default function App() {
       }
     };
 
+    // Check if the event target sits inside a scrollable element that hasn't
+    // reached its limit in the scroll direction yet. If so, let the inner
+    // element consume the scroll — don't hijack to next screen.
+    function isConsumedByScrollable(target: EventTarget | null, deltaY: number): boolean {
+      let el = target as Element | null;
+      while (el && el !== document.documentElement) {
+        const style = window.getComputedStyle(el);
+        const overflowY = style.overflowY;
+        if (overflowY === 'auto' || overflowY === 'scroll') {
+          const canScrollDown = el.scrollHeight > el.clientHeight + 1;
+          if (deltaY > 0 && canScrollDown && el.scrollTop < el.scrollHeight - el.clientHeight - 1) return true;
+          if (deltaY < 0 && el.scrollTop > 1) return true;
+        }
+        el = el.parentElement;
+      }
+      return false;
+    }
+
     const handleWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) < 30) return;
+      if (isConsumedByScrollable(e.target, e.deltaY)) return;
       navigateTo(e.deltaY > 0 ? 1 : -1);
     };
 
@@ -200,9 +203,10 @@ export default function App() {
 
     const handleTouchMove = (e: TouchEvent) => {
       const currentTouchY = e.touches[0].clientY;
-      const deltaY = lastTouchY - currentTouchY; 
-      
+      const deltaY = lastTouchY - currentTouchY;
+
       if (Math.abs(deltaY) > 40) {
+        if (isConsumedByScrollable(e.target, deltaY)) return;
         navigateTo(deltaY > 0 ? 1 : -1);
         lastTouchY = currentTouchY;
       }
@@ -238,20 +242,7 @@ export default function App() {
     }, incrementTime);
 
     return () => clearInterval(timer);
-  }, [selectedCabinIndex, screen]);
-
-  // Dynamic cycle through locations/cabins
-  const cycleCabin = () => {
-    setSelectedCabinIndex((prev) => (prev + 1) % cabins.length);
-  };
-
-  const handleOpenBooking = (cabin: Cabin, inDay: string, outDay: string, guestCount: number) => {
-    setSelectedCabinForModal(cabin);
-    setModalCheckIn(inDay);
-    setModalCheckOut(outDay);
-    setModalGuests(guestCount);
-    setIsBookingOpen(true);
-  };
+  }, [screen]);
 
   const handleReviewInscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -443,14 +434,14 @@ export default function App() {
               {/* ==================== SCREEN 1: LOCATIONS ==================== */}
               {screen === 'locations' && (
                 <>
-                  {/* Left Column Section */}
+                  {/* Left Column */}
                   <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-4 lg:space-y-6">
                     <div>
                       <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-full px-3.5 py-1 text-[11px] font-medium border border-white/20 mb-4">
                         <MapPin size={12} />
                         <span>{t('loc.badge')}</span>
                       </div>
-                      
+
                       <h1 className="text-4xl sm:text-6xl lg:text-[4.5rem] font-bold tracking-tighter leading-none mb-6 text-white text-shadow-sm font-sans">
                         {t('loc.title1')}
                         <br />
@@ -458,147 +449,74 @@ export default function App() {
                         <br />
                         {t('loc.title3')}
                       </h1>
-                      
+
                       <p className="text-sm sm:text-base text-white/90 max-w-sm leading-relaxed font-light drop-shadow-md">
                         {t('loc.desc')}
                       </p>
                     </div>
 
-                    <div className="max-w-md bg-black/15 backdrop-blur-md p-5 rounded-xl border border-white/5 space-y-4 shadow-lg">
-                      <div className="flex items-center justify-between border-t border-white/10 pt-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1 bg-amber-400/25 border border-amber-400/40 rounded px-2 py-0.5 text-amber-300 font-mono text-xs font-semibold">
-                            ★ {currentCabin.rating}
+                    {/* Hotel highlights */}
+                    <div className="max-w-md bg-black/15 backdrop-blur-md p-4 rounded-xl border border-white/5 grid grid-cols-2 gap-3 shadow-lg">
+                      {[
+                        { icon: <Clock size={13} className="text-brand-accent" />, label: language === 'tr' ? 'Check-in' : 'Check-in', value: '14:00 →' },
+                        { icon: <Clock size={13} className="text-brand-accent" />, label: language === 'tr' ? 'Check-out' : 'Check-out', value: '← 12:00' },
+                        { icon: <Wifi size={13} className="text-brand-accent" />, label: language === 'tr' ? 'İnternet' : 'Internet', value: language === 'tr' ? 'Ücretsiz Wi-Fi' : 'Free Wi-Fi' },
+                        { icon: <Coffee size={13} className="text-brand-accent" />, label: language === 'tr' ? 'Kahvaltı' : 'Breakfast', value: language === 'tr' ? 'Seçenek Mevcut' : 'Option Available' },
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-start gap-2 p-2 bg-white/3 rounded-lg">
+                          <div className="mt-0.5">{item.icon}</div>
+                          <div>
+                            <p className="text-[9px] text-white/35 uppercase tracking-wider font-medium">{item.label}</p>
+                            <p className="text-xs text-white/80 font-medium">{item.value}</p>
                           </div>
-                          <span className="text-xs text-white/60 font-medium">{language === 'tr' ? `${currentCabin.reviewsCount.toLocaleString()} ${t('loc.guestStays')}` : `from ${currentCabin.reviewsCount.toLocaleString()} ${t('loc.guestStays')}`}</span>
                         </div>
-                        
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setIsLiked(!isLiked)}
-                            className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all cursor-pointer"
-                          >
-                            <Heart size={14} className={isLiked ? "fill-red-500 text-red-500" : "text-white"} />
-                          </button>
-                          <button 
-                            onClick={cycleCabin}
-                            className="p-2 bg-brand-accent/20 hover:bg-brand-accent text-brand-accent hover:text-black rounded-full transition-all cursor-pointer animate-pulse"
-                            title="Cycle Cabin locations"
-                          >
-                            <Navigation size={14} className="transform rotate-45" />
-                          </button>
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Right Column Section: Reservation Control Card */}
+                  {/* Right Column — CTA card */}
                   <div className="w-full lg:w-[400px] flex items-center justify-center h-full">
-                    <div className="panel-glass p-4 sm:p-5 w-full flex flex-col gap-3 sm:gap-4 shadow-2xl relative">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="label-accent">{t('loc.currentSanctuary')}</span>
-                          <h2 className="text-2xl font-bold text-white tracking-tight mt-0.5 leading-snug">
-                            {t(`cabin.${currentCabin.id}.name`)}
-                          </h2>
-                          <p className="text-xs text-white/50">{t('loc.remoteLocation')}</p>
-                        </div>
+                    <div className="panel-glass p-5 sm:p-6 w-full flex flex-col gap-4 shadow-2xl">
+                      <div>
+                        <span className="label-accent">{language === 'tr' ? 'Konaklama' : 'Accommodation'}</span>
+                        <h2 className="text-2xl font-bold text-white tracking-tight mt-0.5 leading-snug">
+                          {t('loc.title1')} {t('loc.title2')}
+                        </h2>
+                        <p className="text-xs text-white/50 mt-0.5">{t('loc.remoteLocation')}</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        {[
+                          { icon: <BedDouble size={13} />, text: language === 'tr' ? '10 oda, 4 farklı oda çeşidi' : '10 rooms, 4 room types' },
+                          { icon: <MapPin size={13} />, text: language === 'tr' ? 'Kütahya şehir merkezinde' : 'Kütahya city center' },
+                          { icon: <ShieldCheck size={13} />, text: language === 'tr' ? '7/24 resepsiyon hizmeti' : '24/7 reception service' },
+                          { icon: <Coffee size={13} />, text: language === 'tr' ? 'Kahvaltı dahil seçeneği' : 'Breakfast option available' },
+                        ].map((item, i) => (
+                          <div key={i} className="flex items-center gap-2.5 text-xs text-white/60">
+                            <span className="text-brand-accent/70">{item.icon}</span>
+                            {item.text}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="border-t border-white/5 pt-4 flex flex-col gap-2.5">
                         <button
-                          onClick={cycleCabin}
-                          className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/15 hover:scale-105 transition-all shrink-0 cursor-pointer"
-                          title="Switch to next sanctuary"
+                          onClick={() => setScreen('reserve')}
+                          className="w-full btn-primary py-3.5 rounded-xl text-sm font-semibold"
                         >
-                          <Pencil size={14} />
+                          {language === 'tr' ? 'Hemen Rezervasyon Yap' : 'Book Now'}
+                        </button>
+                        <button
+                          onClick={() => setScreen('rooms')}
+                          className="w-full py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+                        >
+                          {language === 'tr' ? 'Odaları İncele' : 'Browse Rooms'}
                         </button>
                       </div>
 
-                      {/* Date Picker Grid */}
-                      <div className="grid grid-cols-2 gap-3.5">
-                        <div 
-                          onClick={() => setCheckInDay(prev => Math.max(1, prev - 1))}
-                          className="panel-card"
-                        >
-                          <span className="label-sm mb-1">{t('loc.checkIn')}</span>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <Calendar size={13} className="text-brand-accent" />
-                              <span className="font-semibold text-sm">{t('loc.may')} {checkInDay}</span>
-                            </div>
-                            <div className="flex flex-col text-[10px] text-white/40">
-                              <button onClick={(e) => { e.stopPropagation(); setCheckInDay(prev => Math.max(1, prev - 1)); }} className="hover:text-white">▲</button>
-                              <button onClick={(e) => { e.stopPropagation(); setCheckInDay(prev => Math.min(checkOutDay - 1, prev + 1)); }} className="hover:text-white">▼</button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div 
-                          onClick={() => setCheckOutDay(prev => Math.min(31, prev + 1))}
-                          className="panel-card"
-                        >
-                          <span className="label-sm mb-1">{t('loc.checkOut')}</span>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <Calendar size={13} className="text-brand-accent" />
-                              <span className="font-semibold text-sm">{t('loc.may')} {checkOutDay}</span>
-                            </div>
-                            <div className="flex flex-col text-[10px] text-white/40">
-                              <button onClick={(e) => { e.stopPropagation(); setCheckOutDay(prev => Math.max(checkInDay + 1, prev - 1)); }} className="hover:text-white">▲</button>
-                              <button onClick={(e) => { e.stopPropagation(); setCheckOutDay(prev => Math.min(31, prev + 1)); }} className="hover:text-white">▼</button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Guests control */}
-                      <div className="border border-border-highlight rounded-card p-3 bg-surface-glass flex justify-between items-center">
-                        <div>
-                          <span className="label-sm block">{t('loc.totalGuests')}</span>
-                          <span className="font-semibold text-sm">{guests} {t('loc.guestsAttending')}</span>
-                        </div>
-                        <div className="flex gap-2 bg-white/10 rounded-lg p-1">
-                          <button
-                            onClick={() => setGuests(prev => Math.max(1, prev - 1))}
-                            className="icon-btn-sm"
-                          >
-                            -
-                          </button>
-                          <span className="w-4 text-center text-xs font-bold self-center">{guests}</span>
-                          <button
-                            onClick={() => setGuests(prev => Math.min(5, prev + 1))}
-                            className="icon-btn-sm"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Timings summary */}
-                      <div className="flex justify-between text-xs divider-subtle pt-4 pb-4 text-text-secondary">
-                        <div>
-                          <span className="text-[9px] text-white/40 block leading-none mb-1">{t('loc.checkInWindow')}</span>
-                          <span className="font-medium">{t('loc.after2pm')}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[9px] text-white/40 block leading-none mb-1">{t('loc.checkOutWindow')}</span>
-                          <span className="font-medium">{t('loc.before12pm')}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-4 items-center justify-between">
-                        <div>
-                          <div className="flex items-baseline leading-none">
-                            <span className="text-3xl font-bold tracking-tight">${currentCabin.price}</span>
-                            <span className="text-xs text-white/50 ml-1">{t('loc.perNight')}</span>
-                          </div>
-                          <span className="text-[10px] text-brand-accent tracking-wide font-medium">{t('loc.ecoService')}</span>
-                        </div>
-                        
-                        <button
-                          onClick={() => handleOpenBooking(currentCabin, `${checkInDay}`, `${checkOutDay}`, guests)}
-                          className="btn-primary py-3.5 px-6 rounded-xl text-xs"
-                        >
-                          {t('loc.reserveCabin')}
-                        </button>
+                      <div className="flex justify-between text-[10px] text-white/30 border-t border-white/5 pt-3">
+                        <span>{language === 'tr' ? `Check-in: ${t('loc.after2pm')}` : `Check-in after ${t('loc.after2pm')}`}</span>
+                        <span>{language === 'tr' ? `Check-out: ${t('loc.before12pm')}` : `Check-out before ${t('loc.before12pm')}`}</span>
                       </div>
                     </div>
                   </div>
@@ -607,200 +525,13 @@ export default function App() {
 
 
               {/* ==================== SCREEN 2: ROOMS ==================== */}
-              {screen === 'rooms' && (
-                <>
-                  {/* Left Column Section: Matching Layout structure precisely */}
-                  <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-4 lg:space-y-6">
-                    <div>
-                      <div className="badge-accent mb-4">
-                        <Compass className="animate-spin-slow" size={12} />
-                        <span>{t('rooms.badge')}</span>
-                      </div>
-                      
-                      <h1 className="text-4xl sm:text-6xl lg:text-[3.5rem] font-medium tracking-tighter leading-none text-white font-sans">
-                        {t('rooms.title1')}
-                        <br />
-                        {t('rooms.title2')}
-                        <br />
-                        <span className="text-brand-accent">{t('rooms.title3')}</span>
-                      </h1>
-                    </div>
+              {screen === 'rooms' && <RoomsScreen />}
 
-                    {/* Room Specs & Details block */}
-                    <div className="bg-black/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 space-y-3">
-                      <div className="flex justify-between items-center bg-surface-glass p-3 rounded-input">
-                        <div className="text-xs text-white/60">{t('rooms.selected')}: <span className="font-semibold text-white">{currentCabin.name}</span></div>
-                        <div className="flex gap-1.5 items-center">
-                          <button 
-                            onClick={cycleCabin}
-                            className="p-1 rounded bg-white/10 hover:bg-white/20 text-xs transition-colors"
-                          >
-                            {t('rooms.nextLodge')}
-                          </button>
-                        </div>
-                      </div>
+              {/* ==================== SCREEN 3: RESERVE ==================== */}
+              {screen === 'reserve' && <ReservationScreen />}
 
-                      <div className="stat-box">
-                        <div>
-                          <span className="text-white/40 block mb-0.5 uppercase tracking-widest text-[8px]">{t('rooms.guests')}</span>
-                          <span className="font-semibold text-white/95 text-xs">{t(`cabin.${currentCabin.id}.guests`)}</span>
-                        </div>
-                        <div>
-                          <span className="text-white/40 block mb-0.5 uppercase tracking-widest text-[8px]">{t('rooms.sleeping')}</span>
-                          <span className="font-semibold text-white/95 text-xs">{t(`cabin.${currentCabin.id}.beds`)}</span>
-                        </div>
-                        <div>
-                          <span className="text-white/40 block mb-0.5 uppercase tracking-widest text-[8px]">{t('rooms.baths')}</span>
-                          <span className="font-semibold text-white/95 text-xs">{t(`cabin.${currentCabin.id}.baths`)}</span>
-                        </div>
-                        <div>
-                          <span className="text-white/40 block mb-0.5 uppercase tracking-widest text-[8px]">{t('rooms.size')}</span>
-                          <span className="font-semibold text-white/95 text-xs">{currentCabin.specs.size}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column Section: Guest Experience & Booking */}
-                  <div className="w-full lg:w-[410px] space-y-4">
-                    {/* Guest review diary block */}
-                    <div className="panel-glass-dashed">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-[10px] text-brand-accent uppercase tracking-widest font-semibold flex items-center gap-1.5">
-                          <MessageSquare size={12} /> {t('rooms.guestRegister')}
-                        </span>
-                        <span className="text-[9px] text-white/50">{reviews.length} {t('rooms.totalEntries')}</span>
-                      </div>
-                      
-                      <form onSubmit={handleReviewInscribe} className="grid grid-cols-1 gap-2 bg-black/30 p-2.5 rounded-lg border border-white/5">
-                        <div className="flex gap-2">
-                          <input 
-                            type="text" 
-                            required 
-                            placeholder={t('rooms.placeholderName')} 
-                            value={newReviewAuthor} 
-                            onChange={e => setNewReviewAuthor(e.target.value)}
-                            className="input-sm flex-1"
-                          />
-                          <select 
-                            value={newReviewRating} 
-                            onChange={e => setNewReviewRating(Number(e.target.value))}
-                            className="input-sm cursor-pointer"
-                          >
-                            <option value="5">★★★★★</option>
-                            <option value="4">★★★★☆</option>
-                            <option value="3">★★★☆☆</option>
-                          </select>
-                        </div>
-                        <div className="relative">
-                          <input 
-                            type="text" 
-                            required 
-                            placeholder={t('rooms.placeholderComment')} 
-                            value={newReviewComment}
-                            onChange={e => setNewReviewComment(e.target.value)}
-                            className="input-sm w-full py-1.5 pr-8"
-                          />
-                          <button type="submit" className="absolute right-1 top-1 p-1 text-brand-accent hover:text-white transition-colors">
-                            <Send size={12} />
-                          </button>
-                        </div>
-                        {reviewSubmitted && (
-                          <span className="text-[9px] text-emerald-400 font-mono animate-pulse">{t('rooms.inscribed')}</span>
-                        )}
-                      </form>
-
-                      {/* Recent Reviews dynamic list */}
-                      <div className="space-y-2 max-h-[140px] overflow-y-auto no-scrollbar pt-1">
-                        {reviews.slice(0, 3).map((rev) => (
-                          <div key={rev.id} className="text-[11px] bg-surface-glass p-2 rounded border border-border-subtle">
-                            <div className="flex justify-between text-[10px] mb-0.5">
-                              <span className="font-semibold text-white/90">{rev.userName}</span>
-                              <span className="text-amber-400">{'★'.repeat(rev.rating)}</span>
-                            </div>
-                            <p className="text-white/70 italic text-light leading-snug">"{rev.comment}"</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleOpenBooking(currentCabin, `${checkInDay}`, `${checkOutDay}`, guests)}
-                      className="w-full bg-white text-brand-emerald text-xs font-semibold py-3.5 rounded-xl hover:bg-brand-accent hover:scale-[1.01] active:scale-95 transition-all duration-300 shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <CalendarCheck size={14} />
-                      <span>{t('rooms.bookButton')}{currentCabin.price}</span>
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* ==================== SCREEN 3: ATMOSPHERE ==================== */}
-              {screen === 'atmosphere' && (
-                <>
-                  {/* Left Column Section */}
-                  <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-4 lg:space-y-6">
-                    <div>
-                      <div className="badge-accent mb-4">
-                        <Flame className="animate-pulse" size={12} />
-                        <span>{t('atm.badge')}</span>
-                      </div>
-                      
-                      <h1 className="text-4xl sm:text-6xl lg:text-[3.5rem] font-medium tracking-tighter leading-none text-white font-sans">
-                        {t('atm.title1')}
-                        <br />
-                        {t('atm.title2')}
-                        <br />
-                        <span className="text-brand-accent">{t('atm.title3')}</span>
-                      </h1>
-                    </div>
-
-                    <div className="max-w-md bg-black/15 backdrop-blur-md p-4 sm:p-5 rounded-xl border border-white/5 space-y-4 shadow-lg">
-                      <p className="text-xs sm:text-sm text-white/80 leading-relaxed font-light">
-                        {t('atm.desc')}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right Column Section: Room Image Gallery instead of Climate/Sound */}
-                  <div className="w-full lg:w-[410px] grid grid-cols-2 gap-3">
-                    {cabins.map((cabin, index) => (
-                      <div 
-                        key={cabin.id}
-                        onClick={() => {
-                          setSelectedCabinIndex(index);
-                          setLightboxState({ cabinIndex: index, photoIndex: 0 });
-                        }}
-                        className={`relative rounded-xl overflow-hidden cursor-zoom-in transition-all duration-300 group h-32 sm:h-40 ${
-                          currentCabin.id === cabin.id 
-                            ? 'border-2 border-brand-accent shadow-[0_0_15px_rgba(250,204,21,0.2)]' 
-                            : 'border border-white/10 opacity-70 hover:opacity-100 hover:border-white/30'
-                        }`}
-                      >
-                        <img 
-                          src={cabin.imageUrl} 
-                          alt={t(`cabin.${cabin.id}.name`)}
-                          className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
-                        <div className="absolute bottom-2 left-2 right-2">
-                          <span className="text-white text-[10px] sm:text-xs font-semibold leading-tight drop-shadow-md block">
-                            {t(`cabin.${cabin.id}.name`)}
-                          </span>
-                        </div>
-                        {currentCabin.id === cabin.id && (
-                          <div className="absolute top-2 right-2 bg-brand-accent text-brand-emerald text-[8px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
-                            {t('rooms.selected')}
-                          </div>
-                        )}
-                        <div className="absolute top-2 left-2 bg-black/40 backdrop-blur-md rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <Eye size={14} className="text-white" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+              {/* ==================== SCREEN 4: ATMOSPHERE ==================== */}
+              {screen === 'atmosphere' && <AtmosphereScreen />}
 
 
               {/* ==================== SCREEN 3: EXPERIENCES ==================== */}
@@ -1086,18 +817,6 @@ export default function App() {
 
       </div>
 
-      {/* Booking summary modal window integration */}
-      {selectedCabinForModal && (
-        <BookingModal
-          isOpen={isBookingOpen}
-          onClose={() => setIsBookingOpen(false)}
-          cabin={selectedCabinForModal}
-          checkInDate={modalCheckIn}
-          checkOutDate={modalCheckOut}
-          guestsCount={modalGuests}
-        />
-      )}
-
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
@@ -1108,67 +827,6 @@ export default function App() {
         }}
       />
 
-      {/* Lightbox Modal */}
-      <AnimatePresence>
-        {lightboxState !== null && (() => {
-          const lbCabin = cabins[lightboxState.cabinIndex];
-          const lbImages = lbCabin.images || [lbCabin.imageUrl];
-          const lbIndex = lightboxState.photoIndex;
-          
-          return (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setLightboxState(null)}
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
-            >
-              <div className="relative w-full max-w-7xl h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                <motion.img
-                  key={lbIndex}
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  src={lbImages[lbIndex]}
-                  alt="Büyük Görünüm"
-                  className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-                />
-                
-                {lbImages.length > 1 && (
-                  <>
-                    <button
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        setLightboxState(prev => prev ? { ...prev, photoIndex: prev.photoIndex === 0 ? lbImages.length - 1 : prev.photoIndex - 1 } : null); 
-                      }}
-                      className="absolute left-0 sm:left-4 text-white/50 hover:text-white transition-colors bg-black/50 hover:bg-black/80 rounded-full p-3 cursor-pointer"
-                    >
-                      <ChevronLeft size={28} />
-                    </button>
-                    <button
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        setLightboxState(prev => prev ? { ...prev, photoIndex: prev.photoIndex === lbImages.length - 1 ? 0 : prev.photoIndex + 1 } : null); 
-                      }}
-                      className="absolute right-0 sm:right-4 text-white/50 hover:text-white transition-colors bg-black/50 hover:bg-black/80 rounded-full p-3 cursor-pointer"
-                    >
-                      <ChevronRight size={28} />
-                    </button>
-                  </>
-                )}
-                
-                <button
-                  onClick={() => setLightboxState(null)}
-                  className="absolute top-4 right-4 sm:top-6 sm:right-6 text-white/50 hover:text-white transition-colors bg-black/50 hover:bg-black/80 rounded-full p-2 cursor-pointer z-50"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                </button>
-              </div>
-            </motion.div>
-          );
-        })()}
-      </AnimatePresence>
     </div>
   );
 }

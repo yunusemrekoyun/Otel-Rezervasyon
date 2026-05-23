@@ -3,6 +3,7 @@ import { Space_Grotesk } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import { ThemeProvider } from '@/theme/ThemeContext';
+import { ToastProvider } from '@/components/ui/ToastProvider';
 import { prisma } from '@/lib/prisma';
 import './globals.css';
 
@@ -38,7 +39,9 @@ export default async function RootLayout({
       <body className={spaceGrotesk.variable}>
         <ThemeProvider initialTheme={initialTheme as any}>
           <LanguageProvider>
-            {children}
+            <ToastProvider>
+              {children}
+            </ToastProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

@@ -30,6 +30,19 @@ model User {
   reservations       Reservation[]
   contactRequests    ContactRequest[]
   experienceBookings ExperienceBooking[]
+  // Profile
+  firstName          String?             @map("first_name")
+  lastName           String?             @map("last_name")
+  phone              String?
+  birthDate          DateTime?           @map("birth_date")
+  gender             String?
+  nationality        String?             @default("TR")
+  tcKimlikNo         String?             @map("tc_kimlik_no")
+  passportNo         String?             @map("passport_no")
+  passportExpiry     DateTime?           @map("passport_expiry")
+  companyName        String?             @map("company_name")
+  taxNumber          String?             @map("tax_number")
+  taxOffice          String?             @map("tax_office")
   createdAt          DateTime            @default(now()) @map("created_at")
   updatedAt          DateTime            @updatedAt @map("updated_at")
 
@@ -55,25 +68,49 @@ model Session {
 }
 
 model Reservation {
-  id             String   @id @default(cuid())
-  userId         String?  @map("user_id")
-  cabinId        String   @map("cabin_id")
-  cabinName      String   @map("cabin_name")
-  checkInDate    DateTime @map("check_in_date")
-  checkOutDate   DateTime @map("check_out_date")
-  guestsCount    Int      @map("guests_count")
-  nights         Int
-  subtotal       Int
-  cleaningFee    Int      @map("cleaning_fee")
-  serviceFee     Int      @map("service_fee")
-  totalPrice     Int      @map("total_price")
-  status         String   @default("pending")
-  confirmationId String   @unique @map("confirmation_id")
-  createdAt      DateTime @default(now()) @map("created_at")
-  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id              String    @id @default(cuid())
+  confirmationId  String    @unique @map("confirmation_id")
+  // Room
+  roomId          String    @map("room_id")
+  room            Room      @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  // Dates
+  checkInDate     DateTime  @map("check_in_date")
+  checkOutDate    DateTime  @map("check_out_date")
+  nights          Int
+  // Guest counts
+  adultsCount     Int       @default(1) @map("adults_count")
+  childrenCount   Int       @default(0) @map("children_count")
+  // Guest identity
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  email           String
+  phone           String
+  birthDate       DateTime? @map("birth_date")
+  gender          String?
+  nationality     String?   @default("TR")
+  // Legal ID
+  tcKimlikNo      String?   @map("tc_kimlik_no")
+  passportNo      String?   @map("passport_no")
+  passportExpiry  DateTime? @map("passport_expiry")
+  // Corporate (optional)
+  companyName     String?   @map("company_name")
+  taxNumber       String?   @map("tax_number")
+  taxOffice       String?   @map("tax_office")
+  // Pricing
+  subtotal        Int
+  totalPrice      Int       @map("total_price")
+  // Extra
+  specialRequests String?   @map("special_requests")
+  status          String    @default("pending")
+  // Optional user account link
+  userId          String?   @map("user_id")
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
+  @@index([roomId])
   @@index([userId])
-  @@index([cabinId])
+  @@index([checkInDate, checkOutDate])
   @@map("reservations")
 }
 
@@ -116,4 +153,55 @@ model SystemSetting {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("system_settings")
+}
+
+model RoomType {
+  id        String   @id @default(cuid())
+  name      String
+  amenities String[]
+  isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  rooms     Room[]
+
+  @@map("room_types")
+}
+
+model Room {
+  id           String        @id @default(cuid())
+  name         String
+  floor        Int?
+  status       String        @default("available")
+  basePrice    Int           @map("base_price")
+  description  String?
+  isActive     Boolean       @default(true) @map("is_active")
+  sortOrder    Int           @default(0) @map("sort_order")
+  roomTypeId   String        @map("room_type_id")
+  roomType     RoomType      @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
+  reservations Reservation[]
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  @@index([roomTypeId])
+  @@map("rooms")
+}
+
+model Media {
+  id           String   @id @default(cuid())
+  originalName String   @map("original_name")
+  mimeType     String   @map("mime_type")
+  size         Int
+  pathOriginal String   @map("path_original")
+  pathThumb    String?  @map("path_thumb")
+  pathMedium   String?  @map("path_medium")
+  pathLarge    String?  @map("path_large")
+  isProcessed  Boolean  @default(false) @map("is_processed")
+  entityType   String   @map("entity_type")
+  entityId     String   @map("entity_id")
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@map("media")
 }

@@ -37,6 +37,10 @@ RUN apt-get update \
 
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 
+# Create writable uploads directory for media storage
+RUN mkdir -p public/uploads/originals public/uploads/thumb public/uploads/medium public/uploads/large \
+  && chown -R node:node public/uploads
+
 USER node
 EXPOSE 3000
 

@@ -230,4 +230,58 @@ textarea {
   .nav-glass {
     @apply flex justify-between items-center w-full px-4 sm:px-8 py-2 z-40 bg-surface-glass backdrop-blur-sm border-b border-border-glass shadow-sm;
   }
+
+  /* ─── Dashboard: stat cards ───────────────────────── */
+  .stat-card {
+    @apply rounded-xl border border-white/10 p-5 flex flex-col gap-3 transition-all duration-300 hover:border-white/20 cursor-default relative overflow-hidden;
+    background: linear-gradient(145deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.02) 100%);
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--app-accent) 0%, transparent 65%);
+    opacity: 0.5;
+  }
+
+  /* ─── Panel with gradient background (elevated) ──── */
+  .panel-glass-raised {
+    @apply rounded-xl border border-white/[0.11] overflow-hidden;
+    background: linear-gradient(145deg, rgba(255,255,255,0.058) 0%, rgba(255,255,255,0.022) 100%);
+  }
+
+  /* ─── Section labels inside panels ───────────────── */
+  .section-title {
+    @apply text-[10px] font-bold text-white/25 uppercase tracking-[0.15em];
+  }
+
+  /* ─── List rows (reservations, tasks…) ───────────── */
+  .list-row {
+    @apply flex items-center gap-3 py-3 border-b border-white/[0.04] last:border-0;
+  }
+
+  /* ─── Status tags ─────────────────────────────────── */
+  .tag {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide border shrink-0;
+  }
+  .tag-success { @apply bg-emerald-500/10 text-emerald-400 border-emerald-500/20; }
+  .tag-warning  { @apply bg-amber-500/10  text-amber-400  border-amber-500/20;  }
+  .tag-info     { @apply bg-sky-400/10    text-sky-400    border-sky-400/20;    }
+  .tag-danger   { @apply bg-red-500/10    text-red-400    border-red-500/20;    }
+  .tag-muted    { @apply bg-white/5       text-white/50   border-white/10;      }
+  .tag-accent   { @apply bg-brand-accent/10 text-brand-accent border-brand-accent/20; }
+
+  /* ─── Initials avatar ─────────────────────────────── */
+  .avatar-init {
+    @apply flex items-center justify-center rounded-full bg-brand-accent/15 text-brand-accent font-bold shrink-0 select-none border border-brand-accent/25;
+  }
+
+  /* ─── Sticky topbar with backdrop blur ────────────── */
+  .topbar-glass {
+    @apply sticky top-0 z-10 px-5 md:px-8 py-4 border-b border-white/5 flex items-center justify-between shrink-0;
+    background: color-mix(in srgb, var(--app-base) 88%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
 }

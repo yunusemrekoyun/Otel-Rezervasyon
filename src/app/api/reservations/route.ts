@@ -1,19 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { cabins } from '@/data';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
-const cleaningFee = 85;
-const serviceFee = 45;
-
 const reservationSchema = z.object({
-  cabinId: z.string().min(1),
-  checkInDay: z.coerce.number().int(),
-  checkOutDay: z.coerce.number().int(),
-  guestsCount: z.coerce.number().int(),
+  roomId: z.string().min(1),
+  checkInDate: z.string().min(1),
+  checkOutDate: z.string().min(1),
+  adultsCount: z.coerce.number().int().min(1).max(10),
+  childrenCount: z.coerce.number().int().min(0).max(10),
+  firstName: z.string().min(1).max(100).transform(v => v.trim()),
+  lastName: z.string().min(1).max(100).transform(v => v.trim()),
+  email: z.string().email().max(254).transform(v => v.trim().toLowerCase()),
+  phone: z.string().min(1).max(30).transform(v => v.trim()),
+  birthDate: z.string().optional(),
+  gender: z.string().optional(),
+  nationality: z.string().optional().default('TR'),
+  tcKimlikNo: z.string().optional(),
+  passportNo: z.string().optional(),
+  passportExpiry: z.string().optional(),
+  companyName: z.string().optional(),
+  taxNumber: z.string().optional(),
+  taxOffice: z.string().optional(),
+  specialRequests: z.string().max(1000).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -21,85 +32,140 @@ export async function POST(request: NextRequest) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, message: 'Reservation data is invalid.' },
+      { ok: false, message: 'Rezervasyon bilgileri geçersiz.', errors: parsed.error.flatten().fieldErrors },
       { status: 400 },
     );
   }
 
-  const cabin = cabins.find((item) => item.id === parsed.data.cabinId);
-  const checkInDay = parsed.data.checkInDay;
-  const checkOutDay = parsed.data.checkOutDay;
-  const guestsCount = parsed.data.guestsCount;
+  const data = parsed.data;
+  const checkIn = new Date(data.checkInDate);
+  const checkOut = new Date(data.checkOutDate);
 
-  if (!cabin) {
+  if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime()) || checkOut <= checkIn) {
     return NextResponse.json(
-      { ok: false, message: 'Selected cabin was not found.' },
+      { ok: false, message: 'Geçersiz tarih aralığı.' },
+      { status: 400 },
+    );
+  }
+
+  const nights = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+
+  const room = await prisma.room.findUnique({
+    where: { id: data.roomId },
+  });
+
+  if (!room || !room.isActive) {
+    return NextResponse.json(
+      { ok: false, message: 'Seçilen oda bulunamadı.' },
       { status: 404 },
     );
   }
 
-  if (checkInDay < 1 || checkOutDay > 31 || checkOutDay <= checkInDay) {
+  // Çakışan rezervasyon kontrolü
+  const conflicting = await prisma.reservation.findFirst({
+    where: {
+      roomId: data.roomId,
+      status: { notIn: ['cancelled'] },
+      AND: [
+        { checkInDate: { lt: checkOut } },
+        { checkOutDate: { gt: checkIn } },
+      ],
+    },
+  });
+
+  if (conflicting) {
     return NextResponse.json(
-      { ok: false, message: 'Check-in and check-out days are invalid.' },
-      { status: 400 },
+      { ok: false, message: 'Seçilen tarihler için bu oda müsait değil.' },
+      { status: 409 },
     );
   }
 
-  if (guestsCount < 1 || guestsCount > 6) {
-    return NextResponse.json(
-      { ok: false, message: 'Guest count must be between 1 and 6.' },
-      { status: 400 },
-    );
-  }
+  const subtotal = room.basePrice * nights;
+  const totalPrice = subtotal;
+  const confirmationId = `WN-${Date.now().toString(36).toUpperCase()}`;
 
-  const nights = checkOutDay - checkInDay;
-  const subtotal = cabin.price * nights;
-  const totalPrice = subtotal + cleaningFee + serviceFee;
-  const confirmationId = `WN-RES-${Date.now().toString(36).toUpperCase()}`;
   const auth = await getAuthContextFromRequest(request).catch(() => null);
-  const checkInDate = new Date(Date.UTC(2026, 4, checkInDay));
-  const checkOutDate = new Date(Date.UTC(2026, 4, checkOutDay));
 
   try {
-    await prisma.reservation.create({
+    const reservation = await prisma.reservation.create({
       data: {
-        userId: auth?.user.id,
-        cabinId: cabin.id,
-        cabinName: cabin.name,
-        checkInDate,
-        checkOutDate,
-        guestsCount,
-        nights,
-        subtotal,
-        cleaningFee,
-        serviceFee,
-        totalPrice,
         confirmationId,
+        roomId: data.roomId,
+        checkInDate: checkIn,
+        checkOutDate: checkOut,
+        nights,
+        adultsCount: data.adultsCount,
+        childrenCount: data.childrenCount,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+        gender: data.gender || undefined,
+        nationality: data.nationality,
+        tcKimlikNo: data.tcKimlikNo || undefined,
+        passportNo: data.passportNo || undefined,
+        passportExpiry: data.passportExpiry ? new Date(data.passportExpiry) : undefined,
+        companyName: data.companyName || undefined,
+        taxNumber: data.taxNumber || undefined,
+        taxOffice: data.taxOffice || undefined,
+        specialRequests: data.specialRequests || undefined,
+        subtotal,
+        totalPrice,
+        userId: auth?.user.id ?? undefined,
+      },
+      include: {
+        room: { select: { id: true, name: true, basePrice: true } },
       },
     });
-  } catch (error) {
-    console.error('Reservation persistence failed.', error);
 
+    return NextResponse.json({
+      ok: true,
+      confirmationId,
+      reservation: {
+        id: reservation.id,
+        confirmationId: reservation.confirmationId,
+        roomName: reservation.room.name,
+        checkInDate: reservation.checkInDate.toISOString().split('T')[0],
+        checkOutDate: reservation.checkOutDate.toISOString().split('T')[0],
+        nights: reservation.nights,
+        adultsCount: reservation.adultsCount,
+        childrenCount: reservation.childrenCount,
+        subtotal: reservation.subtotal,
+        totalPrice: reservation.totalPrice,
+      },
+    }, { status: 201 });
+  } catch (error) {
+    console.error('Reservation creation failed.', error);
     return NextResponse.json(
-      { ok: false, message: 'Reservation could not be stored.' },
+      { ok: false, message: 'Rezervasyon kaydedilemedi.' },
       { status: 503 },
     );
   }
+}
 
-  return NextResponse.json({
-    ok: true,
-    confirmationId,
-    reservation: {
-      cabinId: cabin.id,
-      cabinName: cabin.name,
-      checkInDate: `2026-05-${String(checkInDay).padStart(2, '0')}`,
-      checkOutDate: `2026-05-${String(checkOutDay).padStart(2, '0')}`,
-      guestsCount,
-      nights,
-      subtotal,
-      cleaningFee,
-      serviceFee,
-      totalPrice,
-    },
-  });
+export async function GET(request: NextRequest) {
+  const auth = await getAuthContextFromRequest(request).catch(() => null);
+  if (!auth) {
+    return NextResponse.json({ ok: false, message: 'Yetkisiz.' }, { status: 401 });
+  }
+
+  try {
+    const where = auth.user.roleSlug === 'admin' || auth.user.roleSlug === 'personel'
+      ? {}
+      : { userId: auth.user.id };
+
+    const reservations = await prisma.reservation.findMany({
+      where,
+      include: {
+        room: { select: { id: true, name: true, roomType: { select: { name: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return NextResponse.json({ ok: true, reservations });
+  } catch (error) {
+    console.error('Reservations fetch failed.', error);
+    return NextResponse.json({ ok: false, message: 'Rezervasyonlar alınamadı.' }, { status: 503 });
+  }
 }
