@@ -3,9 +3,10 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 export type ThemeType = 'woodnest' | 'ocean' | 'forest' | 'amethyst' | 'crimson' | 'dune' | 'frost' | 'cyber';
+export type ModeType = 'dark' | 'light';
 
 export const THEMES: { id: ThemeType; name: string; base: string; accent: string }[] = [
-  { id: 'woodnest', name: 'WoodNest Default', base: '#070f12', accent: '#ffb780' },
+  { id: 'woodnest', name: 'Garden Hotel Default', base: '#070f12', accent: '#ffb780' },
   { id: 'ocean', name: 'Ocean Deep', base: '#050b14', accent: '#60a5fa' },
   { id: 'forest', name: 'Forest Canopy', base: '#06120b', accent: '#4ade80' },
   { id: 'amethyst', name: 'Royal Amethyst', base: '#0f0712', accent: '#d8b4fe' },
@@ -18,24 +19,28 @@ export const THEMES: { id: ThemeType; name: string; base: string; accent: string
 interface ThemeContextType {
   theme: ThemeType;
   setTheme: (theme: ThemeType) => void;
+  mode: ModeType;
+  setMode: (mode: ModeType) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children, initialTheme = 'woodnest' }: { children: ReactNode, initialTheme?: ThemeType }) {
   const [theme, setThemeState] = useState<ThemeType>(initialTheme);
+  const [mode, setModeState] = useState<ModeType>('dark');
 
-  // Fallback sync if client load differs from server (rare)
+  useEffect(() => {
+    const saved = localStorage.getItem('wn-panel-mode');
+    if (saved === 'light') setModeState('light');
+  }, []);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
   const handleSetTheme = async (newTheme: ThemeType) => {
-    // Optimistic UI update
     setThemeState(newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
-
-    // Save to database
     try {
       await fetch('/api/settings/theme', {
         method: 'POST',
@@ -47,8 +52,13 @@ export function ThemeProvider({ children, initialTheme = 'woodnest' }: { childre
     }
   };
 
+  const handleSetMode = (newMode: ModeType) => {
+    setModeState(newMode);
+    localStorage.setItem('wn-panel-mode', newMode);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme: handleSetTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme: handleSetTheme, mode, setMode: handleSetMode }}>
       {children}
     </ThemeContext.Provider>
   );

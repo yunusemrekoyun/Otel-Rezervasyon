@@ -28,7 +28,7 @@ interface RoomType {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function RoomTypeManager() {
+export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' }) {
   const { language } = useLanguage();
   const tr = language === 'tr';
   const toast = useToast();
@@ -620,13 +620,129 @@ export function RoomTypeManager() {
         </div>
       )}
 
-      {/* ── Room type cards ───────────────────────────────────── */}
-      {roomTypes.length > 0 && (
+      {/* ── Room type list / card view ────────────────────────── */}
+      {roomTypes.length > 0 && (viewMode === 'card' ? (
+
+        /* ══ CARD GRID ══ */
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {roomTypes.map(rt => {
+            const cover = rt.media[0];
+            const coverSrc = cover
+              ? (cover.pathThumb ? `/uploads/${cover.pathThumb}` : `/uploads/${cover.pathOriginal}`)
+              : null;
+            const coverIsVideo = cover?.mimeType.startsWith('video/') ?? false;
+
+            return (
+              <div
+                key={rt.id}
+                className="rounded-2xl overflow-hidden border border-white/8 group hover:border-brand-accent/25 transition-all duration-200 flex flex-col"
+                style={{ background: '#0d0f13' }}
+              >
+                {/* Cover */}
+                <div className="relative shrink-0" style={{ aspectRatio: '5/2' }}>
+                  {coverSrc ? (
+                    coverIsVideo ? (
+                      <video src={`/uploads/${cover!.pathOriginal}`} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={coverSrc} alt={rt.name} className="w-full h-full object-cover" />
+                    )
+                  ) : (
+                    <div
+                      className="w-full h-full flex flex-col items-center justify-center gap-3"
+                      style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 12%, #0d0f13) 0%, #0d0f13 100%)' }}
+                    >
+                      <BedDouble size={24} className="text-brand-accent/25" />
+                      <span className="text-[11px] text-white/10 font-semibold uppercase tracking-widest">{rt.name}</span>
+                    </div>
+                  )}
+
+                  {/* Active badge — top left */}
+                  <div className="absolute top-2.5 left-2.5">
+                    <span
+                      className={`tag ${rt.isActive ? 'tag-success' : 'tag-muted'} text-[10px]`}
+                      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
+                    >
+                      {rt.isActive ? (tr ? 'Aktif' : 'Active') : (tr ? 'Pasif' : 'Inactive')}
+                    </span>
+                  </div>
+
+                  {/* Edit / Delete — top right, hover */}
+                  <div className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => openEdit(rt)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    {deletingId === rt.id ? (
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
+                        <Loader2 size={12} className="animate-spin text-white/40" />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => initiateDelete(rt)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-red-400 transition-colors"
+                        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Add media — bottom right */}
+                  <label
+                    className="absolute bottom-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center text-white/40 hover:text-white cursor-pointer transition-colors"
+                    style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  >
+                    <input type="file" accept="image/*,video/*" multiple className="sr-only" onChange={e => handleFileChange(e, rt.id)} />
+                    <ImagePlus size={12} />
+                  </label>
+
+                  {/* Media count — bottom left */}
+                  {rt.media.length > 0 && (
+                    <div
+                      className="absolute bottom-2.5 left-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-white/50"
+                      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                      <Film size={9} />
+                      {rt.media.length}
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 p-3 border-t border-white/[0.06]">
+                  <h3 className="font-bold text-white/95 text-base leading-none truncate">{rt.name}</h3>
+                  <p className="text-[11px] text-white/35 mt-1">
+                    {rt.amenities.length} {tr ? 'imkan' : 'amenity'}
+                    {' · '}
+                    {rt.media.length} {tr ? 'medya' : 'media'}
+                  </p>
+                  {rt.amenities.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {rt.amenities.slice(0, 4).map((a, i) => (
+                        <span key={i} className="tag tag-muted text-[10px]">{a}</span>
+                      ))}
+                      {rt.amenities.length > 4 && (
+                        <span className="tag tag-muted text-[10px] text-white/30">+{rt.amenities.length - 4}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+      ) : (
+
+        /* ══ LIST VIEW (mevcut) ══ */
         <div className="space-y-4">
           {roomTypes.map(rt => (
             <div key={rt.id} className="panel-glass-raised">
 
-              {/* Card header */}
               <div
                 className="px-5 py-4 flex items-center justify-between"
                 style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 6%, transparent) 0%, transparent 60%)' }}
@@ -666,7 +782,6 @@ export function RoomTypeManager() {
                 </div>
               </div>
 
-              {/* Amenities */}
               <div className="px-5 py-3 border-t border-white/[0.06]">
                 {rt.amenities.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
@@ -681,7 +796,6 @@ export function RoomTypeManager() {
                 )}
               </div>
 
-              {/* Media grid — always visible so the + tile is always accessible */}
               <div className="px-5 pb-5 pt-3 border-t border-white/[0.06]">
                 <p className="section-title mb-3">{tr ? 'Medya' : 'Media'}</p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
@@ -706,15 +820,8 @@ export function RoomTypeManager() {
                     );
                   })}
 
-                  {/* Add more media tile */}
                   <label className="aspect-square rounded-xl border border-dashed border-white/10 hover:border-brand-accent/40 flex items-center justify-center bg-white/[0.02] hover:bg-brand-accent/5 transition-all cursor-pointer group">
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      multiple
-                      className="sr-only"
-                      onChange={e => handleFileChange(e, rt.id)}
-                    />
+                    <input type="file" accept="image/*,video/*" multiple className="sr-only" onChange={e => handleFileChange(e, rt.id)} />
                     <ImagePlus size={16} className="text-white/20 group-hover:text-brand-accent/60 transition-colors" />
                   </label>
                 </div>
@@ -723,7 +830,8 @@ export function RoomTypeManager() {
             </div>
           ))}
         </div>
-      )}
+
+      ))}
     </div>
   );
 }

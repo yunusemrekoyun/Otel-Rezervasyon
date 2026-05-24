@@ -7,16 +7,22 @@ import {
   LogOut, ShieldCheck, LayoutDashboard, Users, CalendarCheck,
   Settings, ClipboardList, Bell, LineChart, FileText, CreditCard,
   User, Calendar, MessageSquare, CheckSquare, DoorOpen, Package,
-  Palette, Building2, ChevronRight,
+  Building2, ChevronRight, Sun, Moon, Home, Globe, AlertTriangle,
 } from 'lucide-react';
 import type { AuthUser } from '@/lib/auth/session';
 import type { RoleSlug } from '@/lib/auth/constants';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { useTheme, THEMES } from '@/theme/ThemeContext';
+import { useTheme } from '@/theme/ThemeContext';
 import { OdalarSection } from '@/components/admin/OdalarSection';
 import { AdminOverview } from '@/components/admin/AdminOverview';
 import { AdminReservations } from '@/components/admin/AdminReservations';
-import { CustomerReservations } from '@/components/customer/CustomerReservations';
+import { AdminSettings } from '@/components/admin/AdminSettings';
+import { AdminUserManager } from '@/components/admin/AdminUserManager';
+import { CustomerDashboard } from '@/components/customer/CustomerDashboard';
+import { CheckinPanel } from '@/components/personel/CheckinPanel';
+import { PersonelDashboard } from '@/components/personel/PersonelDashboard';
+import { ActiveGuests } from '@/components/personel/ActiveGuests';
+import { ConciergePanel } from '@/components/personel/ConciergePanel';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,7 +48,6 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'reservations', label: 'Tüm Rezervasyonlar', description: 'Sistemdeki tüm rezervasyonları görüntüleyebilir, iptal veya onay işlemlerini yapabilirsiniz.', icon: CalendarCheck },
       { id: 'rooms',        label: 'Odalar',              description: 'Oda çeşitlerini, imkanlarını ve medyalarını buradan yönetebilirsiniz.',                    icon: DoorOpen },
       { id: 'settings',     label: 'Sistem Ayarları',     description: 'Kabin fiyatlandırmaları, site ayarları ve genel yapılandırmalar.',                         icon: Settings },
-      { id: 'appearance',   label: 'Görünüm',             description: 'Sitenin global renk paletini ve temasını değiştirin.',                                     icon: Palette },
     ],
     personel: [
       { id: 'dashboard', label: 'Personel Paneli',   description: 'Günlük vardiya özetiniz ve aktif bildirimleriniz.',                          icon: ClipboardList },
@@ -62,9 +67,9 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'support',       label: 'Destek & İletişim',  description: 'Otel yönetimiyle iletişime geçin veya taleplerinizi iletin.',        icon: MessageSquare },
     ],
     temizlikci: [
-      { id: 'tasks',     label: 'Bugünkü Görevler', description: 'Size atanmış günlük temizlik ve bakım görevleri.',                               icon: CheckSquare },
-      { id: 'cabins',    label: 'Kabin Durumları',  description: 'Hangi kabinlerin temizlenmesi gerektiği, hangilerinin hazır olduğu bilgisi.',    icon: DoorOpen },
-      { id: 'inventory', label: 'Malzeme Durumu',   description: 'Temizlik malzemesi stok durumu ve yeni malzeme talebi ekranı.',                  icon: Package },
+      { id: 'tasks',       label: 'Görev Listesi',       description: 'Size atanmış temizlik görevleri ve tamamlanma durumları.',               icon: CheckSquare },
+      { id: 'maintenance', label: 'Hasar Bildirimi',     description: 'Odada tespit ettiğiniz arızaları veya hasarları bildirin.',              icon: AlertTriangle },
+      { id: 'lostitems',   label: 'Kayıp Eşya',          description: 'Odada bulduğunuz unutulan eşyaları kayıt altına alın.',                 icon: Package },
     ],
   },
   en: {
@@ -74,7 +79,6 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'reservations', label: 'All Reservations',  description: 'You can view all reservations in the system, cancel or approve them.',               icon: CalendarCheck },
       { id: 'rooms',        label: 'Rooms',             description: 'Manage room types, their amenities and media from here.',                            icon: DoorOpen },
       { id: 'settings',     label: 'Settings',          description: 'Cabin pricing, site configurations and general structures.',                         icon: Settings },
-      { id: 'appearance',   label: 'Appearance',        description: 'Change the global color palette and theme of the site.',                             icon: Palette },
     ],
     personel: [
       { id: 'dashboard', label: 'Staff Panel',       description: 'Your daily shift summary and active notifications.',                        icon: ClipboardList },
@@ -94,9 +98,9 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'support',      label: 'Support & Contact', description: 'Contact hotel management or submit your requests.',                     icon: MessageSquare },
     ],
     temizlikci: [
-      { id: 'tasks',     label: "Today's Tasks",   description: 'Daily cleaning and maintenance tasks assigned to you.',                       icon: CheckSquare },
-      { id: 'cabins',    label: 'Cabin Statuses',  description: 'Information on which cabins need cleaning and which are ready.',             icon: DoorOpen },
-      { id: 'inventory', label: 'Material Status', description: 'Cleaning material stock status and new material request screen.',            icon: Package },
+      { id: 'tasks',       label: 'Task List',         description: 'Cleaning tasks assigned to you and their completion status.',  icon: CheckSquare },
+      { id: 'maintenance', label: 'Damage Report',     description: 'Report malfunctions or damage found in rooms.',               icon: AlertTriangle },
+      { id: 'lostitems',   label: 'Lost & Found',      description: 'Log forgotten items found in rooms.',                        icon: Package },
     ],
   },
 };
@@ -110,10 +114,15 @@ function emailInitials(email: string) {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
+  // Müşteri rolü tamamen farklı bir arayüze sahip
+  if (user.roleSlug === 'musteri') {
+    return <CustomerDashboard user={user} authSource={authSource} />;
+  }
+
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { language, setLanguage } = useLanguage();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, mode, setMode } = useTheme();
 
   const roleMenus = ROLE_MENUS[language][user.roleSlug] ?? ROLE_MENUS[language].musteri;
   const [activeTabId, setActiveTabId] = useState(roleMenus[0]?.id);
@@ -138,7 +147,7 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
   const ActiveIcon = activeTab.icon;
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-[var(--app-base)] text-white">
+    <div data-mode={mode} className={`flex flex-col md:flex-row min-h-screen panel-root${mode === 'light' ? ' mode-light' : ''}`}>
 
       {/* ══════════════════════════════════════════════════════════
           SIDEBAR
@@ -152,13 +161,13 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
       ">
 
         {/* Hotel branding */}
-        <div className="px-5 pt-5 pb-4 border-b border-white/5">
+        <div className="px-4 pt-4 pb-3 border-b border-white/5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center shrink-0">
-              <Building2 size={17} className="text-brand-accent" />
+            <div className="w-9 h-9 rounded-xl bg-white overflow-hidden shrink-0 shadow-sm">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
             </div>
             <div>
-              <p className="font-bold text-white/95 text-sm leading-none">WoodNest</p>
+              <p className="font-bold text-white/95 text-sm leading-none">Garden Hotel</p>
               <p className="text-[10px] text-white/30 mt-1">
                 {language === 'tr' ? 'Otel Yönetim Sistemi' : 'Hotel Management System'}
               </p>
@@ -217,33 +226,6 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           </div>
         </nav>
 
-        {/* Footer */}
-        <div className="px-3 pb-4 pt-3 border-t border-white/5 space-y-1.5">
-          <button
-            onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
-            className="btn-secondary w-full justify-between px-3 py-2 text-xs rounded-xl"
-          >
-            <span className="text-white/40">
-              {language === 'tr' ? 'Dil / Language' : 'Language / Dil'}
-            </span>
-            <span className="bg-brand-accent/15 text-brand-accent px-2 py-0.5 rounded-md text-[10px] font-bold border border-brand-accent/20">
-              {language.toUpperCase()}
-            </span>
-          </button>
-          <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="btn-danger w-full px-3 py-2.5 text-xs rounded-xl"
-          >
-            <LogOut size={14} />
-            <span>
-              {isLoggingOut
-                ? (language === 'tr' ? 'Çıkılıyor...' : 'Logging out...')
-                : (language === 'tr' ? 'Güvenli Çıkış' : 'Secure Logout')}
-            </span>
-          </button>
-        </div>
-
       </aside>
 
       {/* ══════════════════════════════════════════════════════════
@@ -253,53 +235,81 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
 
         {/* Topbar */}
         <div className="topbar-glass">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-base font-bold text-white/95 leading-none">{activeTab.label}</h1>
             <p className="text-[11px] text-white/30 mt-1.5 max-w-lg leading-relaxed hidden md:block">
               {activeTab.description}
             </p>
           </div>
-          <div className="badge-accent shrink-0">
-            <ShieldCheck size={12} />
-            <span>{user.roleName}</span>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+
+            {/* Home */}
+            <button
+              onClick={() => router.push('/')}
+              title={language === 'tr' ? 'Ana Sayfaya Dön' : 'Back to Home'}
+              className="h-8 px-2.5 rounded-lg border border-white/8 hover:bg-white/6 text-white/35 hover:text-white/80 transition-colors flex items-center gap-1.5 text-xs"
+            >
+              <Home size={13} />
+              <span className="hidden sm:inline">{language === 'tr' ? 'Ana Sayfa' : 'Home'}</span>
+            </button>
+
+            {/* Language */}
+            <button
+              onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
+              title={language === 'tr' ? 'Dil Değiştir' : 'Change Language'}
+              className="h-8 px-2.5 rounded-lg border border-white/8 hover:bg-white/6 text-white/35 hover:text-white/80 transition-colors flex items-center gap-1.5 text-xs font-bold"
+            >
+              <Globe size={13} />
+              <span>{language.toUpperCase()}</span>
+            </button>
+
+            {/* Theme */}
+            <button
+              onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')}
+              title={mode === 'dark'
+                ? (language === 'tr' ? 'Açık Tema' : 'Light Mode')
+                : (language === 'tr' ? 'Koyu Tema' : 'Dark Mode')}
+              className="h-8 w-8 rounded-lg border border-white/8 hover:bg-white/6 text-white/35 hover:text-white/80 transition-colors flex items-center justify-center"
+            >
+              {mode === 'dark' ? <Moon size={13} /> : <Sun size={13} />}
+            </button>
+
+            <div className="w-px h-5 bg-white/8 mx-0.5" />
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="h-8 px-2.5 rounded-lg border border-red-500/20 hover:bg-red-500/8 text-red-400/50 hover:text-red-400 transition-colors flex items-center gap-1.5 text-xs font-semibold disabled:opacity-40"
+            >
+              <LogOut size={13} />
+              <span className="hidden sm:inline">
+                {isLoggingOut
+                  ? (language === 'tr' ? 'Çıkılıyor…' : 'Logging out…')
+                  : (language === 'tr' ? 'Çıkış' : 'Logout')}
+              </span>
+            </button>
+
+            {/* Role badge */}
+            <div className="badge-accent shrink-0 hidden md:flex ml-1">
+              <ShieldCheck size={12} />
+              <span>{user.roleName}</span>
+            </div>
+
           </div>
         </div>
 
         {/* Page content */}
-        <div className="flex-1 p-5 md:p-8">
+        <div className="flex-1 p-4 md:p-5">
 
-          {/* ── Appearance ── */}
-          {activeTabId === 'appearance' ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {THEMES.map((t) => (
-                  <div
-                    key={t.id}
-                    onClick={() => setTheme(t.id as Parameters<typeof setTheme>[0])}
-                    className={`relative p-4 rounded-card border cursor-pointer transition-all ${
-                      theme === t.id
-                        ? 'bg-surface-glass border-brand-accent shadow-lg shadow-brand-accent/10'
-                        : 'bg-surface-glass border-border-subtle hover:border-border-glass hover:bg-surface-glass-hover'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <span className="text-xs font-semibold">{t.name}</span>
-                      {theme === t.id && (
-                        <span className="w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_8px_rgba(255,183,128,0.8)]" />
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="flex-1 h-7 rounded-md" style={{ backgroundColor: t.base }} />
-                      <div className="w-7 h-7 rounded-md" style={{ backgroundColor: t.accent }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          /* ── Rooms ── */
-          ) : activeTabId === 'rooms' ? (
+          {/* ── Rooms ── */}
+          {activeTabId === 'rooms' ? (
             <OdalarSection />
+
+          /* ── Admin user management ── */
+          ) : activeTabId === 'users' && user.roleSlug === 'admin' ? (
+            <AdminUserManager tr={language === 'tr'} currentUserId={user.id} />
 
           /* ── Admin overview ── */
           ) : activeTabId === 'overview' && user.roleSlug === 'admin' ? (
@@ -309,9 +319,25 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           ) : activeTabId === 'reservations' && user.roleSlug === 'admin' ? (
             <AdminReservations tr={language === 'tr'} />
 
-          /* ── Customer reservations ── */
-          ) : activeTabId === 'reservations' && user.roleSlug === 'musteri' ? (
-            <CustomerReservations user={user} tr={language === 'tr'} />
+          /* ── Admin settings ── */
+          ) : activeTabId === 'settings' && user.roleSlug === 'admin' ? (
+            <AdminSettings tr={language === 'tr'} />
+
+          /* ── Personel dashboard ── */
+          ) : activeTabId === 'dashboard' && user.roleSlug === 'personel' ? (
+            <PersonelDashboard tr={language === 'tr'} />
+
+          /* ── Personel active guests ── */
+          ) : activeTabId === 'guests' && user.roleSlug === 'personel' ? (
+            <ActiveGuests tr={language === 'tr'} />
+
+          /* ── Personel check-in / check-out ── */
+          ) : activeTabId === 'checkin' && user.roleSlug === 'personel' ? (
+            <CheckinPanel tr={language === 'tr'} />
+
+          /* ── Personel concierge ── */
+          ) : activeTabId === 'concierge' && user.roleSlug === 'personel' ? (
+            <ConciergePanel tr={language === 'tr'} />
 
           /* ── Coming soon placeholder ── */
           ) : (

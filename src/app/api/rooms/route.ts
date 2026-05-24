@@ -4,10 +4,37 @@ import { getAuthContextFromRequest } from '@/lib/auth/session';
 
 export const runtime = 'nodejs';
 
-/** GET: List all rooms with their room type and media */
-export async function GET() {
+/** GET: List all rooms with their room type and media.
+ *  Optional ?checkIn=YYYY-MM-DD&checkOut=YYYY-MM-DD filters out rooms
+ *  that have a conflicting active reservation in that date range.
+ */
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const checkInParam  = searchParams.get('checkIn');
+  const checkOutParam = searchParams.get('checkOut');
+
+  let bookedRoomIds: string[] = [];
+  if (checkInParam && checkOutParam) {
+    const checkIn  = new Date(checkInParam);
+    const checkOut = new Date(checkOutParam);
+    if (!isNaN(checkIn.getTime()) && !isNaN(checkOut.getTime()) && checkOut > checkIn) {
+      const conflicts = await prisma.reservation.findMany({
+        where: {
+          status: { notIn: ['cancelled'] },
+          AND: [
+            { checkInDate:  { lt: checkOut } },
+            { checkOutDate: { gt: checkIn  } },
+          ],
+        },
+        select: { roomId: true },
+      });
+      bookedRoomIds = conflicts.map(c => c.roomId);
+    }
+  }
+
   try {
     const rooms = await prisma.room.findMany({
+      where: bookedRoomIds.length > 0 ? { id: { notIn: bookedRoomIds } } : {},
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: {
         roomType: {
@@ -54,13 +81,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, roomTypeId, floor, basePrice, description, status } = body as {
+    const { name, roomTypeId, floor, basePrice, description, status, maxAdults, maxChildren } = body as {
       name: string;
       roomTypeId: string;
       floor?: number;
       basePrice: number;
       description?: string;
       status?: string;
+      maxAdults?: number;
+      maxChildren?: number;
     };
 
     if (!name?.trim()) {
@@ -72,6 +101,9 @@ export async function POST(request: NextRequest) {
     if (!basePrice || basePrice <= 0) {
       return NextResponse.json({ ok: false, message: 'Geçerli bir fiyat girilmesi zorunludur.' }, { status: 400 });
     }
+    if (!maxAdults || maxAdults < 1) {
+      return NextResponse.json({ ok: false, message: 'En az 1 yetişkin kapasitesi girilmelidir.' }, { status: 400 });
+    }
 
     const room = await prisma.room.create({
       data: {
@@ -81,6 +113,8 @@ export async function POST(request: NextRequest) {
         basePrice,
         description: description?.trim() || null,
         status: status || 'available',
+        maxAdults: maxAdults ?? 2,
+        maxChildren: maxChildren ?? 0,
       },
       include: {
         roomType: { select: { id: true, name: true, amenities: true } },

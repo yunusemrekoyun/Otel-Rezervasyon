@@ -24,6 +24,8 @@ interface RoomData {
   basePrice: number;
   description: string | null;
   isActive: boolean;
+  maxAdults: number;
+  maxChildren: number;
   roomType: { id: string; name: string; amenities: string[] };
   media: MediaItem[];
 }
@@ -248,6 +250,12 @@ export function RoomsScreen() {
                     {selected.floor}. {tr ? 'Kat' : 'Floor'}
                   </p>
                 )}
+                <p className="text-[11px] text-brand-accent/70 mt-0.5 font-medium">
+                  {(selected.maxAdults ?? 2)} {tr ? 'yetişkin' : 'adult'}
+                  {(selected.maxChildren ?? 0) > 0
+                    ? ` + ${selected.maxChildren} ${tr ? 'çocuk' : 'child'}`
+                    : (tr ? ' · çocuk kabul edilmez' : ' · no children')}
+                </p>
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-2xl font-bold text-white leading-none">
@@ -416,6 +424,7 @@ export function RoomsScreen() {
                       <p className="text-[10px] text-white/35 truncate">
                         {room.roomType.name}
                         {room.floor != null ? ` · ${room.floor}. ${tr ? 'Kat' : 'Floor'}` : ''}
+                        {' · '}{(room.maxAdults ?? 2)}{tr ? 'y' : 'a'}{(room.maxChildren ?? 0) > 0 ? `+${room.maxChildren}${tr ? 'ç' : 'c'}` : ''}
                       </p>
                     </div>
 

@@ -13,8 +13,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'WoodNest | Luxury Wilderness Cabins',
-  description: "Luxury cabins and nature's perfect hideaways with immersive booking experiences.",
+  title: 'Garden Hotel',
+  description: 'Garden Hotel — Rezervasyon ve otel yönetim sistemi.',
 };
 
 export const dynamic = 'force-dynamic';

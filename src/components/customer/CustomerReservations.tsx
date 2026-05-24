@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Calendar, BedDouble,
   CheckCircle2, Clock, XCircle, AlertCircle, MapPin,
+  QrCode, X, Loader2, Trash2,
 } from 'lucide-react';
 import type { AuthUser } from '@/lib/auth/session';
 
@@ -48,15 +49,77 @@ function fmtDate(iso: string, tr: boolean) {
   });
 }
 
+// ── QR Modal ──────────────────────────────────────────────────────────────────
+
+function QRModal({ code, onClose, tr }: { code: string; onClose: () => void; tr: boolean }) {
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}&bgcolor=ffffff&color=1c1714&qzone=1&margin=0`;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.92 }}
+        transition={{ duration: 0.18 }}
+        onClick={e => e.stopPropagation()}
+        className="bg-white rounded-2xl p-6 flex flex-col items-center gap-4 shadow-2xl w-72"
+      >
+        <div className="flex items-center justify-between w-full">
+          <p className="text-[#1c1714] text-sm font-semibold">
+            {tr ? 'Rezervasyon QR' : 'Reservation QR'}
+          </p>
+          <button onClick={onClose} className="text-[#1c1714]/40 hover:text-[#1c1714] transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+        <img
+          src={qrUrl}
+          alt={`QR ${code}`}
+          width={220}
+          height={220}
+          className="rounded-xl"
+        />
+        <div className="text-center">
+          <p className="font-mono text-2xl font-bold text-[#1c1714] tracking-[0.2em]">{code}</p>
+          <p className="text-[11px] text-[#1c1714]/40 mt-1">
+            {tr ? 'Bu kodu resepsiyonda gösterin' : 'Show this code at reception'}
+          </p>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Reservation Card ───────────────────────────────────────────────────────────
 
-function ReservationCard({ res, tr }: { res: Reservation; tr: boolean }) {
+function ReservationCard({ res, tr, onCancel }: { res: Reservation; tr: boolean; onCancel: (id: string) => void }) {
+  const [showQR, setShowQR] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const badge = statusBadge(res.status, tr);
   const BadgeIcon = badge.icon;
   const now = new Date();
-  const checkIn = new Date(res.checkInDate + 'T12:00:00');
+  const checkIn = new Date(res.checkInDate.slice(0, 10) + 'T12:00:00');
   const isUpcoming = checkIn > now && res.status !== 'cancelled';
   const daysLeft = Math.ceil((checkIn.getTime() - now.getTime()) / 86400000);
+  const canCancel = isUpcoming && ['pending', 'confirmed'].includes(res.status);
+
+  async function handleCancel() {
+    setCancelling(true);
+    const r = await fetch(`/api/reservations/${res.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'cancel' }),
+    }).catch(() => null);
+    const data = r ? await r.json().catch(() => null) : null;
+    setCancelling(false);
+    if (data?.ok) {
+      onCancel(res.id);
+    }
+    setConfirmCancel(false);
+  }
 
   return (
     <motion.div
@@ -107,21 +170,69 @@ function ReservationCard({ res, tr }: { res: Reservation; tr: boolean }) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[10px] text-white/25">{tr ? 'Onay Kodu' : 'Confirmation'}</p>
-          <p className="text-xs font-mono text-brand-accent/80">{res.confirmationId}</p>
+          <p className="text-xs font-mono text-brand-accent/80 tracking-widest">{res.confirmationId}</p>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] text-white/25">{tr ? 'Toplam' : 'Total'}</p>
-          <p className="text-sm font-bold text-brand-accent">₺{res.totalPrice.toLocaleString('tr-TR')}</p>
+        <div className="flex items-center gap-3">
+          {res.status !== 'cancelled' && (
+            <button
+              onClick={() => setShowQR(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/8 border border-white/8 text-white/40 hover:text-white/70 text-[10px] font-medium transition-colors"
+            >
+              <QrCode size={11} />
+              QR
+            </button>
+          )}
+          <div className="text-right">
+            <p className="text-[10px] text-white/25">{tr ? 'Toplam' : 'Total'}</p>
+            <p className="text-sm font-bold text-brand-accent">₺{res.totalPrice.toLocaleString('tr-TR')}</p>
+          </div>
         </div>
       </div>
 
       {isUpcoming && (
-        <div className="mt-2 pt-2 border-t border-white/5">
+        <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between gap-2">
           <p className="text-[10px] text-brand-accent/60">
             {tr ? `Check-in'e ${daysLeft} gün kaldı` : `${daysLeft} days until check-in`}
           </p>
+          {canCancel && !confirmCancel && (
+            <button
+              onClick={() => setConfirmCancel(true)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-red-400/60 hover:text-red-400 hover:bg-red-400/8 border border-transparent hover:border-red-400/15 transition-colors"
+            >
+              <Trash2 size={10} />
+              {tr ? 'İptal Et' : 'Cancel'}
+            </button>
+          )}
         </div>
       )}
+
+      {confirmCancel && (
+        <div className="mt-2 pt-2 border-t border-red-400/15 flex items-center justify-between gap-2">
+          <p className="text-[10px] text-red-400/80">
+            {tr ? 'Rezervasyonu iptal etmek istediğinize emin misiniz?' : 'Are you sure you want to cancel this reservation?'}
+          </p>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setConfirmCancel(false)}
+              className="px-2.5 py-1 rounded-lg text-[10px] text-white/40 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+            >
+              {tr ? 'Hayır' : 'No'}
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="px-2.5 py-1 rounded-lg text-[10px] text-white bg-red-500 hover:bg-red-600 disabled:opacity-50 transition-colors flex items-center gap-1"
+            >
+              {cancelling && <Loader2 size={9} className="animate-spin" />}
+              {tr ? 'İptal Et' : 'Cancel'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {showQR && <QRModal code={res.confirmationId} onClose={() => setShowQR(false)} tr={tr} />}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -141,11 +252,15 @@ export function CustomerReservations({ user, tr }: { user: AuthUser; tr: boolean
       .finally(() => setLoading(false));
   }, [user.id]);
 
+  function handleCancel(id: string) {
+    setReservations(prev => prev.map(r => r.id === id ? { ...r, status: 'cancelled' } : r));
+  }
+
   const now = new Date();
 
   const filtered = reservations.filter(r => {
-    const checkOut = new Date(r.checkOutDate + 'T12:00:00');
-    const checkIn  = new Date(r.checkInDate  + 'T12:00:00');
+    const checkOut = new Date(r.checkOutDate.slice(0, 10) + 'T12:00:00');
+    const checkIn  = new Date(r.checkInDate.slice(0, 10)  + 'T12:00:00');
     if (tab === 'upcoming') return checkIn >= now && r.status !== 'cancelled';
     if (tab === 'past')     return checkOut < now || r.status === 'cancelled';
     return true;
@@ -192,7 +307,7 @@ export function CustomerReservations({ user, tr }: { user: AuthUser; tr: boolean
         <AnimatePresence mode="popLayout">
           <div className="grid gap-3 sm:grid-cols-2">
             {filtered.map(r => (
-              <ReservationCard key={r.id} res={r} tr={tr} />
+              <ReservationCard key={r.id} res={r} tr={tr} onCancel={handleCancel} />
             ))}
           </div>
         </AnimatePresence>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Calendar, ChevronLeft, ChevronRight, X, Check,
@@ -24,6 +24,8 @@ interface RoomData {
   basePrice: number;
   description: string | null;
   isActive: boolean;
+  maxAdults: number;
+  maxChildren: number;
   roomType: { id: string; name: string; amenities: string[] };
 }
 
@@ -253,6 +255,7 @@ export function ReservationScreen() {
 
   const [rooms, setRooms] = useState<RoomData[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
+  const [dateFilterActive, setDateFilterActive] = useState(false);
 
   const [step, setStep] = useState(0);
   const [selectedRoomId, setSelectedRoomId] = useState('');
@@ -265,25 +268,53 @@ export function ReservationScreen() {
   const [isTurkish, setIsTurkish] = useState(true);
   const [showBirthPicker, setShowBirthPicker] = useState(false);
 
-  // Step 3 — account upsell
+  // Step 2 — email check + account
+  const [emailCheckState, setEmailCheckState] = useState<'idle' | 'checking' | 'exists' | 'not-exists'>('idle');
   const [wantsAccount, setWantsAccount] = useState<boolean | null>(null);
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; confirmationId?: string; message?: string } | null>(null);
 
-  useEffect(() => {
-    fetch('/api/rooms')
-      .then(r => r.json())
-      .then(data => {
-        if (data.ok) setRooms((data.rooms as RoomData[]).filter(r => r.isActive && r.status === 'available'));
-      })
-      .catch(console.error)
-      .finally(() => setLoadingRooms(false));
+  const fetchRooms = useCallback(async (ci?: Date, co?: Date) => {
+    setLoadingRooms(true);
+    try {
+      let url = '/api/rooms';
+      if (ci && co) {
+        const p = new URLSearchParams({
+          checkIn:  ci.toISOString().split('T')[0],
+          checkOut: co.toISOString().split('T')[0],
+        });
+        url = `/api/rooms?${p}`;
+        setDateFilterActive(true);
+      } else {
+        setDateFilterActive(false);
+      }
+      const r = await fetch(url);
+      const data = await r.json();
+      if (data.ok) {
+        const available = (data.rooms as RoomData[]).filter(r => r.isActive && r.status === 'available');
+        setRooms(available);
+        // If selected room is no longer available, clear the selection
+        setSelectedRoomId(prev => available.find(r => r.id === prev) ? prev : '');
+      }
+    } catch (e) { console.error(e); }
+    finally { setLoadingRooms(false); }
   }, []);
 
+  useEffect(() => { fetchRooms(); }, [fetchRooms]);
+
   const selectedRoom = rooms.find(r => r.id === selectedRoomId) ?? null;
+
+  // Filter rooms by guest capacity in addition to date availability
+  const capacityFilteredRooms = rooms.filter(r => {
+    const maxA = r.maxAdults  ?? 99;
+    const maxC = r.maxChildren ?? 99;
+    return maxA >= form.adultsCount && (form.childrenCount === 0 || maxC >= form.childrenCount);
+  });
 
   const nights = checkIn && checkOut
     ? Math.round((checkOut.getTime() - checkIn.getTime()) / 86400000)
@@ -300,6 +331,16 @@ export function ReservationScreen() {
     return d.toLocaleDateString(tr ? 'tr-TR' : 'en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
+  // Clear selected room if capacity exceeded after guest count change
+  useEffect(() => {
+    if (!selectedRoom) return;
+    const maxA = selectedRoom.maxAdults  ?? 99;
+    const maxC = selectedRoom.maxChildren ?? 99;
+    if (form.adultsCount > maxA || (form.childrenCount > 0 && form.childrenCount > maxC)) {
+      setSelectedRoomId('');
+    }
+  }, [form.adultsCount, form.childrenCount, selectedRoom]);
+
   // Step 0 validation
   const step0Valid = selectedRoomId && checkIn && checkOut && checkOut > checkIn;
 
@@ -308,11 +349,41 @@ export function ReservationScreen() {
     (isTurkish ? form.tcKimlikNo.length === 11 : form.passportNo.length > 0);
 
   // Step 2 — account requires password match
-  const step2Valid = wantsAccount === false || (wantsAccount === true && password.length >= 8 && password === passwordConfirm);
+  const step2Valid = emailCheckState === 'exists'
+    ? loginPassword.length > 0
+    : wantsAccount === false || (wantsAccount === true && password.length >= 8 && password === passwordConfirm);
+
+  async function goToStep2() {
+    setEmailCheckState('checking');
+    setStep(2);
+    try {
+      const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(form.email)}`);
+      const data = await res.json();
+      setEmailCheckState(data.exists ? 'exists' : 'not-exists');
+    } catch {
+      setEmailCheckState('not-exists');
+    }
+  }
 
   async function handleSubmit() {
     if (!step0Valid || !step1Valid || !step2Valid) return;
     setSubmitting(true);
+    setLoginError(null);
+
+    // Mevcut hesap varsa önce giriş doğrulaması yap
+    if (emailCheckState === 'exists') {
+      const loginRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, password: loginPassword }),
+      }).catch(() => null);
+      const loginData = loginRes ? await loginRes.json().catch(() => null) : null;
+      if (!loginData?.ok) {
+        setLoginError(loginData?.message ?? (tr ? 'Şifre hatalı.' : 'Incorrect password.'));
+        setSubmitting(false);
+        return;
+      }
+    }
 
     const payload = {
       roomId: selectedRoomId,
@@ -350,8 +421,8 @@ export function ReservationScreen() {
         return;
       }
 
-      // Account creation if desired
-      if (wantsAccount === true) {
+      // Hesap oluşturma — yalnızca yeni kayıt akışında
+      if (wantsAccount === true && emailCheckState !== 'exists') {
         await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -395,20 +466,37 @@ export function ReservationScreen() {
             <h2 className="text-2xl font-bold text-white mb-2">
               {tr ? 'Rezervasyonunuz Alındı!' : 'Reservation Confirmed!'}
             </h2>
-            <p className="text-white/50 text-sm mb-6">
+            <p className="text-white/50 text-sm mb-4">
               {tr ? 'Onay kodunuz:' : 'Your confirmation code:'}
             </p>
-            <div className="bg-brand-accent/10 border border-brand-accent/30 rounded-xl px-8 py-4 mb-6">
+            {/* QR Code */}
+            <div className="bg-white rounded-2xl p-4 mb-4 shadow-lg inline-block">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(result.confirmationId!)}&bgcolor=ffffff&color=1c1714&qzone=1&margin=0`}
+                alt="QR"
+                width={180}
+                height={180}
+                className="rounded-xl block"
+              />
+            </div>
+            <div className="bg-brand-accent/10 border border-brand-accent/30 rounded-xl px-8 py-4 mb-4">
               <p className="text-brand-accent text-xl font-mono font-bold tracking-widest">
                 {result.confirmationId}
               </p>
             </div>
             <p className="text-white/30 text-xs max-w-sm">
               {tr
-                ? 'Bu kodu saklayınız. Otel ile iletişime geçerken gerekebilir.'
-                : 'Please keep this code. You may need it when contacting the hotel.'}
+                ? 'QR kodu veya onay kodunu resepsiyonda göstererek check-in yapabilirsiniz.'
+                : 'Show the QR code or confirmation code at reception to check in.'}
             </p>
-            {wantsAccount && (
+            {emailCheckState === 'exists' && (
+              <p className="mt-4 text-xs text-brand-accent/70">
+                {tr
+                  ? 'Hesabınıza giriş yapıldı. Rezervasyonlarınızı panelden görebilirsiniz.'
+                  : 'You are now logged in. View your reservations from your panel.'}
+              </p>
+            )}
+            {emailCheckState !== 'exists' && wantsAccount === true && (
               <p className="mt-4 text-xs text-brand-accent/70">
                 {tr ? 'Hesabınız oluşturuldu, giriş yapabilirsiniz.' : 'Your account has been created. You can log in now.'}
               </p>
@@ -491,6 +579,12 @@ export function ReservationScreen() {
                 className="space-y-3"
               >
                 <Field label={tr ? 'Oda Seçin' : 'Select Room'} required>
+                  {dateFilterActive && (
+                    <p className="text-[10px] text-brand-accent/70 mb-1 flex items-center gap-1">
+                      <Check size={10} />
+                      {tr ? 'Yalnızca seçili tarihlerde müsait odalar gösteriliyor' : 'Showing only rooms available for selected dates'}
+                    </p>
+                  )}
                   <div className="relative">
                     <select
                       value={selectedRoomId}
@@ -498,11 +592,18 @@ export function ReservationScreen() {
                       className={selectCls}
                       disabled={loadingRooms}
                     >
-                      <option value="">{loadingRooms ? (tr ? 'Yükleniyor…' : 'Loading…') : (tr ? 'Oda seçin…' : 'Select a room…')}</option>
-                      {rooms.map(r => (
+                      <option value="">
+                        {loadingRooms
+                          ? (tr ? 'Yükleniyor…' : 'Loading…')
+                          : capacityFilteredRooms.length === 0
+                            ? (tr ? 'Bu kişi sayısına ve tarihlere uygun oda yok' : 'No rooms available for these dates & guest count')
+                            : (tr ? 'Oda seçin…' : 'Select a room…')}
+                      </option>
+                      {capacityFilteredRooms.map(r => (
                         <option key={r.id} value={r.id}>
                           {r.name} — {r.roomType.name} · ₺{r.basePrice.toLocaleString('tr-TR')}/{tr ? 'gece' : 'night'}
                           {r.floor ? ` (${r.floor}. kat)` : ''}
+                          {' · '}{r.maxAdults}{tr ? 'y' : 'a'}{r.maxChildren > 0 ? `+${r.maxChildren}${tr ? 'ç' : 'c'}` : ''}
                         </option>
                       ))}
                     </select>
@@ -512,6 +613,10 @@ export function ReservationScreen() {
 
                 {selectedRoom && (
                   <div className="bg-white/3 rounded-lg p-3 text-xs text-white/40 space-y-1">
+                    <p className="text-brand-accent/70 font-medium">
+                      {tr ? 'Kapasite:' : 'Capacity:'} {selectedRoom.maxAdults} {tr ? 'yetişkin' : 'adult'}
+                      {selectedRoom.maxChildren > 0 ? ` + ${selectedRoom.maxChildren} ${tr ? 'çocuk' : 'child'}` : (tr ? ' (çocuk kabul edilmez)' : ' (no children)')}
+                    </p>
                     {selectedRoom.description && <p>{selectedRoom.description}</p>}
                     {selectedRoom.roomType.amenities.length > 0 && (
                       <p>{selectedRoom.roomType.amenities.slice(0, 5).join(' · ')}{selectedRoom.roomType.amenities.length > 5 ? ' …' : ''}</p>
@@ -739,7 +844,7 @@ export function ReservationScreen() {
                   </button>
                   <button
                     disabled={!step1Valid}
-                    onClick={() => setStep(2)}
+                    onClick={goToStep2}
                     className="px-6 py-2.5 rounded-lg bg-brand-accent text-black font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-brand-accent/90 transition-colors"
                   >
                     {tr ? 'Devam Et' : 'Continue'}
@@ -784,8 +889,47 @@ export function ReservationScreen() {
                   </div>
                 </div>
 
-                {/* Account upsell */}
-                {wantsAccount === null && (
+                {/* E-posta kontrol ediliyor */}
+                {emailCheckState === 'checking' && (
+                  <div className="flex items-center gap-2 text-white/30 text-xs py-1">
+                    <Loader2 size={12} className="animate-spin" />
+                    {tr ? 'Hesap kontrol ediliyor…' : 'Checking account…'}
+                  </div>
+                )}
+
+                {/* Mevcut hesap — giriş yap */}
+                {emailCheckState === 'exists' && (
+                  <div className="bg-brand-accent/5 border border-brand-accent/20 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <User size={14} className="text-brand-accent" />
+                      <p className="text-sm font-semibold text-white">
+                        {tr ? 'Bu e-posta ile bir hesabınız var' : 'You already have an account'}
+                      </p>
+                    </div>
+                    <p className="text-xs text-white/40">
+                      {tr
+                        ? 'Rezervasyon hesabınıza bağlansın diye şifrenizi girin.'
+                        : 'Enter your password to link this reservation to your account.'}
+                    </p>
+                    <Field label={tr ? 'Şifreniz' : 'Your Password'} required>
+                      <input
+                        type="password"
+                        value={loginPassword}
+                        onChange={e => { setLoginPassword(e.target.value); setLoginError(null); }}
+                        onKeyDown={e => e.key === 'Enter' && step2Valid && !submitting && handleSubmit()}
+                        className={inputCls}
+                        placeholder="••••••••"
+                        autoFocus
+                      />
+                    </Field>
+                    {loginError && (
+                      <p className="text-[10px] text-red-400">{loginError}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Yeni kullanıcı — hesap oluşturmak ister misiniz? */}
+                {emailCheckState === 'not-exists' && wantsAccount === null && (
                   <div className="bg-brand-accent/5 border border-brand-accent/20 rounded-xl p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <User size={14} className="text-brand-accent" />
@@ -869,11 +1013,25 @@ export function ReservationScreen() {
                 )}
 
                 <div className="flex justify-between pt-2">
-                  <button onClick={() => setStep(1)} className="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-sm transition-colors">
+                  <button
+                    onClick={() => {
+                      setStep(1);
+                      setEmailCheckState('idle');
+                      setLoginPassword('');
+                      setLoginError(null);
+                    }}
+                    className="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-sm transition-colors"
+                  >
                     {tr ? 'Geri' : 'Back'}
                   </button>
                   <button
-                    disabled={submitting || !step2Valid || wantsAccount === null}
+                    disabled={
+                      submitting ||
+                      !step2Valid ||
+                      emailCheckState === 'checking' ||
+                      emailCheckState === 'idle' ||
+                      (emailCheckState === 'not-exists' && wantsAccount === null)
+                    }
                     onClick={handleSubmit}
                     className="px-6 py-2.5 rounded-lg bg-brand-accent text-black font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-brand-accent/90 transition-colors flex items-center gap-2"
                   >
@@ -894,7 +1052,7 @@ export function ReservationScreen() {
           <DatePickerModal
             checkIn={checkIn}
             checkOut={checkOut}
-            onConfirm={(ci, co) => { setCheckIn(ci); setCheckOut(co); setShowDatePicker(false); }}
+            onConfirm={(ci, co) => { setCheckIn(ci); setCheckOut(co); setShowDatePicker(false); fetchRooms(ci, co); }}
             onClose={() => setShowDatePicker(false)}
             tr={tr}
           />

@@ -158,7 +158,7 @@ export function BookingModal({
                 <span>${cleaningFee}</span>
               </div>
               <div className="flex justify-between text-sm text-white/80">
-                <span>WoodNest Eco Service Fee</span>
+                <span>Garden Hotel Service Fee</span>
                 <span>${serviceFee}</span>
               </div>
               <div className="border-t border-white/10 pt-3 mt-1 flex justify-between text-base font-semibold">

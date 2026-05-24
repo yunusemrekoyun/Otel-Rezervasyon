@@ -11,6 +11,24 @@ const contactSchema = z.object({
   message: z.string().trim().min(1).max(2000),
 });
 
+export async function GET(request: NextRequest) {
+  const auth = await getAuthContextFromRequest(request).catch(() => null);
+  if (!auth || !['admin', 'personel'].includes(auth.user.roleSlug)) {
+    return NextResponse.json({ ok: false, message: 'Yetkisiz.' }, { status: 403 });
+  }
+
+  try {
+    const requests = await prisma.contactRequest.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    return NextResponse.json({ ok: true, requests });
+  } catch (error) {
+    console.error('Contact requests fetch failed.', error);
+    return NextResponse.json({ ok: false, message: 'Talepler alınamadı.' }, { status: 503 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   const parsed = contactSchema.safeParse(await request.json().catch(() => null));
 

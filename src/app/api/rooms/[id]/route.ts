@@ -28,6 +28,8 @@ export async function PATCH(
         ...(body.description !== undefined && { description: body.description }),
         ...(body.isActive !== undefined && { isActive: body.isActive }),
         ...(body.roomTypeId !== undefined && { roomTypeId: body.roomTypeId }),
+        ...(body.maxAdults !== undefined && { maxAdults: body.maxAdults }),
+        ...(body.maxChildren !== undefined && { maxChildren: body.maxChildren }),
       },
       include: {
         roomType: { select: { id: true, name: true } },

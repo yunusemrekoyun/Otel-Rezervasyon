@@ -7,7 +7,7 @@ import {
   Star, Calendar, Sparkles, ShieldCheck,
   Compass, MessageSquare, Send, CheckCircle2, ChevronLeft, ChevronRight,
   MapPin, Mail, Phone, Lock, Eye, CalendarCheck, HelpCircle, Flame, Droplets, Fan,
-  Leaf, Menu, BedDouble, Wifi, Coffee, Clock
+  Leaf, Menu, BedDouble, Wifi, Coffee, Clock, UserCircle2,
 } from 'lucide-react';
 import { experiencesData, reviews as initialReviews } from './data';
 import { Review } from './types';
@@ -96,6 +96,14 @@ export default function App() {
   const [isContactSending, setIsContactSending] = useState(false);
 
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [sessionUser, setSessionUser] = useState<{ roleSlug: string; email: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => { if (data.ok) setSessionUser({ roleSlug: data.user.roleSlug, email: data.user.email }); })
+      .catch(() => null);
+  }, []);
 
   // Disable background scrolling when login modal is open
   const isModalOpen = isLoginOpen;
@@ -291,7 +299,7 @@ export default function App() {
         throw new Error(payload?.message || 'Contact request failed.');
       }
 
-      alert(`Message dispatched to WoodNest hosts. Reference: ${payload.ticketId}. Secure fallback copy queued to YunusemreKoyun26@gmail.com.`);
+      alert(`Message dispatched to Garden Hotel hosts. Reference: ${payload.ticketId}. Secure fallback copy queued to YunusemreKoyun26@gmail.com.`);
       setContactName('');
       setContactMessage('');
     } catch (error) {
@@ -354,14 +362,21 @@ export default function App() {
         {/* Navigation Header strictly matching Navigation Flow specs */}
         <nav className="nav-glass">
           
-          {/* Logo container (Parent div, contains span with 'WoodNest' text exactly, clicking returns to Locations) */}
-          <div 
+          {/* Logo */}
+          <div
             onClick={() => setScreen('locations')}
-            className="flex items-center gap-2 cursor-pointer group"
+            className="flex items-center gap-2.5 cursor-pointer group"
           >
-            <Leaf className="text-brand-accent group-hover:rotate-12 transition-transform select-none" size={24} />
+            <div className="w-9 h-9 rounded-xl bg-white overflow-hidden shrink-0 shadow-sm">
+              <img
+                src="/logo.png"
+                alt="Logo"
+                className="w-full h-full object-cover"
+                style={{ objectPosition: 'left center' }}
+              />
+            </div>
             <span className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent select-none">
-              WoodNest
+              Garden Hotel
             </span>
           </div>
 
@@ -407,13 +422,26 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Action buttons (Login placeholder / CTA) */}
-              <button
-                onClick={() => setIsLoginOpen(true)}
-                className="bg-white/10 hover:bg-white text-white hover:text-black px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 backdrop-blur-md border border-white/20"
-              >
-                {t('nav.login')}
-              </button>
+              {/* Login / User panel button */}
+              {sessionUser ? (
+                <button
+                  onClick={() => router.push(`/${sessionUser.roleSlug}`)}
+                  title={sessionUser.email}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 backdrop-blur-md border border-white/20"
+                >
+                  <UserCircle2 size={17} className="text-brand-accent" />
+                  <span className="hidden sm:inline text-xs text-white/70 max-w-[120px] truncate">
+                    {sessionUser.email.split('@')[0]}
+                  </span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsLoginOpen(true)}
+                  className="bg-white/10 hover:bg-white text-white hover:text-black px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 backdrop-blur-md border border-white/20"
+                >
+                  {t('nav.login')}
+                </button>
+              )}
             </div>
           </div>
         </nav>

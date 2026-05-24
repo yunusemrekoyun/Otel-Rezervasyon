@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Loader2, DoorOpen, BedDouble, X, ImagePlus, Film, Pencil, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Trash2, Loader2, DoorOpen, BedDouble, X, ImagePlus, Film, Pencil, AlertTriangle, ChevronDown, Check } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -37,6 +37,8 @@ interface Room {
   description: string | null;
   isActive: boolean;
   roomTypeId: string;
+  maxAdults: number;
+  maxChildren: number;
   roomType: { id: string; name: string };
   media: MediaItem[];
 }
@@ -59,9 +61,96 @@ const STATUS_LABEL: Record<string, { tr: string; en: string }> = {
 
 const STATUS_OPTIONS = ['available', 'occupied', 'cleaning', 'maintenance'];
 
+const STATUS_STYLE: Record<string, { dot: string; text: string; border: string; glow: string }> = {
+  available:   { dot: 'bg-emerald-400', text: 'text-emerald-400', border: 'border-emerald-500/35', glow: 'rgba(52,211,153,0.15)'  },
+  occupied:    { dot: 'bg-sky-400',     text: 'text-sky-400',     border: 'border-sky-500/35',     glow: 'rgba(56,189,248,0.15)'  },
+  cleaning:    { dot: 'bg-amber-400',   text: 'text-amber-400',   border: 'border-amber-500/35',   glow: 'rgba(251,191,36,0.15)'  },
+  maintenance: { dot: 'bg-red-400',     text: 'text-red-400',     border: 'border-red-500/35',     glow: 'rgba(248,113,113,0.15)' },
+};
+
+// ── Status Dropdown ───────────────────────────────────────────────────────────
+
+function StatusDropdown({
+  roomId,
+  status,
+  onChange,
+  tr,
+}: {
+  roomId: string;
+  status: string;
+  onChange: (id: string, newStatus: string) => void;
+  tr: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const style = STATUS_STYLE[status] ?? STATUS_STYLE.available;
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+
+      {/* Trigger pill */}
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(v => !v); }}
+        className={`flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all ${style.text} ${style.border}`}
+        style={{
+          background: `linear-gradient(135deg, ${style.glow} 0%, rgba(0,0,0,0.65) 100%)`,
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot} shadow-[0_0_4px_currentColor]`} />
+        {tr ? STATUS_LABEL[status]?.tr : STATUS_LABEL[status]?.en}
+        <ChevronDown
+          size={9}
+          className={`ml-0.5 opacity-60 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {/* Dropdown menu */}
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-1.5 min-w-[148px] rounded-xl overflow-hidden z-50 shadow-2xl"
+          style={{ background: '#141618', border: '1px solid rgba(255,255,255,0.10)' }}
+        >
+          {STATUS_OPTIONS.map(s => {
+            const st = STATUS_STYLE[s];
+            const isActive = s === status;
+            return (
+              <button
+                key={s}
+                onClick={e => { e.stopPropagation(); onChange(roomId, s); setOpen(false); }}
+                className={`
+                  w-full flex items-center gap-2.5 px-3 py-2.5 text-[11px] font-semibold
+                  transition-colors text-left
+                  ${isActive ? 'bg-white/[0.04]' : 'hover:bg-white/[0.04]'}
+                `}
+              >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${st.dot}`} />
+                <span className={st.text}>
+                  {tr ? STATUS_LABEL[s].tr : STATUS_LABEL[s].en}
+                </span>
+                {isActive && <Check size={11} className="ml-auto text-white/30 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+    </div>
+  );
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function RoomManager() {
+export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' }) {
   const { language } = useLanguage();
   const tr = language === 'tr';
   const toast = useToast();
@@ -79,6 +168,8 @@ export function RoomManager() {
   const [basePrice, setBasePrice] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('available');
+  const [maxAdults, setMaxAdults] = useState('2');
+  const [maxChildren, setMaxChildren] = useState('0');
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
 
   // ── Edit state ────────────────────────────────────────────────────────────
@@ -89,6 +180,8 @@ export function RoomManager() {
   const [editBasePrice, setEditBasePrice] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editStatus, setEditStatus] = useState('available');
+  const [editMaxAdults, setEditMaxAdults] = useState('2');
+  const [editMaxChildren, setEditMaxChildren] = useState('0');
   const [editPendingItems, setEditPendingItems] = useState<PendingItem[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -129,6 +222,8 @@ export function RoomManager() {
     setBasePrice('');
     setDescription('');
     setStatus('available');
+    setMaxAdults('2');
+    setMaxChildren('0');
     setPendingItems(prev => {
       prev.forEach(item => { if (item.objectUrl) URL.revokeObjectURL(item.objectUrl); });
       return [];
@@ -168,6 +263,8 @@ export function RoomManager() {
           basePrice: parseInt(basePrice, 10),
           description: description.trim() || undefined,
           status,
+          maxAdults: parseInt(maxAdults, 10) || 2,
+          maxChildren: parseInt(maxChildren, 10) || 0,
         }),
       });
       const data = await res.json();
@@ -212,6 +309,8 @@ export function RoomManager() {
     setEditBasePrice(String(room.basePrice));
     setEditDescription(room.description ?? '');
     setEditStatus(room.status);
+    setEditMaxAdults(String(room.maxAdults));
+    setEditMaxChildren(String(room.maxChildren));
     setEditPendingItems([]);
   };
 
@@ -256,6 +355,8 @@ export function RoomManager() {
           basePrice: parseInt(editBasePrice, 10),
           description: editDescription.trim() || null,
           status: editStatus,
+          maxAdults: parseInt(editMaxAdults, 10) || 2,
+          maxChildren: parseInt(editMaxChildren, 10) || 0,
         }),
       });
       const data = await res.json();
@@ -394,6 +495,8 @@ export function RoomManager() {
           basePrice={basePrice} setBasePrice={setBasePrice}
           description={description} setDescription={setDescription}
           status={status} setStatus={setStatus}
+          maxAdults={maxAdults} setMaxAdults={setMaxAdults}
+          maxChildren={maxChildren} setMaxChildren={setMaxChildren}
           roomTypes={roomTypes}
           pendingItems={pendingItems}
           onFileChange={handleFormFileChange}
@@ -421,6 +524,8 @@ export function RoomManager() {
             basePrice={editBasePrice} setBasePrice={setEditBasePrice}
             description={editDescription} setDescription={setEditDescription}
             status={editStatus} setStatus={setEditStatus}
+            maxAdults={editMaxAdults} setMaxAdults={setEditMaxAdults}
+            maxChildren={editMaxChildren} setMaxChildren={setEditMaxChildren}
             roomTypes={roomTypes}
             pendingItems={editPendingItems}
             onFileChange={handleEditFileChange}
@@ -491,13 +596,132 @@ export function RoomManager() {
         </div>
       )}
 
-      {/* ── Room cards ────────────────────────────────────────── */}
-      {rooms.length > 0 && (
+      {/* ── Room list / card view ─────────────────────────────── */}
+      {rooms.length > 0 && (viewMode === 'card' ? (
+
+        /* ══ CARD GRID ══ */
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {rooms.map(room => {
+            const cover = room.media[0];
+            const coverSrc = cover
+              ? (cover.pathThumb ? `/uploads/${cover.pathThumb}` : `/uploads/${cover.pathOriginal}`)
+              : null;
+            const coverIsVideo = cover?.mimeType.startsWith('video/') ?? false;
+
+            return (
+              <div
+                key={room.id}
+                className="rounded-2xl overflow-hidden border border-white/8 group hover:border-brand-accent/25 transition-all duration-200 flex flex-col"
+                style={{ background: '#0d0f13' }}
+              >
+                {/* Cover */}
+                <div className="relative shrink-0" style={{ aspectRatio: '5/2' }}>
+                  {coverSrc ? (
+                    coverIsVideo ? (
+                      <video src={`/uploads/${cover!.pathOriginal}`} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={coverSrc} alt={room.name} className="w-full h-full object-cover" />
+                    )
+                  ) : (
+                    <div
+                      className="w-full h-full flex flex-col items-center justify-center gap-2"
+                      style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 12%, #0d0f13) 0%, #0d0f13 100%)' }}
+                    >
+                      <BedDouble size={24} className="text-brand-accent/25" />
+                      <span className="font-mono font-black text-lg text-white/10 tracking-widest">{room.name}</span>
+                    </div>
+                  )}
+
+                  {/* Status dropdown — top left */}
+                  <div className="absolute top-2.5 left-2.5">
+                    <StatusDropdown
+                      roomId={room.id}
+                      status={room.status}
+                      onChange={handleStatusChange}
+                      tr={tr}
+                    />
+                  </div>
+
+                  {/* Edit / Delete — top right, hover */}
+                  <div className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => openEdit(room)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    {deletingId === room.id ? (
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
+                        <Loader2 size={12} className="animate-spin text-white/40" />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeleteTarget(room)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-red-400 transition-colors"
+                        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Media count badge — bottom right */}
+                  {room.media.length > 0 && (
+                    <div
+                      className="absolute bottom-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-white/60"
+                      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                      <ImagePlus size={9} />
+                      {room.media.length}
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 p-3 border-t border-white/[0.06]">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-white/95 text-base leading-none truncate">{room.name}</h3>
+                      <p className="text-[11px] text-white/35 mt-1 truncate">
+                        {room.roomType.name}
+                        {room.floor != null ? ` · Kat ${room.floor}` : ''}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-base font-black text-brand-accent leading-none">
+                        ₺{room.basePrice.toLocaleString('tr-TR')}
+                      </p>
+                      <p className="text-[9px] text-white/25 mt-0.5">/{tr ? 'gece' : 'night'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    <span className="tag tag-muted">
+                      {room.maxAdults}{tr ? 'y' : 'a'}
+                      {room.maxChildren > 0 ? ` + ${room.maxChildren}${tr ? 'ç' : 'c'}` : ''}
+                    </span>
+                    {!room.isActive && (
+                      <span className="tag tag-danger">{tr ? 'Pasif' : 'Inactive'}</span>
+                    )}
+                    {room.description && (
+                      <span className="tag tag-muted text-white/20 italic truncate max-w-[120px]">{room.description}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+      ) : (
+
+        /* ══ LIST VIEW (mevcut) ══ */
         <div className="space-y-4">
           {rooms.map(room => (
             <div key={room.id} className="panel-glass-raised">
 
-              {/* Card header */}
               <div
                 className="px-5 py-4 flex items-center justify-between"
                 style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 6%, transparent) 0%, transparent 60%)' }}
@@ -512,6 +736,7 @@ export function RoomManager() {
                       {room.roomType.name}
                       {room.floor != null && ` · ${room.floor}. ${tr ? 'Kat' : 'Floor'}`}
                       {' · '}₺{room.basePrice.toLocaleString('tr-TR')}/{tr ? 'gece' : 'night'}
+                      {' · '}{room.maxAdults} {tr ? 'yetişkin' : 'adult'}{room.maxChildren > 0 ? ` + ${room.maxChildren} ${tr ? 'çocuk' : 'child'}` : ''}
                       {' · '}{room.media.length} {tr ? 'medya' : 'media'}
                     </p>
                   </div>
@@ -549,14 +774,12 @@ export function RoomManager() {
                 </div>
               </div>
 
-              {/* Description */}
               {room.description && (
                 <div className="px-5 py-3 border-t border-white/[0.06]">
                   <p className="text-[12px] text-white/40 leading-relaxed">{room.description}</p>
                 </div>
               )}
 
-              {/* Media grid */}
               {room.media.length > 0 && (
                 <div className="px-5 pb-5 pt-3 border-t border-white/[0.06]">
                   <p className="section-title mb-3">{tr ? 'Medya' : 'Media'}</p>
@@ -588,7 +811,8 @@ export function RoomManager() {
             </div>
           ))}
         </div>
-      )}
+
+      ))}
 
     </div>
   );
@@ -599,6 +823,7 @@ export function RoomManager() {
 function RoomFormFields({
   tr, name, setName, roomTypeId, setRoomTypeId, floor, setFloor,
   basePrice, setBasePrice, description, setDescription, status, setStatus,
+  maxAdults, setMaxAdults, maxChildren, setMaxChildren,
   roomTypes, pendingItems, onFileChange, onRemovePendingItem,
   existingMedia, onDeleteExistingMedia,
   onSubmit, onCancel, submitting, isNew,
@@ -610,6 +835,8 @@ function RoomFormFields({
   basePrice: string; setBasePrice: (v: string) => void;
   description: string; setDescription: (v: string) => void;
   status: string; setStatus: (v: string) => void;
+  maxAdults: string; setMaxAdults: (v: string) => void;
+  maxChildren: string; setMaxChildren: (v: string) => void;
   roomTypes: RoomType[];
   pendingItems: PendingItem[];
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -665,6 +892,17 @@ function RoomFormFields({
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <label className="label-sm">{tr ? 'Maks. Yetişkin' : 'Max Adults'}</label>
+          <input type="number" value={maxAdults} onChange={e => setMaxAdults(e.target.value)} className="input-base" min={1} max={10} placeholder="2" />
+        </div>
+        <div className="space-y-2">
+          <label className="label-sm">{tr ? 'Maks. Çocuk (0 = kabul edilmez)' : 'Max Children (0 = not allowed)'}</label>
+          <input type="number" value={maxChildren} onChange={e => setMaxChildren(e.target.value)} className="input-base" min={0} max={10} placeholder="0" />
         </div>
       </div>
 
@@ -742,7 +980,7 @@ function RoomFormFields({
       <div className="flex items-center gap-3 pt-1">
         <button
           onClick={onSubmit}
-          disabled={submitting || !name.trim() || !roomTypeId || !basePrice}
+          disabled={submitting || !name.trim() || !roomTypeId || !basePrice || !maxAdults}
           className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-card text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting && <Loader2 size={14} className="animate-spin" />}

@@ -30,6 +30,10 @@ model User {
   reservations       Reservation[]
   contactRequests    ContactRequest[]
   experienceBookings ExperienceBooking[]
+  assignedTasks      CleaningTask[]      @relation("assigned_tasks")
+  reportedTasks      CleaningTask[]      @relation("reported_tasks")
+  maintenanceReports MaintenanceReport[]
+  lostItems          LostItem[]
   // Profile
   firstName          String?             @map("first_name")
   lastName           String?             @map("last_name")
@@ -169,22 +173,79 @@ model RoomType {
 }
 
 model Room {
-  id           String        @id @default(cuid())
-  name         String
-  floor        Int?
-  status       String        @default("available")
-  basePrice    Int           @map("base_price")
-  description  String?
-  isActive     Boolean       @default(true) @map("is_active")
-  sortOrder    Int           @default(0) @map("sort_order")
-  roomTypeId   String        @map("room_type_id")
-  roomType     RoomType      @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
-  reservations Reservation[]
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+  id                 String              @id @default(cuid())
+  name               String
+  floor              Int?
+  status             String              @default("available")
+  basePrice          Int                 @map("base_price")
+  description        String?
+  isActive           Boolean             @default(true) @map("is_active")
+  sortOrder          Int                 @default(0) @map("sort_order")
+  maxAdults          Int                 @default(2) @map("max_adults")
+  maxChildren        Int                 @default(0) @map("max_children")
+  roomTypeId         String              @map("room_type_id")
+  roomType           RoomType            @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
+  reservations       Reservation[]
+  cleaningTasks      CleaningTask[]
+  maintenanceReports MaintenanceReport[]
+  lostItems          LostItem[]
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
 
   @@index([roomTypeId])
   @@map("rooms")
+}
+
+model CleaningTask {
+  id           String    @id @default(cuid())
+  roomId       String    @map("room_id")
+  room         Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  assignedToId String?   @map("assigned_to_id")
+  assignedTo   User?     @relation("assigned_tasks", fields: [assignedToId], references: [id], onDelete: SetNull)
+  reportedById String    @map("reported_by_id")
+  reportedBy   User      @relation("reported_tasks", fields: [reportedById], references: [id], onDelete: Restrict)
+  status       String    @default("pending")  // pending | in_progress | done
+  priority     String    @default("normal")   // normal | urgent
+  notes        String?
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([roomId])
+  @@index([assignedToId])
+  @@map("cleaning_tasks")
+}
+
+model MaintenanceReport {
+  id           String   @id @default(cuid())
+  roomId       String   @map("room_id")
+  room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  reportedById String   @map("reported_by_id")
+  reportedBy   User     @relation(fields: [reportedById], references: [id], onDelete: Restrict)
+  description  String
+  priority     String   @default("normal")  // normal | urgent
+  status       String   @default("open")    // open | resolved
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([roomId])
+  @@map("maintenance_reports")
+}
+
+model LostItem {
+  id           String   @id @default(cuid())
+  roomId       String   @map("room_id")
+  room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  foundById    String   @map("found_by_id")
+  foundBy      User     @relation(fields: [foundById], references: [id], onDelete: Restrict)
+  description  String
+  status       String   @default("found")  // found | claimed | discarded
+  foundAt      DateTime @default(now()) @map("found_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([roomId])
+  @@map("lost_items")
 }
 
 model Media {

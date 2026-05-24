@@ -13,7 +13,7 @@ export const ROLE_NAMES: Record<RoleSlug, string> = {
   personel: 'Personel',
   muhasebe: 'Muhasebe',
   musteri: 'Müşteri',
-  temizlikci: 'Temizlikçi',
+  temizlikci: 'Kat Hizmetleri',
 };
 
 export function isRoleSlug(value: string): value is RoleSlug {

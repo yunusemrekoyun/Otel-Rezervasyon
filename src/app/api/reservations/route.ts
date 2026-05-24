@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
   const subtotal = room.basePrice * nights;
   const totalPrice = subtotal;
-  const confirmationId = `WN-${Date.now().toString(36).toUpperCase()}`;
+  const confirmationId = Math.floor(10000000 + Math.random() * 90000000).toString();
 
   const auth = await getAuthContextFromRequest(request).catch(() => null);
 
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
   try {
     const where = auth.user.roleSlug === 'admin' || auth.user.roleSlug === 'personel'
       ? {}
-      : { userId: auth.user.id };
+      : { OR: [{ userId: auth.user.id }, { email: auth.user.email }] };
 
     const reservations = await prisma.reservation.findMany({
       where,
