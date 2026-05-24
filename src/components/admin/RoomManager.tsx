@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, Loader2, DoorOpen, BedDouble, X, ImagePlus, Film, Pencil, AlertTriangle, Check, Sparkles, Wrench, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, Loader2, DoorOpen, BedDouble, X, ImagePlus, Film, Pencil, AlertTriangle, Check, Sparkles, Wrench, RotateCcw, CalendarCheck } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -43,6 +43,8 @@ interface Room {
   media: MediaItem[];
 }
 
+type RoomManagerMode = 'admin' | 'frontdesk';
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_TAG: Record<string, string> = {
@@ -78,6 +80,216 @@ function StatusBadge({ status, tr }: { status: string; tr: boolean }) {
       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot}`} />
       {tr ? STATUS_LABEL[status]?.tr : STATUS_LABEL[status]?.en}
     </div>
+  );
+}
+
+function dateInputValue(offsetDays = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+function nightsBetween(checkInDate: string, checkOutDate: string) {
+  const checkIn = new Date(`${checkInDate}T00:00:00`);
+  const checkOut = new Date(`${checkOutDate}T00:00:00`);
+
+  if (Number.isNaN(checkIn.getTime()) || Number.isNaN(checkOut.getTime()) || checkOut <= checkIn) {
+    return 0;
+  }
+
+  return Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function QuickReservationModal({
+  room,
+  tr,
+  onClose,
+  onReserved,
+}: {
+  room: Room;
+  tr: boolean;
+  onClose: () => void;
+  onReserved: (status: string, confirmationId: string) => void;
+}) {
+  const toast = useToast();
+  const today = dateInputValue();
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    nationality: 'TR',
+    tcKimlikNo: '',
+    adultsCount: '1',
+    childrenCount: '0',
+    checkInDate: today,
+    checkOutDate: dateInputValue(1),
+    checkInNow: true,
+    specialRequests: '',
+  });
+
+  const nights = nightsBetween(form.checkInDate, form.checkOutDate);
+  const totalPrice = nights * room.basePrice;
+  const checkInIsToday = form.checkInDate === today;
+  const canSubmit = room.status === 'available' && room.isActive && nights > 0
+    && form.firstName.trim() && form.lastName.trim() && form.email.trim() && form.phone.trim();
+
+  useEffect(() => {
+    if (!checkInIsToday && form.checkInNow) {
+      setForm(prev => ({ ...prev, checkInNow: false }));
+    }
+  }, [checkInIsToday, form.checkInNow]);
+
+  function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    setForm(prev => ({ ...prev, [key]: value }));
+  }
+
+  async function handleSubmit() {
+    if (!canSubmit) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/reservations/instant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...form,
+          adultsCount: Number(form.adultsCount),
+          childrenCount: Number(form.childrenCount),
+          checkInNow: checkInIsToday && form.checkInNow,
+          tcKimlikNo: form.tcKimlikNo || undefined,
+          specialRequests: form.specialRequests || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.message ?? (tr ? 'Rezervasyon oluşturulamadı.' : 'Reservation could not be created.'));
+      }
+
+      toast.success(
+        tr ? 'Hızlı rezervasyon oluşturuldu.' : 'Quick reservation created.',
+        `${tr ? 'Onay kodu' : 'Confirmation'}: ${data.confirmationId}`,
+      );
+      onReserved(data.roomStatus ?? room.status, data.confirmationId);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (tr ? 'Rezervasyon oluşturulamadı.' : 'Reservation could not be created.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const inputClass = 'w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-brand-accent/40';
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={tr ? 'Hızlı Rezervasyon' : 'Quick Reservation'}
+      description={`${room.name} · ${room.roomType.name}`}
+      size="lg"
+    >
+      <div className="space-y-4">
+        <div className="rounded-xl border border-brand-accent/15 bg-brand-accent/7 px-4 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-white">{room.name}</p>
+              <p className="text-[11px] text-white/40 mt-0.5">
+                {room.roomType.name}
+                {room.floor != null ? ` · ${room.floor}. ${tr ? 'Kat' : 'Floor'}` : ''}
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-lg font-black text-brand-accent leading-none">
+                ₺{totalPrice.toLocaleString('tr-TR')}
+              </p>
+              <p className="text-[10px] text-white/30 mt-1">
+                {nights || 0} {tr ? 'gece' : 'night'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {room.status !== 'available' && (
+          <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            {tr ? 'Bu oda şu anda hızlı rezervasyona uygun değil.' : 'This room is not available for quick reservation right now.'}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input className={inputClass} placeholder={tr ? 'Ad' : 'First name'} value={form.firstName} onChange={e => update('firstName', e.target.value)} />
+          <input className={inputClass} placeholder={tr ? 'Soyad' : 'Last name'} value={form.lastName} onChange={e => update('lastName', e.target.value)} />
+          <input className={inputClass} type="email" placeholder="E-posta" value={form.email} onChange={e => update('email', e.target.value)} />
+          <input className={inputClass} placeholder={tr ? 'Telefon' : 'Phone'} value={form.phone} onChange={e => update('phone', e.target.value)} />
+          <input className={inputClass} placeholder={tr ? 'Uyruk' : 'Nationality'} value={form.nationality} onChange={e => update('nationality', e.target.value)} />
+          <input className={inputClass} placeholder={tr ? 'T.C. kimlik no (opsiyonel)' : 'National ID (optional)'} value={form.tcKimlikNo} onChange={e => update('tcKimlikNo', e.target.value)} />
+          <div>
+            <label className="label-sm">{tr ? 'Giriş' : 'Check-in'}</label>
+            <input className={inputClass} type="date" value={form.checkInDate} onChange={e => update('checkInDate', e.target.value)} />
+          </div>
+          <div>
+            <label className="label-sm">{tr ? 'Çıkış' : 'Check-out'}</label>
+            <input className={inputClass} type="date" value={form.checkOutDate} onChange={e => update('checkOutDate', e.target.value)} />
+          </div>
+          <div>
+            <label className="label-sm">{tr ? 'Yetişkin' : 'Adults'}</label>
+            <input className={inputClass} type="number" min={1} max={room.maxAdults} value={form.adultsCount} onChange={e => update('adultsCount', e.target.value)} />
+          </div>
+          <div>
+            <label className="label-sm">{tr ? 'Çocuk' : 'Children'}</label>
+            <input className={inputClass} type="number" min={0} max={room.maxChildren} value={form.childrenCount} onChange={e => update('childrenCount', e.target.value)} />
+          </div>
+        </div>
+
+        <textarea
+          className={`${inputClass} h-20 resize-none`}
+          placeholder={tr ? 'Not / özel istek (opsiyonel)' : 'Note / special request (optional)'}
+          value={form.specialRequests}
+          onChange={e => update('specialRequests', e.target.value)}
+        />
+
+        <label className={`flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${checkInIsToday ? 'border-white/8 bg-white/[0.03]' : 'border-white/5 bg-white/[0.015] opacity-55'}`}>
+          <input
+            type="checkbox"
+            checked={form.checkInNow && checkInIsToday}
+            disabled={!checkInIsToday}
+            onChange={e => update('checkInNow', e.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            <span className="block text-sm font-semibold text-white/80">
+              {tr ? 'Misafir şimdi giriş yapacak' : 'Guest will check in now'}
+            </span>
+            <span className="block text-[11px] text-white/35 mt-0.5 leading-relaxed">
+              {tr
+                ? 'Seçiliyse rezervasyon onaylanır, check-in tamamlanır ve oda doğrudan dolu görünür.'
+                : 'When enabled, the reservation is confirmed, checked in, and the room becomes occupied.'}
+            </span>
+          </span>
+        </label>
+
+        <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+          <button onClick={onClose} className="btn-secondary flex-1 text-sm">
+            {tr ? 'Vazgeç' : 'Cancel'}
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit || saving}
+            className="btn-primary flex-1 text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <CalendarCheck size={14} />}
+            {tr ? 'Rezervasyonu Oluştur' : 'Create Reservation'}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -185,10 +397,11 @@ function SendToCleaningModal({
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' }) {
+export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 'card' | 'list'; mode?: RoomManagerMode }) {
   const { language } = useLanguage();
   const tr = language === 'tr';
   const toast = useToast();
+  const canManageRooms = mode === 'admin';
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
@@ -225,6 +438,7 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
   // ── Cleaning / maintenance ────────────────────────────────────────────────
   const [cleaningTarget, setCleaningTarget] = useState<Room | null>(null);
   const [maintenanceLoadingId, setMaintenanceLoadingId] = useState<string | null>(null);
+  const [quickReservationRoom, setQuickReservationRoom] = useState<Room | null>(null);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -298,7 +512,7 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
           floor: floor ? parseInt(floor, 10) : undefined,
           basePrice: parseInt(basePrice, 10),
           description: description.trim() || undefined,
-          status,
+          status: 'available',
           maxAdults: parseInt(maxAdults, 10) || 2,
           maxChildren: parseInt(maxChildren, 10) || 0,
         }),
@@ -507,16 +721,20 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
               : `${rooms.length} room${rooms.length !== 1 ? 's' : ''} registered`}
           </p>
           <p className="section-title mt-0.5">
-            {tr ? 'Oda durumlarını ve bilgilerini yönetin' : 'Manage room statuses and details'}
+            {mode === 'frontdesk'
+              ? (tr ? 'Oda durumlarını izleyin ve müsait odadan hızlı rezervasyon alın' : 'Track room status and create quick reservations from available rooms')
+              : (tr ? 'Oda durumlarını ve bilgilerini yönetin' : 'Manage room statuses and details')}
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-card text-sm"
-        >
-          <Plus size={15} />
-          {tr ? 'Yeni Oda Ekle' : 'Add New Room'}
-        </button>
+        {canManageRooms && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-card text-sm"
+          >
+            <Plus size={15} />
+            {tr ? 'Yeni Oda Ekle' : 'Add New Room'}
+          </button>
+        )}
       </div>
 
       {/* ── Create Modal ─────────────────────────────────────── */}
@@ -627,6 +845,18 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
         />
       )}
 
+      {quickReservationRoom && (
+        <QuickReservationModal
+          room={quickReservationRoom}
+          tr={tr}
+          onClose={() => setQuickReservationRoom(null)}
+          onReserved={(status) => {
+            setRooms(prev => prev.map(r => r.id === quickReservationRoom.id ? { ...r, status } : r));
+            setQuickReservationRoom(null);
+          }}
+        />
+      )}
+
       {/* ── Empty state ───────────────────────────────────────── */}
       {rooms.length === 0 && (
         <div className="panel-glass-dashed">
@@ -650,7 +880,7 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
       {rooms.length > 0 && (viewMode === 'card' ? (
 
         /* ══ CARD GRID ══ */
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
           {rooms.map(room => {
             const cover = room.media[0];
             const coverSrc = cover
@@ -661,11 +891,11 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
             return (
               <div
                 key={room.id}
-                className="rounded-2xl overflow-hidden border border-white/8 group hover:border-brand-accent/25 transition-all duration-200 flex flex-col"
+                className="rounded-xl overflow-hidden border border-white/8 group hover:border-brand-accent/25 transition-all duration-200 flex flex-col"
                 style={{ background: '#0d0f13' }}
               >
                 {/* Cover */}
-                <div className="relative shrink-0" style={{ aspectRatio: '5/2' }}>
+                <div className="relative shrink-0" style={{ aspectRatio: '9/4' }}>
                   {coverSrc ? (
                     coverIsVideo ? (
                       <video src={`/uploads/${cover!.pathOriginal}`} className="w-full h-full object-cover" muted playsInline preload="metadata" />
@@ -684,38 +914,40 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
                   )}
 
                   {/* Status badge — top left (read-only) */}
-                  <div className="absolute top-2.5 left-2.5">
+                  <div className="absolute top-2 left-2">
                     <StatusBadge status={room.status} tr={tr} />
                   </div>
 
                   {/* Edit / Delete — top right, hover */}
-                  <div className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => openEdit(room)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white transition-colors"
-                      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}
-                    >
-                      <Pencil size={12} />
-                    </button>
-                    {deletingId === room.id ? (
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
-                        <Loader2 size={12} className="animate-spin text-white/40" />
-                      </div>
-                    ) : (
+                  {canManageRooms && (
+                    <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
-                        onClick={() => setDeleteTarget(room)}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-red-400 transition-colors"
+                        onClick={() => openEdit(room)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white transition-colors"
                         style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}
                       >
-                        <Trash2 size={12} />
+                        <Pencil size={12} />
                       </button>
-                    )}
-                  </div>
+                      {deletingId === room.id ? (
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
+                          <Loader2 size={12} className="animate-spin text-white/40" />
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setDeleteTarget(room)}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-red-400 transition-colors"
+                          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Media count badge — bottom right */}
                   {room.media.length > 0 && (
                     <div
-                      className="absolute bottom-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-white/60"
+                      className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-white/60"
                       style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)' }}
                     >
                       <ImagePlus size={9} />
@@ -725,24 +957,24 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 p-3 border-t border-white/[0.06]">
+                <div className="flex-1 p-2.5 border-t border-white/[0.06]">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <h3 className="font-bold text-white/95 text-base leading-none truncate">{room.name}</h3>
+                      <h3 className="font-bold text-white/95 text-sm leading-none truncate">{room.name}</h3>
                       <p className="text-[11px] text-white/35 mt-1 truncate">
                         {room.roomType.name}
                         {room.floor != null ? ` · Kat ${room.floor}` : ''}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-base font-black text-brand-accent leading-none">
+                      <p className="text-sm font-black text-brand-accent leading-none">
                         ₺{room.basePrice.toLocaleString('tr-TR')}
                       </p>
                       <p className="text-[9px] text-white/25 mt-0.5">/{tr ? 'gece' : 'night'}</p>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                  <div className="flex flex-wrap gap-1.5 mt-2">
                     <span className="tag tag-muted">
                       {room.maxAdults}{tr ? 'y' : 'a'}
                       {room.maxChildren > 0 ? ` + ${room.maxChildren}${tr ? 'ç' : 'c'}` : ''}
@@ -754,30 +986,41 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
 
                   {/* Action buttons */}
                   {(room.status === 'available' || room.status === 'maintenance') && (
-                    <div className="flex gap-2 mt-3 pt-2.5 border-t border-white/[0.05]">
+                    <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2.5 border-t border-white/[0.05]">
+                      {room.status === 'available' && (
+                        <button
+                          onClick={() => setQuickReservationRoom(room)}
+                          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-bold text-black bg-brand-accent hover:brightness-105 transition-colors"
+                        >
+                          <CalendarCheck size={10} />
+                          {tr ? 'Rezervasyon' : 'Reserve'}
+                        </button>
+                      )}
                       {room.status === 'available' && (
                         <button
                           onClick={() => setCleaningTarget(room)}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-400 border border-amber-400/20 bg-amber-400/6 hover:bg-amber-400/12 transition-colors"
+                          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-semibold text-amber-400 border border-amber-400/20 bg-amber-400/6 hover:bg-amber-400/12 transition-colors"
                         >
                           <Sparkles size={10} />
-                          {tr ? 'Temizliğe Gönder' : 'Send to Cleaning'}
+                          {tr ? 'Temizlik' : 'Clean'}
                         </button>
                       )}
-                      {maintenanceLoadingId === room.id ? (
-                        <div className="flex items-center px-2.5"><Loader2 size={11} className="animate-spin text-white/30" /></div>
-                      ) : (
-                        <button
-                          onClick={() => handleToggleMaintenance(room)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors ${
-                            room.status === 'maintenance'
-                              ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/6 hover:bg-emerald-400/12'
-                              : 'text-white/35 border-white/8 bg-white/[0.02] hover:bg-white/[0.06] hover:text-white/60'
-                          }`}
-                        >
-                          {room.status === 'maintenance' ? <RotateCcw size={10} /> : <Wrench size={10} />}
-                          {room.status === 'maintenance' ? (tr ? 'Aktife Al' : 'Reactivate') : (tr ? 'Askıya Al' : 'Suspend')}
-                        </button>
+                      {canManageRooms && (
+                        maintenanceLoadingId === room.id ? (
+                          <div className="flex items-center px-2"><Loader2 size={11} className="animate-spin text-white/30" /></div>
+                        ) : (
+                          <button
+                            onClick={() => handleToggleMaintenance(room)}
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${
+                              room.status === 'maintenance'
+                                ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/6 hover:bg-emerald-400/12'
+                                : 'text-white/35 border-white/8 bg-white/[0.02] hover:bg-white/[0.06] hover:text-white/60'
+                            }`}
+                          >
+                            {room.status === 'maintenance' ? <RotateCcw size={10} /> : <Wrench size={10} />}
+                            {room.status === 'maintenance' ? (tr ? 'Aktife Al' : 'Reactivate') : (tr ? 'Askıya Al' : 'Suspend')}
+                          </button>
+                        )
                       )}
                     </div>
                   )}
@@ -819,6 +1062,16 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
 
                   {room.status === 'available' && (
                     <button
+                      onClick={() => setQuickReservationRoom(room)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-black bg-brand-accent hover:brightness-105 transition-colors"
+                    >
+                      <CalendarCheck size={11} />
+                      {tr ? 'Rezervasyon Yap' : 'Reserve'}
+                    </button>
+                  )}
+
+                  {room.status === 'available' && (
+                    <button
                       onClick={() => setCleaningTarget(room)}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-400 border border-amber-400/20 bg-amber-400/6 hover:bg-amber-400/12 transition-colors"
                     >
@@ -827,7 +1080,7 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
                     </button>
                   )}
 
-                  {(room.status === 'available' || room.status === 'maintenance') && (
+                  {canManageRooms && (room.status === 'available' || room.status === 'maintenance') && (
                     maintenanceLoadingId === room.id ? (
                       <Loader2 size={13} className="animate-spin text-white/30" />
                     ) : (
@@ -845,20 +1098,24 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
                     )
                   )}
 
-                  <button onClick={() => openEdit(room)} className="btn-secondary px-3 py-1.5 rounded-lg text-xs gap-1.5">
-                    <Pencil size={13} />
-                    {tr ? 'Düzenle' : 'Edit'}
-                  </button>
+                  {canManageRooms && (
+                    <>
+                      <button onClick={() => openEdit(room)} className="btn-secondary px-3 py-1.5 rounded-lg text-xs gap-1.5">
+                        <Pencil size={13} />
+                        {tr ? 'Düzenle' : 'Edit'}
+                      </button>
 
-                  {deletingId === room.id ? (
-                    <Loader2 size={14} className="animate-spin text-white/30" />
-                  ) : (
-                    <button
-                      onClick={() => setDeleteTarget(room)}
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-400/10 transition-all"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                      {deletingId === room.id ? (
+                        <Loader2 size={14} className="animate-spin text-white/30" />
+                      ) : (
+                        <button
+                          onClick={() => setDeleteTarget(room)}
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

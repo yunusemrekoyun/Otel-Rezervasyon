@@ -14,6 +14,7 @@ import type { RoleSlug } from '@/lib/auth/constants';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useTheme } from '@/theme/ThemeContext';
 import { OdalarSection } from '@/components/admin/OdalarSection';
+import { RoomManager } from '@/components/admin/RoomManager';
 import { AdminOverview } from '@/components/admin/AdminOverview';
 import { AdminReservations } from '@/components/admin/AdminReservations';
 import { AdminSettings } from '@/components/admin/AdminSettings';
@@ -58,6 +59,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
     personel: [
       { id: 'dashboard', label: 'Personel Paneli',   description: 'Günlük vardiya özetiniz ve aktif bildirimleriniz.',                          icon: ClipboardList },
       { id: 'guests',    label: 'Aktif Misafirler',  description: 'Şu an otelde konaklayan misafirlerin listesi ve istekleri.',                  icon: Users },
+      { id: 'rooms',     label: 'Oda Matrisi',       description: 'Tüm odaların anlık durumunu görün ve müsait odadan hızlı rezervasyon alın.',  icon: Building2 },
       { id: 'checkin',   label: 'Giriş / Çıkış',    description: 'Misafir check-in ve check-out işlemlerini yapabileceğiniz ekran.',           icon: DoorOpen },
       { id: 'concierge', label: 'Müşteri Talepleri', description: 'Misafirlerden gelen oda servisi ve diğer taleplerin yönetimi.',               icon: Bell },
     ],
@@ -91,6 +93,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
     personel: [
       { id: 'dashboard', label: 'Staff Panel',       description: 'Your daily shift summary and active notifications.',                        icon: ClipboardList },
       { id: 'guests',    label: 'Active Guests',     description: 'List and requests of guests currently staying at the hotel.',               icon: Users },
+      { id: 'rooms',     label: 'Room Matrix',       description: 'View live room status and create quick reservations from available rooms.', icon: Building2 },
       { id: 'checkin',   label: 'Check-in / Out',   description: 'Screen where you can perform guest check-in and check-out operations.',     icon: DoorOpen },
       { id: 'concierge', label: 'Customer Requests', description: 'Management of room service and other requests from guests.',               icon: Bell },
     ],
@@ -342,6 +345,10 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           /* ── Personel active guests ── */
           ) : activeTabId === 'guests' && user.roleSlug === 'personel' ? (
             <ActiveGuests tr={language === 'tr'} />
+
+          /* ── Personel room matrix + quick reservation ── */
+          ) : activeTabId === 'rooms' && user.roleSlug === 'personel' ? (
+            <RoomManager viewMode="card" mode="frontdesk" />
 
           /* ── Admin check-in / check-out ── */
           ) : activeTabId === 'checkinout' && user.roleSlug === 'admin' ? (
