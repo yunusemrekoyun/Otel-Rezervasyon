@@ -50,7 +50,8 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'overview',     label: 'Genel Bakış',        description: 'Otel genel durumunu, doluluk oranlarını ve günlük özetleri buradan takip edebilirsiniz.',  icon: LayoutDashboard },
       { id: 'users',        label: 'Kullanıcı Yönetimi', description: 'Tüm personel, muhasebe ve müşteri hesaplarını yönetebileceğiniz alan.',                   icon: Users },
       { id: 'reservations', label: 'Tüm Rezervasyonlar', description: 'Sistemdeki tüm rezervasyonları görüntüleyebilir, iptal veya onay işlemlerini yapabilirsiniz.', icon: CalendarCheck },
-      { id: 'rooms',        label: 'Odalar',              description: 'Oda çeşitlerini, imkanlarını ve medyalarını buradan yönetebilirsiniz.',                    icon: DoorOpen },
+      { id: 'checkinout',   label: 'Giriş / Çıkış',     description: 'Misafir giriş ve çıkış işlemleri ile QR tarama terminali.',                                icon: DoorOpen },
+      { id: 'rooms',        label: 'Odalar',              description: 'Oda çeşitlerini, imkanlarını ve medyalarını buradan yönetebilirsiniz.',                    icon: Building2 },
       { id: 'operations',   label: 'Hasar & Kayıp Eşya', description: 'Personelden gelen hasar bildirimleri ve kayıp eşya kayıtlarını buradan yönetin.',           icon: Wrench },
       { id: 'settings',     label: 'Sistem Ayarları',     description: 'Kabin fiyatlandırmaları, site ayarları ve genel yapılandırmalar.',                         icon: Settings },
     ],
@@ -82,7 +83,8 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'overview',     label: 'Overview',          description: 'Track hotel general status, occupancy rates and daily summaries here.',                icon: LayoutDashboard },
       { id: 'users',        label: 'User Management',   description: 'Area where you can manage all staff, accounting and customer accounts.',              icon: Users },
       { id: 'reservations', label: 'All Reservations',  description: 'You can view all reservations in the system, cancel or approve them.',               icon: CalendarCheck },
-      { id: 'rooms',        label: 'Rooms',             description: 'Manage room types, their amenities and media from here.',                            icon: DoorOpen },
+      { id: 'checkinout',   label: 'Check-in / Out',   description: 'Guest check-in and check-out operations with QR scanning terminal.',                  icon: DoorOpen },
+      { id: 'rooms',        label: 'Rooms',             description: 'Manage room types, their amenities and media from here.',                            icon: Building2 },
       { id: 'operations',   label: 'Damage & Lost Items', description: 'Manage damage reports and lost item logs submitted by housekeeping staff.',          icon: Wrench },
       { id: 'settings',     label: 'Settings',          description: 'Cabin pricing, site configurations and general structures.',                         icon: Settings },
     ],
@@ -340,6 +342,10 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           /* ── Personel active guests ── */
           ) : activeTabId === 'guests' && user.roleSlug === 'personel' ? (
             <ActiveGuests tr={language === 'tr'} />
+
+          /* ── Admin check-in / check-out ── */
+          ) : activeTabId === 'checkinout' && user.roleSlug === 'admin' ? (
+            <CheckinPanel tr={language === 'tr'} />
 
           /* ── Personel check-in / check-out ── */
           ) : activeTabId === 'checkin' && user.roleSlug === 'personel' ? (

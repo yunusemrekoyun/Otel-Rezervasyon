@@ -5,9 +5,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Calendar, BedDouble,
   CheckCircle2, Clock, XCircle, AlertCircle, MapPin,
-  QrCode, X, Loader2, Trash2,
+  QrCode, X, Loader2, Trash2, User,
 } from 'lucide-react';
 import type { AuthUser } from '@/lib/auth/session';
+import { formatBirthDate } from '@/components/ui/BirthDateInput';
+import { maskTc } from '@/components/ui/TcInput';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -22,6 +24,21 @@ interface Reservation {
   childrenCount: number;
   totalPrice: number;
   room: { id: string; name: string; roomType: { name: string } };
+  // Guest identity fields
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  birthDate: string | null;
+  gender: string | null;
+  nationality: string | null;
+  tcKimlikNo: string | null;
+  passportNo: string | null;
+  passportExpiry: string | null;
+  companyName: string | null;
+  taxNumber: string | null;
+  taxOffice: string | null;
+  specialRequests: string | null;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -49,9 +66,85 @@ function fmtDate(iso: string, tr: boolean) {
   });
 }
 
+// ── Guest Info Modal ──────────────────────────────────────────────────────────
+
+function GuestInfoModal({ res, onClose, tr }: { res: Reservation; onClose: () => void; tr: boolean }) {
+  const rows: { label: string; value: string | null | undefined; full?: boolean }[] = [
+    { label: tr ? 'Ad Soyad'         : 'Full Name',        value: `${res.firstName} ${res.lastName}`, full: true },
+    { label: tr ? 'E-posta'          : 'Email',            value: res.email,            full: true },
+    { label: tr ? 'Telefon'          : 'Phone',            value: res.phone },
+    { label: tr ? 'Doğum Tarihi'     : 'Birth Date',       value: formatBirthDate(res.birthDate, tr) },
+    { label: tr ? 'Cinsiyet'         : 'Gender',           value: res.gender },
+    { label: tr ? 'Uyruk'            : 'Nationality',      value: res.nationality },
+    { label: tr ? 'T.C. Kimlik No'   : 'National ID',      value: res.tcKimlikNo ? maskTc(res.tcKimlikNo) : null },
+    { label: tr ? 'Pasaport No'      : 'Passport No',      value: res.passportNo },
+    { label: tr ? 'Pasaport Bitiş'   : 'Passport Expiry',  value: res.passportExpiry },
+    { label: tr ? 'Şirket'           : 'Company',          value: res.companyName,      full: true },
+    { label: tr ? 'Vergi No'         : 'Tax No',           value: res.taxNumber },
+    { label: tr ? 'Vergi Dairesi'    : 'Tax Office',       value: res.taxOffice },
+  ].filter(r => r.value);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto"
+      style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}
+      onClick={onClose}
+    >
+      <div className="flex min-h-full items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 12 }}
+          transition={{ duration: 0.18 }}
+          onClick={e => e.stopPropagation()}
+          className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#15120f] shadow-2xl overflow-hidden"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
+                <User size={14} className="text-brand-accent" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">{tr ? 'Misafir Bilgileri' : 'Guest Details'}</p>
+                <p className="text-[10px] text-white/35 font-mono">{res.confirmationId}</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/8 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+
+          {/* Fields */}
+          <div className="p-5 space-y-3">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              {rows.map(row => (
+                <div key={row.label} className={row.full ? 'col-span-2' : ''}>
+                  <p className="text-[9px] uppercase tracking-wider text-white/25 mb-0.5">{row.label}</p>
+                  <p className="text-xs text-white/75 font-medium break-all">{row.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {res.specialRequests && (
+              <div className="pt-3 border-t border-white/6">
+                <p className="text-[9px] uppercase tracking-wider text-white/25 mb-1">{tr ? 'Özel İstekler' : 'Special Requests'}</p>
+                <p className="text-xs text-white/60 leading-relaxed italic">"{res.specialRequests}"</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
 // ── QR Modal ──────────────────────────────────────────────────────────────────
 
-function QRModal({ code, onClose, tr }: { code: string; onClose: () => void; tr: boolean }) {
+function QRModal({ code, onClose, tr, title }: { code: string; onClose: () => void; tr: boolean; title?: string }) {
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}&bgcolor=ffffff&color=1c1714&qzone=1&margin=0`;
   return (
     <div
@@ -68,7 +161,7 @@ function QRModal({ code, onClose, tr }: { code: string; onClose: () => void; tr:
       >
         <div className="flex items-center justify-between w-full">
           <p className="text-[#1c1714] text-sm font-semibold">
-            {tr ? 'Rezervasyon QR' : 'Reservation QR'}
+            {title ?? (tr ? 'Rezervasyon QR' : 'Reservation QR')}
           </p>
           <button onClick={onClose} className="text-[#1c1714]/40 hover:text-[#1c1714] transition-colors">
             <X size={16} />
@@ -94,14 +187,18 @@ function QRModal({ code, onClose, tr }: { code: string; onClose: () => void; tr:
 
 // ── Reservation Card ───────────────────────────────────────────────────────────
 
-function ReservationCard({ res, tr, onCancel }: { res: Reservation; tr: boolean; onCancel: (id: string) => void }) {
+function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res: Reservation; tr: boolean; onCancel: (id: string) => void; checkInTime: string; checkOutTime: string }) {
   const [showQR, setShowQR] = useState(false);
+  const [showCheckoutQR, setShowCheckoutQR] = useState(false);
+  const [showGuest, setShowGuest] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const badge = statusBadge(res.status, tr);
   const BadgeIcon = badge.icon;
   const now = new Date();
   const checkIn = new Date(res.checkInDate.slice(0, 10) + 'T12:00:00');
+  const checkOut = new Date(res.checkOutDate.slice(0, 10) + 'T12:00:00');
+  const isCheckoutDay = res.status === 'checked_in' && now.toDateString() === checkOut.toDateString();
   const isUpcoming = checkIn > now && res.status !== 'cancelled';
   const daysLeft = Math.ceil((checkIn.getTime() - now.getTime()) / 86400000);
   const canCancel = isUpcoming && ['pending', 'confirmed'].includes(res.status);
@@ -150,12 +247,14 @@ function ReservationCard({ res, tr, onCancel }: { res: Reservation; tr: boolean;
             {tr ? 'Giriş' : 'Check-in'}
           </p>
           <p className="text-white/80 font-medium text-[11px]">{fmtDate(res.checkInDate, tr)}</p>
+          <p className="text-brand-accent/70 text-[10px] font-semibold tabular-nums">{checkInTime}</p>
         </div>
         <div className="bg-white/3 rounded-lg p-2">
           <p className="text-white/25 text-[9px] uppercase tracking-wider mb-0.5">
             {tr ? 'Çıkış' : 'Check-out'}
           </p>
           <p className="text-white/80 font-medium text-[11px]">{fmtDate(res.checkOutDate, tr)}</p>
+          <p className="text-brand-accent/70 text-[10px] font-semibold tabular-nums">{checkOutTime}</p>
         </div>
         <div className="bg-white/3 rounded-lg p-2">
           <p className="text-white/25 text-[9px] uppercase tracking-wider mb-0.5">
@@ -172,7 +271,14 @@ function ReservationCard({ res, tr, onCancel }: { res: Reservation; tr: boolean;
           <p className="text-[10px] text-white/25">{tr ? 'Onay Kodu' : 'Confirmation'}</p>
           <p className="text-xs font-mono text-brand-accent/80 tracking-widest">{res.confirmationId}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowGuest(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/8 border border-white/8 text-white/40 hover:text-white/70 text-[10px] font-medium transition-colors"
+          >
+            <User size={11} />
+            {tr ? 'Misafir' : 'Guest'}
+          </button>
           {res.status !== 'cancelled' && (
             <button
               onClick={() => setShowQR(true)}
@@ -180,6 +286,15 @@ function ReservationCard({ res, tr, onCancel }: { res: Reservation; tr: boolean;
             >
               <QrCode size={11} />
               QR
+            </button>
+          )}
+          {isCheckoutDay && (
+            <button
+              onClick={() => setShowCheckoutQR(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-brand-accent/10 hover:bg-brand-accent/15 border border-brand-accent/30 text-brand-accent text-[10px] font-medium transition-colors"
+            >
+              <QrCode size={11} />
+              {tr ? 'Çıkış QR' : 'Check-out QR'}
             </button>
           )}
           <div className="text-right">
@@ -231,7 +346,9 @@ function ReservationCard({ res, tr, onCancel }: { res: Reservation; tr: boolean;
       )}
 
       <AnimatePresence>
-        {showQR && <QRModal code={res.confirmationId} onClose={() => setShowQR(false)} tr={tr} />}
+        {showQR         && <QRModal code={res.confirmationId} onClose={() => setShowQR(false)} tr={tr} />}
+        {showCheckoutQR && <QRModal code={res.confirmationId} onClose={() => setShowCheckoutQR(false)} tr={tr} title={tr ? 'Çıkış QR' : 'Check-out QR'} />}
+        {showGuest      && <GuestInfoModal res={res} onClose={() => setShowGuest(false)} tr={tr} />}
       </AnimatePresence>
     </motion.div>
   );
@@ -243,6 +360,17 @@ export function CustomerReservations({ user, tr }: { user: AuthUser; tr: boolean
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'upcoming' | 'past' | 'all'>('upcoming');
+  const [checkInTime,  setCheckInTime]  = useState('14:00');
+  const [checkOutTime, setCheckOutTime] = useState('12:00');
+
+  useEffect(() => {
+    fetch('/api/settings/checkin-times')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) { setCheckInTime(data.checkInTime); setCheckOutTime(data.checkOutTime); }
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     fetch('/api/reservations')
@@ -307,7 +435,7 @@ export function CustomerReservations({ user, tr }: { user: AuthUser; tr: boolean
         <AnimatePresence mode="popLayout">
           <div className="grid gap-3 sm:grid-cols-2">
             {filtered.map(r => (
-              <ReservationCard key={r.id} res={r} tr={tr} onCancel={handleCancel} />
+              <ReservationCard key={r.id} res={r} tr={tr} onCancel={handleCancel} checkInTime={checkInTime} checkOutTime={checkOutTime} />
             ))}
           </div>
         </AnimatePresence>

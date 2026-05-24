@@ -1,12 +1,20 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import { getMailConfig, type MailConfig } from './config';
 
+export interface MailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+  cid?: string;
+}
+
 export interface SendMailInput {
   to: string | string[];
   subject: string;
   html: string;
   text: string;
   replyTo?: string;
+  attachments?: MailAttachment[];
 }
 
 export interface SendMailResult {
@@ -97,6 +105,7 @@ export async function sendMail(input: SendMailInput): Promise<SendMailResult> {
     html: input.html,
     text: input.text,
     replyTo: input.replyTo ?? config.replyTo,
+    attachments: input.attachments,
   });
 
   return {

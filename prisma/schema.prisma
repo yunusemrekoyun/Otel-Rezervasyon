@@ -26,9 +26,10 @@ model User {
   isActive           Boolean             @default(true) @map("is_active")
   roleId             String              @map("role_id")
   role               Role                @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  sessions           Session[]
-  passwordResetTokens PasswordResetToken[]
-  accountPeople      AccountPerson[]
+  sessions                Session[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  accountPeople           AccountPerson[]
   reservations       Reservation[]
   contactRequests    ContactRequest[]
   experienceBookings ExperienceBooking[]
@@ -49,11 +50,26 @@ model User {
   companyName        String?             @map("company_name")
   taxNumber          String?             @map("tax_number")
   taxOffice          String?             @map("tax_office")
+  emailVerified      Boolean             @default(false) @map("email_verified")
   createdAt          DateTime            @default(now()) @map("created_at")
   updatedAt          DateTime            @updatedAt @map("updated_at")
 
   @@index([roleId])
   @@map("users")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
 }
 
 model Session {
@@ -148,8 +164,11 @@ model Reservation {
   subtotal        Int
   totalPrice      Int       @map("total_price")
   // Extra
-  specialRequests String?   @map("special_requests")
-  status          String    @default("pending")
+  specialRequests    String?   @map("special_requests")
+  vehiclePlate       String?   @map("vehicle_plate")
+  checkinNote        String?   @map("checkin_note")
+  checkinDocumentUrl String?   @map("checkin_document_url")
+  status             String    @default("pending")
   // Optional user account link
   userId          String?   @map("user_id")
   user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)

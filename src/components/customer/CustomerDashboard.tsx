@@ -14,6 +14,9 @@ import {
 import { useLanguage } from '@/i18n/LanguageContext';
 import { CustomerReservations } from '@/components/customer/CustomerReservations';
 import type { AuthUser } from '@/lib/auth/session';
+import { PhoneInput } from '@/components/ui/PhoneInput';
+import { BirthDateInput, formatBirthDate } from '@/components/ui/BirthDateInput';
+import { TcInput, maskTc } from '@/components/ui/TcInput';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -225,9 +228,9 @@ function PersonCard({ person, tr }: { person: AccountPerson; tr: boolean }) {
       <div className="grid grid-cols-2 gap-3">
         <PersonInfoRow label="E-posta" value={person.email} />
         <PersonInfoRow label={tr ? 'Telefon' : 'Phone'} value={person.phone} />
-        <PersonInfoRow label={tr ? 'Doğum tarihi' : 'Birth date'} value={person.birthDate} />
+        <PersonInfoRow label={tr ? 'Doğum tarihi' : 'Birth date'} value={formatBirthDate(person.birthDate, tr)} />
         <PersonInfoRow label={tr ? 'Uyruk' : 'Nationality'} value={person.nationality} />
-        <PersonInfoRow label={tr ? 'T.C. kimlik no' : 'National ID'} value={person.tcKimlikNo} />
+        <PersonInfoRow label={tr ? 'T.C. kimlik no' : 'National ID'} value={person.tcKimlikNo ? maskTc(person.tcKimlikNo) : null} />
         <PersonInfoRow label={tr ? 'Pasaport no' : 'Passport no'} value={person.passportNo} />
         <PersonInfoRow label={tr ? 'Pasaport bitiş' : 'Passport expiry'} value={person.passportExpiry} />
         <PersonInfoRow label={tr ? 'Cinsiyet' : 'Gender'} value={person.gender} />
@@ -334,10 +337,20 @@ function ProfileTab({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input className={inputCls} placeholder={tr ? 'Adınız' : 'First name'} value={ownerForm.firstName} onChange={(e) => setOwnerForm((p) => ({ ...p, firstName: e.target.value }))} />
               <input className={inputCls} placeholder={tr ? 'Soyadınız' : 'Last name'} value={ownerForm.lastName} onChange={(e) => setOwnerForm((p) => ({ ...p, lastName: e.target.value }))} />
-              <input className={inputCls} placeholder={tr ? 'Telefonunuz' : 'Phone'} value={ownerForm.phone} onChange={(e) => setOwnerForm((p) => ({ ...p, phone: e.target.value }))} />
-              <input className={inputCls} placeholder={tr ? 'Doğum tarihi' : 'Birth date'} type="date" value={ownerForm.birthDate} onChange={(e) => setOwnerForm((p) => ({ ...p, birthDate: e.target.value }))} />
+              <PhoneInput
+                value={ownerForm.phone}
+                onChange={v => setOwnerForm(p => ({ ...p, phone: v }))}
+              />
+              <BirthDateInput
+                value={ownerForm.birthDate}
+                onChange={v => setOwnerForm(p => ({ ...p, birthDate: v }))}
+                tr={tr}
+              />
               <input className={inputCls} placeholder={tr ? 'Uyruk' : 'Nationality'} value={ownerForm.nationality} onChange={(e) => setOwnerForm((p) => ({ ...p, nationality: e.target.value }))} />
-              <input className={inputCls} placeholder={tr ? 'T.C. kimlik no' : 'National ID'} value={ownerForm.tcKimlikNo} onChange={(e) => setOwnerForm((p) => ({ ...p, tcKimlikNo: e.target.value }))} />
+              <TcInput
+                value={ownerForm.tcKimlikNo}
+                onChange={v => setOwnerForm(p => ({ ...p, tcKimlikNo: v }))}
+              />
             </div>
             {ownerMessage && <p className="text-xs text-brand-accent/80">{ownerMessage}</p>}
             <div className="flex justify-end">

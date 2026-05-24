@@ -6,5 +6,6 @@ export {
   MailConfigurationError,
   type SendMailInput,
   type SendMailResult,
+  type MailAttachment,
 } from './mailer';
 export { renderBrandedMail, type BrandedMailInput, type MailAction } from './templates';

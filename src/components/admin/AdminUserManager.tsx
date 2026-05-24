@@ -7,6 +7,7 @@ import {
   CalendarDays, BookOpen, Phone, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -222,11 +223,9 @@ function EditModal({
           {/* Phone */}
           <div>
             <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Telefon' : 'Phone'}</label>
-            <input
-              value={form.phone}
-              onChange={e => set('phone', e.target.value)}
-              placeholder="+90 5xx xxx xx xx"
-              className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-brand-accent/40"
+            <PhoneInput
+              value={form.phone ?? ''}
+              onChange={v => set('phone', v)}
             />
           </div>
 

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   LogIn,
   LogOut as LogOutIcon,
   BedDouble,
-  User,
   X,
   AlertCircle,
   RefreshCw,
@@ -14,9 +14,13 @@ import {
   CheckCircle2,
   Camera,
   Hash,
-  Users,
   DoorOpen,
   ArrowRight,
+  Upload,
+  FileText,
+  Car,
+  StickyNote,
+  Users,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -116,17 +120,22 @@ function QRScannerModal({
   useEffect(() => {
     let stream: MediaStream | null = null;
     let animFrame = 0;
+    scanningRef.current = true; // reset for StrictMode double-invoke
 
     async function start() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1280 } },
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } },
         });
         if (!videoRef.current) return;
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        await videoRef.current.play().catch((err: Error) => {
+          if (err.name !== 'AbortError') throw err;
+        });
+        if (!scanningRef.current) return;
         scan();
-      } catch {
+      } catch (err) {
+        console.error("Camera error:", err);
         setCamError(
           isTr ? "Kameraya erişim sağlanamadı." : "Camera access denied.",
         );
@@ -134,7 +143,9 @@ function QRScannerModal({
     }
 
     async function scan() {
-      if (!("BarcodeDetector" in window)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const BD = (window as any).BarcodeDetector;
+      if (!BD) {
         setCamError(
           isTr
             ? "Tarayıcınız kamera ile QR taramayı desteklemiyor.\nFiziksel QR okuyucu kullanın."
@@ -142,26 +153,51 @@ function QRScannerModal({
         );
         return;
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const detector = new (window as any).BarcodeDetector({
-        formats: ["qr_code"],
-      });
+
+      // Verify qr_code format is actually supported
+      try {
+        const supported: string[] = await BD.getSupportedFormats();
+        if (!supported.includes("qr_code")) {
+          setCamError(
+            isTr
+              ? "Tarayıcınız QR kod formatını desteklemiyor.\nFiziksel QR okuyucu kullanın."
+              : "Browser does not support qr_code format.\nUse a physical QR scanner.",
+          );
+          return;
+        }
+      } catch { /* getSupportedFormats not available in all builds — proceed */ }
+
+      const detector = new BD({ formats: ["qr_code"] });
+
+      // Canvas snapshot approach — more reliable than passing video element directly
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      console.debug("[QR] Scanner started");
 
       async function detect() {
-        if (!scanningRef.current || !videoRef.current) return;
+        if (!scanningRef.current || !videoRef.current || !ctx) return;
+        if (videoRef.current.readyState < 2) {
+          animFrame = requestAnimationFrame(detect);
+          return;
+        }
         try {
-          const results: Array<{ rawValue: string }> = await detector.detect(
-            videoRef.current,
-          );
-          if (results.length > 0) {
-            const val = results[0].rawValue;
-            if (/^\d{8}$/.test(val)) {
-              onCode(val);
-              return;
+          const { videoWidth: w, videoHeight: h } = videoRef.current;
+          if (w > 0 && h > 0) {
+            if (canvas.width !== w) canvas.width = w;
+            if (canvas.height !== h) canvas.height = h;
+            ctx.drawImage(videoRef.current, 0, 0, w, h);
+            const results: Array<{ rawValue: string }> = await detector.detect(canvas);
+            if (results.length > 0) {
+              const val = results[0].rawValue.trim();
+              console.debug("[QR] detected:", val);
+              if (/^\d{8}$/.test(val)) {
+                onCode(val);
+                return;
+              }
             }
           }
-        } catch {
-          /* ignore */
+        } catch (err) {
+          console.warn("[QR] detect error:", err);
         }
         animFrame = requestAnimationFrame(detect);
       }
@@ -270,17 +306,23 @@ function QRScannerModal({
 function DetailCard({
   res,
   onClose,
-  onAction,
+  onCheckinRequest,
+  onCheckoutRequest,
   loading,
   isTr,
   successId,
+  checkInTime,
+  checkOutTime,
 }: {
   res: Res;
   onClose: () => void;
-  onAction: (id: string, action: "checkin" | "checkout") => void;
+  onCheckinRequest: (confirmationId: string) => void;
+  onCheckoutRequest: (confirmationId: string) => void;
   loading: boolean;
   isTr: boolean;
   successId: string | null;
+  checkInTime: string;
+  checkOutTime: string;
 }) {
   const canCheckin = ["pending", "confirmed"].includes(res.status);
   const canCheckout = res.status === "checked_in";
@@ -356,12 +398,12 @@ function DetailCard({
             {
               label: isTr ? "Giriş" : "Check-in",
               value: fmtDate(res.checkInDate),
-              sub: "",
+              sub: checkInTime,
             },
             {
               label: isTr ? "Çıkış / Gece" : "Check-out / Nights",
               value: fmtDate(res.checkOutDate),
-              sub: `${res.nights} ${isTr ? "gece" : "nights"} · ${res.adultsCount}${isTr ? "y" : "a"}${res.childrenCount > 0 ? `+${res.childrenCount}` : ""}`,
+              sub: `${checkOutTime} · ${res.nights} ${isTr ? "gece" : "nights"} · ${res.adultsCount}${isTr ? "y" : "a"}${res.childrenCount > 0 ? `+${res.childrenCount}` : ""}`,
             },
           ].map(({ label, value, sub }) => (
             <div key={label} className="bg-white/3 rounded-xl p-3 min-w-0">
@@ -394,7 +436,7 @@ function DetailCard({
           <div className="flex gap-2">
             {canCheckin && (
               <button
-                onClick={() => onAction(res.confirmationId, "checkin")}
+                onClick={() => onCheckinRequest(res.confirmationId)}
                 disabled={loading}
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500/10 hover:bg-emerald-500/18 border border-emerald-500/22 text-emerald-400 text-sm font-bold rounded-xl transition-colors disabled:opacity-40"
               >
@@ -404,7 +446,7 @@ function DetailCard({
             )}
             {canCheckout && (
               <button
-                onClick={() => onAction(res.confirmationId, "checkout")}
+                onClick={() => onCheckoutRequest(res.confirmationId)}
                 disabled={loading}
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-accent/10 hover:bg-brand-accent/18 border border-brand-accent/22 text-brand-accent text-sm font-bold rounded-xl transition-colors disabled:opacity-40"
               >
@@ -427,12 +469,403 @@ function DetailCard({
   );
 }
 
+// ── Check-in Confirm Modal ────────────────────────────────────────────────────
+
+function CheckinConfirmModal({
+  res,
+  isTr,
+  loading,
+  docFile,
+  docUrl,
+  docUploading,
+  docError,
+  vehiclePlate,
+  staffNote,
+  onDocChange,
+  onVehiclePlate,
+  onStaffNote,
+  onConfirm,
+  onClose,
+}: {
+  res: Res;
+  isTr: boolean;
+  loading: boolean;
+  docFile: File | null;
+  docUrl: string | null;
+  docUploading: boolean;
+  docError: string | null;
+  vehiclePlate: string;
+  staffNote: string;
+  onDocChange: (f: File | null) => void;
+  onVehiclePlate: (v: string) => void;
+  onStaffNote: (v: string) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    const f = e.dataTransfer.files[0];
+    if (f) onDocChange(f);
+  }
+
+  function pickFile() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf,.jpg,.jpeg,.png,.webp";
+    input.onchange = (e) => {
+      const f = (e.target as HTMLInputElement).files?.[0];
+      if (f) onDocChange(f);
+    };
+    input.click();
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.97 }}
+        transition={{ duration: 0.18 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md bg-[#141210] border border-white/12 rounded-2xl shadow-2xl overflow-hidden"
+      >
+        {/* Header */}
+        <div className="h-[3px] bg-gradient-to-r from-emerald-500 to-transparent" />
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <LogIn size={14} className="text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white/90">
+                {isTr ? "Check-in Onayı" : "Confirm Check-in"}
+              </p>
+              <p className="text-[10px] text-white/30 font-mono">{res.confirmationId}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg hover:bg-white/8 flex items-center justify-center text-white/30 hover:text-white transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+          {/* Guest + room summary */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white/3 rounded-xl p-3">
+              <p className="text-[9px] text-white/22 uppercase tracking-wider mb-1">
+                {isTr ? "Misafir" : "Guest"}
+              </p>
+              <p className="text-sm font-bold text-white leading-snug">
+                {res.firstName} {res.lastName}
+              </p>
+              <p className="text-[10px] text-white/35 mt-0.5 truncate">{res.phone}</p>
+            </div>
+            <div className="bg-white/3 rounded-xl p-3">
+              <p className="text-[9px] text-white/22 uppercase tracking-wider mb-1">
+                {isTr ? "Oda" : "Room"}
+              </p>
+              <p className="text-sm font-bold text-white leading-snug">{res.room.name}</p>
+              <p className="text-[10px] text-white/35 mt-0.5 truncate">
+                {res.room.roomType.name}
+              </p>
+            </div>
+          </div>
+
+          {/* Document upload */}
+          <div>
+            <p className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">
+              {isTr ? "Kimlik Belgesi" : "ID Document"}{" "}
+              <span className="text-white/20 normal-case font-normal">
+                ({isTr ? "opsiyonel" : "optional"})
+              </span>
+            </p>
+            {docUrl ? (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-500/8 border border-emerald-500/20">
+                <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
+                <p className="text-xs text-emerald-400 flex-1">
+                  {isTr ? "Belge yüklendi" : "Document uploaded"}
+                </p>
+                <button
+                  onClick={() => onDocChange(null)}
+                  className="text-white/30 hover:text-white/60 transition-colors"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : docFile ? (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/4 border border-white/10">
+                <FileText size={14} className="text-white/40 shrink-0" />
+                <p className="text-xs text-white/60 flex-1 truncate">{docFile.name}</p>
+                <button
+                  onClick={() => onDocChange(null)}
+                  className="text-white/30 hover:text-white/60 transition-colors"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              <div
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+                onClick={pickFile}
+                className="flex flex-col items-center gap-2 px-4 py-5 rounded-xl border border-dashed border-white/12 hover:border-white/25 hover:bg-white/3 cursor-pointer transition-all text-center"
+              >
+                <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                  <Upload size={15} className="text-white/25" />
+                </div>
+                <div>
+                  <p className="text-xs text-white/40">
+                    {isTr ? "Dosya seçin veya buraya bırakın" : "Click or drop file here"}
+                  </p>
+                  <p className="text-[10px] text-white/20 mt-0.5">
+                    PDF, JPG, PNG · maks. 10 MB
+                  </p>
+                </div>
+              </div>
+            )}
+            {docError && (
+              <p className="text-[10px] text-red-400 mt-1.5">{docError}</p>
+            )}
+          </div>
+
+          {/* Vehicle plate */}
+          <div>
+            <label className="text-[10px] text-white/40 uppercase tracking-widest font-semibold flex items-center gap-1.5 mb-1.5">
+              <Car size={11} />
+              {isTr ? "Araç Plakası" : "Vehicle Plate"}{" "}
+              <span className="text-white/20 normal-case font-normal">
+                ({isTr ? "opsiyonel" : "optional"})
+              </span>
+            </label>
+            <input
+              value={vehiclePlate}
+              onChange={(e) => onVehiclePlate(e.target.value.toUpperCase())}
+              placeholder="34 ABC 1234"
+              className="w-full bg-white/4 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder-white/15 focus:outline-none focus:border-brand-accent/40 transition-colors tracking-widest"
+            />
+          </div>
+
+          {/* Staff note */}
+          <div>
+            <label className="text-[10px] text-white/40 uppercase tracking-widest font-semibold flex items-center gap-1.5 mb-1.5">
+              <StickyNote size={11} />
+              {isTr ? "Personel Notu" : "Staff Note"}{" "}
+              <span className="text-white/20 normal-case font-normal">
+                ({isTr ? "opsiyonel" : "optional"})
+              </span>
+            </label>
+            <textarea
+              value={staffNote}
+              onChange={(e) => onStaffNote(e.target.value)}
+              rows={2}
+              placeholder={
+                isTr
+                  ? "Özel talep, gözlem veya not…"
+                  : "Special request, observation or note…"
+              }
+              className="w-full bg-white/4 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/15 focus:outline-none focus:border-brand-accent/40 transition-colors resize-none"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/40 text-sm font-semibold hover:bg-white/5 transition-colors"
+            >
+              {isTr ? "İptal" : "Cancel"}
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={loading || docUploading}
+              className="flex-[2] flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500/12 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-400 text-sm font-bold transition-colors disabled:opacity-40"
+            >
+              {loading || docUploading ? (
+                <RefreshCw size={13} className="animate-spin" />
+              ) : (
+                <LogIn size={13} />
+              )}
+              {isTr ? "Check-in'i Tamamla" : "Complete Check-in"}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>,
+    document.body,
+  );
+}
+
+// ── Check-out Confirm Modal ───────────────────────────────────────────────────
+
+function CheckoutConfirmModal({
+  res,
+  isTr,
+  loading,
+  sendToCleaning,
+  onToggleCleaning,
+  staffNote,
+  onStaffNote,
+  onConfirm,
+  onClose,
+}: {
+  res: Res;
+  isTr: boolean;
+  loading: boolean;
+  sendToCleaning: boolean;
+  onToggleCleaning: () => void;
+  staffNote: string;
+  onStaffNote: (v: string) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.97 }}
+        transition={{ duration: 0.18 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md bg-[#141210] border border-white/12 rounded-2xl shadow-2xl overflow-hidden"
+      >
+        {/* Header */}
+        <div className="h-[3px] bg-gradient-to-r from-brand-accent to-transparent" />
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
+              <LogOutIcon size={14} className="text-brand-accent" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white/90">
+                {isTr ? "Check-out Onayı" : "Confirm Check-out"}
+              </p>
+              <p className="text-[10px] text-white/30 font-mono">{res.confirmationId}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg hover:bg-white/8 flex items-center justify-center text-white/30 hover:text-white transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Guest + room summary */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white/3 rounded-xl p-3">
+              <p className="text-[9px] text-white/22 uppercase tracking-wider mb-1">
+                {isTr ? "Misafir" : "Guest"}
+              </p>
+              <p className="text-sm font-bold text-white leading-snug">
+                {res.firstName} {res.lastName}
+              </p>
+              <p className="text-[10px] text-white/35 mt-0.5 truncate">{res.phone}</p>
+            </div>
+            <div className="bg-white/3 rounded-xl p-3">
+              <p className="text-[9px] text-white/22 uppercase tracking-wider mb-1">
+                {isTr ? "Oda" : "Room"}
+              </p>
+              <p className="text-sm font-bold text-white leading-snug">{res.room.name}</p>
+              <p className="text-[10px] text-white/35 mt-0.5 truncate">
+                {res.room.roomType.name}
+              </p>
+            </div>
+          </div>
+
+          {/* Cleaning toggle */}
+          <div>
+            <p className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-3">
+              {isTr ? "Oda Temizliğe Gönderilsin mi?" : "Send Room to Cleaning?"}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { if (!sendToCleaning) onToggleCleaning(); }}
+                className={`py-3 rounded-xl border text-sm font-bold transition-all ${
+                  sendToCleaning
+                    ? "bg-brand-accent/15 border-brand-accent/35 text-brand-accent"
+                    : "bg-white/3 border-white/10 text-white/30 hover:bg-white/6"
+                }`}
+              >
+                {isTr ? "Evet" : "Yes"}
+              </button>
+              <button
+                onClick={() => { if (sendToCleaning) onToggleCleaning(); }}
+                className={`py-3 rounded-xl border text-sm font-bold transition-all ${
+                  !sendToCleaning
+                    ? "bg-white/10 border-white/25 text-white"
+                    : "bg-white/3 border-white/10 text-white/30 hover:bg-white/6"
+                }`}
+              >
+                {isTr ? "Hayır" : "No"}
+              </button>
+            </div>
+          </div>
+
+          {/* Staff note */}
+          <div>
+            <label className="text-[10px] text-white/40 uppercase tracking-widest font-semibold flex items-center gap-1.5 mb-1.5">
+              <StickyNote size={11} />
+              {isTr ? "Personel Notu" : "Staff Note"}{" "}
+              <span className="text-white/20 normal-case font-normal">
+                ({isTr ? "opsiyonel" : "optional"})
+              </span>
+            </label>
+            <textarea
+              value={staffNote}
+              onChange={(e) => onStaffNote(e.target.value)}
+              rows={2}
+              placeholder={
+                isTr ? "Check-out notu veya gözlem…" : "Check-out note or observation…"
+              }
+              className="w-full bg-white/4 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/15 focus:outline-none focus:border-brand-accent/40 transition-colors resize-none"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/40 text-sm font-semibold hover:bg-white/5 transition-colors"
+            >
+              {isTr ? "İptal" : "Cancel"}
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className="flex-[2] flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-accent/12 hover:bg-brand-accent/20 border border-brand-accent/25 text-brand-accent text-sm font-bold transition-colors disabled:opacity-40"
+            >
+              {loading ? (
+                <RefreshCw size={13} className="animate-spin" />
+              ) : (
+                <LogOutIcon size={13} />
+              )}
+              {isTr ? "Check-out'u Tamamla" : "Complete Check-out"}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>,
+    document.body,
+  );
+}
+
 // ── Guest Row ─────────────────────────────────────────────────────────────────
 
 function GuestRow({
   res,
   isArrival,
-  onAction,
+  onCheckinRequest,
+  onCheckoutRequest,
   loading,
   isTr,
   successId,
@@ -441,7 +874,8 @@ function GuestRow({
 }: {
   res: Res;
   isArrival: boolean;
-  onAction: (id: string, action: "checkin" | "checkout") => void;
+  onCheckinRequest: (confirmationId: string) => void;
+  onCheckoutRequest: (confirmationId: string) => void;
   loading: boolean;
   isTr: boolean;
   successId: string | null;
@@ -495,7 +929,8 @@ function GuestRow({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onAction(res.confirmationId, isArrival ? "checkin" : "checkout");
+            if (isArrival) onCheckinRequest(res.confirmationId);
+            else onCheckoutRequest(res.confirmationId);
           }}
           disabled={loading}
           className={`shrink-0 px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-colors disabled:opacity-40 ${
@@ -533,8 +968,35 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
   const [loadingToday, setLoadingToday] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [successId, setSuccessId] = useState<string | null>(null);
+  const [checkInTime,  setCheckInTime]  = useState("14:00");
+  const [checkOutTime, setCheckOutTime] = useState("12:00");
+
+  // ── Check-out confirmation modal ──
+  const [showCheckoutModal,  setShowCheckoutModal]  = useState(false);
+  const [pendingCheckoutId,  setPendingCheckoutId]  = useState<string | null>(null);
+  const [checkoutCleaning,   setCheckoutCleaning]   = useState(true);
+  const [checkoutNote,       setCheckoutNote]       = useState('');
+
+  // ── Check-in confirmation modal ──
+  const [showCheckinModal,    setShowCheckinModal]    = useState(false);
+  const [pendingCheckinId,    setPendingCheckinId]    = useState<string | null>(null);
+  const [modalVehiclePlate,   setModalVehiclePlate]   = useState("");
+  const [modalStaffNote,      setModalStaffNote]      = useState("");
+  const [modalDocFile,        setModalDocFile]        = useState<File | null>(null);
+  const [modalDocUrl,         setModalDocUrl]         = useState<string | null>(null);
+  const [modalDocUploading,   setModalDocUploading]   = useState(false);
+  const [modalDocError,       setModalDocError]       = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/settings/checkin-times")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok) { setCheckInTime(data.checkInTime); setCheckOutTime(data.checkOutTime); }
+      })
+      .catch(() => undefined);
+  }, []);
 
   // Live clock
   const [time, setTime] = useState(() => new Date());
@@ -606,13 +1068,17 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
   );
 
   const handleAction = useCallback(
-    async (confirmationId: string, action: "checkin" | "checkout") => {
+    async (
+      confirmationId: string,
+      action: "checkin" | "checkout",
+      extras?: { vehiclePlate?: string; checkinNote?: string; checkinDocumentUrl?: string; sendToCleaning?: boolean; checkoutNote?: string },
+    ) => {
       setActionLoading(true);
       try {
         const res = await fetch("/api/checkin", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ confirmationId, action }),
+          body: JSON.stringify({ confirmationId, action, ...extras }),
         });
         const data = await res.json();
         if (data.ok) {
@@ -640,6 +1106,73 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
     },
     [found, fetchToday, isTr],
   );
+
+  const handleCheckoutRequest = useCallback((confirmationId: string) => {
+    setPendingCheckoutId(confirmationId);
+    setCheckoutCleaning(true);
+    setCheckoutNote('');
+    setShowCheckoutModal(true);
+  }, []);
+
+  const handleCheckoutConfirm = useCallback(async () => {
+    if (!pendingCheckoutId) return;
+    setShowCheckoutModal(false);
+    await handleAction(pendingCheckoutId, 'checkout', {
+      sendToCleaning: checkoutCleaning,
+      checkoutNote:   checkoutNote || undefined,
+    });
+    setPendingCheckoutId(null);
+  }, [pendingCheckoutId, checkoutCleaning, checkoutNote, handleAction]);
+
+  const handleCheckinRequest = useCallback((confirmationId: string) => {
+    setPendingCheckinId(confirmationId);
+    setModalVehiclePlate("");
+    setModalStaffNote("");
+    setModalDocFile(null);
+    setModalDocUrl(null);
+    setModalDocError(null);
+    setShowCheckinModal(true);
+  }, []);
+
+  const handleCheckinConfirm = useCallback(async () => {
+    if (!pendingCheckinId) return;
+    let docUrl = modalDocUrl;
+
+    if (modalDocFile && !modalDocUrl) {
+      setModalDocUploading(true);
+      const fd = new FormData();
+      fd.append("file", modalDocFile);
+      fd.append("confirmationId", pendingCheckinId);
+      try {
+        const r = await fetch("/api/checkin/document", { method: "POST", body: fd });
+        const d = await r.json();
+        if (d.ok) {
+          docUrl = d.url;
+          setModalDocUrl(d.url);
+        } else {
+          setModalDocError(d.message ?? (isTr ? "Belge yüklenemedi." : "Upload failed."));
+          setModalDocUploading(false);
+          return;
+        }
+      } catch {
+        setModalDocError(isTr ? "Yükleme hatası." : "Upload error.");
+        setModalDocUploading(false);
+        return;
+      }
+      setModalDocUploading(false);
+    }
+
+    setShowCheckinModal(false);
+    await handleAction(pendingCheckinId, "checkin", {
+      vehiclePlate:       modalVehiclePlate || undefined,
+      checkinNote:        modalStaffNote    || undefined,
+      checkinDocumentUrl: docUrl            || undefined,
+    });
+    setPendingCheckinId(null);
+  }, [
+    pendingCheckinId, modalDocFile, modalDocUrl, modalVehiclePlate,
+    modalStaffNote, handleAction, isTr,
+  ]);
 
   const timeStr = time.toLocaleTimeString("tr-TR", {
     hour: "2-digit",
@@ -868,10 +1401,13 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
                   setSelectedId(null);
                   inputRef.current?.focus();
                 }}
-                onAction={handleAction}
+                onCheckinRequest={handleCheckinRequest}
+                onCheckoutRequest={handleCheckoutRequest}
                 loading={actionLoading}
                 isTr={isTr}
                 successId={successId}
+                checkInTime={checkInTime}
+                checkOutTime={checkOutTime}
               />
             )}
           </AnimatePresence>
@@ -958,7 +1494,8 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
                     key={r.id}
                     res={r}
                     isArrival={listTab === "arrivals"}
-                    onAction={handleAction}
+                    onCheckinRequest={handleCheckinRequest}
+                    onCheckoutRequest={handleCheckoutRequest}
                     loading={actionLoading}
                     isTr={isTr}
                     successId={successId}
@@ -992,6 +1529,55 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
             isTr={isTr}
           />
         )}
+      </AnimatePresence>
+
+      {/* Check-out confirmation modal */}
+      <AnimatePresence>
+        {showCheckoutModal && pendingCheckoutId && (() => {
+          const res = found
+            ?? arrivals.find(r => r.confirmationId === pendingCheckoutId)
+            ?? departures.find(r => r.confirmationId === pendingCheckoutId);
+          if (!res) return null;
+          return (
+            <CheckoutConfirmModal
+              res={res}
+              isTr={isTr}
+              loading={actionLoading}
+              sendToCleaning={checkoutCleaning}
+              onToggleCleaning={() => setCheckoutCleaning(p => !p)}
+              staffNote={checkoutNote}
+              onStaffNote={setCheckoutNote}
+              onConfirm={handleCheckoutConfirm}
+              onClose={() => { setShowCheckoutModal(false); setPendingCheckoutId(null); }}
+            />
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* Check-in confirmation modal */}
+      <AnimatePresence>
+        {showCheckinModal && pendingCheckinId && (() => {
+          const res = found ?? arrivals.find(r => r.confirmationId === pendingCheckinId) ?? departures.find(r => r.confirmationId === pendingCheckinId);
+          if (!res) return null;
+          return (
+            <CheckinConfirmModal
+              res={res}
+              isTr={isTr}
+              loading={actionLoading}
+              docFile={modalDocFile}
+              docUrl={modalDocUrl}
+              docUploading={modalDocUploading}
+              docError={modalDocError}
+              vehiclePlate={modalVehiclePlate}
+              staffNote={modalStaffNote}
+              onDocChange={(f) => { setModalDocFile(f); if (!f) setModalDocUrl(null); setModalDocError(null); }}
+              onVehiclePlate={setModalVehiclePlate}
+              onStaffNote={setModalStaffNote}
+              onConfirm={handleCheckinConfirm}
+              onClose={() => { setShowCheckinModal(false); setPendingCheckinId(null); }}
+            />
+          );
+        })()}
       </AnimatePresence>
     </div>
   );

@@ -41,6 +41,7 @@ export interface CalendarMonthProps {
   minDate?: Date;               // restrict past (e.g. today for checkin)
   maxDate?: Date;               // restrict future (e.g. today for birthdate)
   bookedDates?: Set<string>;    // 'YYYY-MM-DD' strings → show as booked
+  isDateUnavailable?: (d: Date) => boolean;
   onSelect: (d: Date) => void;
   onHover?: (d: Date | null) => void;
   tr: boolean;
@@ -49,7 +50,7 @@ export interface CalendarMonthProps {
 export function CalendarMonth({
   year, month,
   checkIn, checkOut, selected, hovered, today,
-  minDate, maxDate, bookedDates,
+  minDate, maxDate, bookedDates, isDateUnavailable,
   onSelect, onHover, tr,
 }: CalendarMonthProps) {
   const monthNames = tr ? MONTHS_TR : MONTHS_EN;
@@ -62,16 +63,18 @@ export function CalendarMonth({
     const t = date.getTime();
     const isBeforeMin = minDate ? date < minDate : false;
     const isAfterMax  = maxDate ? date > maxDate : false;
-    const disabled    = isBeforeMin || isAfterMax;
+    const key          = `${year}-${String(month + 1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    const isBooked     = bookedDates?.has(key) ?? false;
+    const unavailable  = isDateUnavailable?.(date) ?? isBooked;
+    const disabled     = isBeforeMin || isAfterMax || unavailable;
 
     const isSelected  = selected && t === selected.getTime();
     const isCheckIn   = checkIn  && t === checkIn.getTime();
     const isCheckOut  = checkOut && t === checkOut.getTime();
     const inRange     = checkIn && rangeEnd && t > checkIn.getTime() && t < rangeEnd.getTime();
     const isToday     = t === today.getTime();
-    const isBooked    = bookedDates?.has(`${year}-${String(month + 1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`);
 
-    return { disabled, isSelected, isCheckIn, isCheckOut, inRange, isToday, isBooked };
+    return { disabled, isSelected, isCheckIn, isCheckOut, inRange, isToday, isBooked, unavailable };
   }
 
   return (
@@ -89,8 +92,8 @@ export function CalendarMonth({
           const s = cellState(date);
 
           let cls = 'text-xs py-1.5 select-none ';
-          if (s.disabled)                         cls += 'text-white/15 cursor-not-allowed';
-          else if (s.isBooked)                    cls += 'bg-red-500/20 text-red-400/70 rounded-lg cursor-not-allowed';
+          if (s.disabled && (s.isBooked || s.unavailable)) cls += 'bg-red-500/20 text-red-400/70 rounded-lg cursor-not-allowed';
+          else if (s.disabled)                    cls += 'text-white/15 cursor-not-allowed';
           else if (s.isSelected || s.isCheckIn || s.isCheckOut) cls += 'bg-brand-accent text-black font-bold rounded-lg cursor-pointer';
           else if (s.inRange)                     cls += 'bg-brand-accent/20 text-white cursor-pointer';
           else if (s.isToday)                     cls += 'text-brand-accent font-semibold hover:bg-white/10 rounded-lg cursor-pointer';

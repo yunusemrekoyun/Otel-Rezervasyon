@@ -13,6 +13,8 @@ import {
   CalendarMonth, SingleDatePickerModal,
   startOfDay, addMonths,
 } from '@/components/ui/CalendarPicker';
+import { PhoneInput } from '@/components/ui/PhoneInput';
+import { TcInput } from '@/components/ui/TcInput';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -63,6 +65,26 @@ interface AccountProfile {
 type ProfileDecision = 'entered' | 'account';
 type NewAccountProfileOwner = 'self' | 'guest';
 
+interface AccountPerson {
+  id: string;
+  label: string;
+  relation: string;
+  isDefault: boolean;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  birthDate: string | null;
+  gender: string | null;
+  nationality: string | null;
+  tcKimlikNo: string | null;
+  passportNo: string | null;
+  passportExpiry: string | null;
+  companyName: string | null;
+  taxNumber: string | null;
+  taxOffice: string | null;
+}
+
 const emptyForm: GuestForm = {
   firstName: '', lastName: '', email: '', phone: '',
   birthDate: '', gender: '', nationality: 'TR',
@@ -112,12 +134,27 @@ function formWithAccountProfile(form: GuestForm, profile: AccountProfile): Guest
 interface DatePickerModalProps {
   checkIn: Date | null;
   checkOut: Date | null;
+  roomId?: string;
+  roomName?: string;
   onConfirm: (ci: Date, co: Date) => void;
   onClose: () => void;
   tr: boolean;
 }
 
-function DatePickerModal({ checkIn: initCi, checkOut: initCo, onConfirm, onClose, tr }: DatePickerModalProps) {
+function dateKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function parseDateKey(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return startOfDay(new Date(year, month - 1, day));
+}
+
+function addDays(date: Date, days: number) {
+  return startOfDay(new Date(date.getFullYear(), date.getMonth(), date.getDate() + days));
+}
+
+function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomId, roomName, onConfirm, onClose, tr }: DatePickerModalProps) {
   const today = startOfDay(new Date());
   const [leftMonth, setLeftMonth] = useState(() => {
     const base = initCi ?? today;
@@ -127,12 +164,87 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, onConfirm, onClose
   const [checkOut, setCheckOut] = useState<Date | null>(initCo);
   const [hovered, setHovered] = useState<Date | null>(null);
   const [selecting, setSelecting] = useState<'in' | 'out'>(initCi ? 'out' : 'in');
+  const [bookedDates, setBookedDates] = useState<Set<string>>(() => new Set());
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
 
   const rightMonth = addMonths(leftMonth, 1);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  useEffect(() => {
+    if (!roomId) {
+      setBookedDates(new Set());
+      setLoadingAvailability(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadAvailability() {
+      setLoadingAvailability(true);
+      try {
+        const months = [leftMonth, rightMonth];
+        const responses = await Promise.all(months.map((monthDate) => {
+          const params = new URLSearchParams({
+            year: String(monthDate.getFullYear()),
+            month: String(monthDate.getMonth()),
+            roomId: roomId!,
+          });
+          return fetch(`/api/availability?${params}`).then((response) => response.json());
+        }));
+
+        if (cancelled) return;
+
+        const next = new Set<string>();
+        for (const response of responses) {
+          if (!response?.ok) continue;
+          for (const range of response.ranges as Array<{ checkIn: string; checkOut: string }>) {
+            let day = parseDateKey(range.checkIn);
+            const end = parseDateKey(range.checkOut);
+            while (day < end) {
+              next.add(dateKey(day));
+              day = addDays(day, 1);
+            }
+          }
+        }
+
+        setBookedDates(next);
+      } catch {
+        if (!cancelled) setBookedDates(new Set());
+      } finally {
+        if (!cancelled) setLoadingAvailability(false);
+      }
+    }
+
+    loadAvailability();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [leftMonth, roomId]);
+
+  function hasBookedNightBetween(start: Date, end: Date) {
+    let day = startOfDay(start);
+    const endDay = startOfDay(end);
+
+    while (day < endDay) {
+      if (bookedDates.has(dateKey(day))) return true;
+      day = addDays(day, 1);
+    }
+
+    return false;
+  }
+
+  function isDateUnavailable(date: Date) {
+    if (!roomId) return false;
+    if (!checkIn || selecting === 'in' || date <= checkIn) return bookedDates.has(dateKey(date));
+
+    return hasBookedNightBetween(checkIn, date);
+  }
+
   function handleSelect(date: Date) {
+    if (isDateUnavailable(date)) return;
+
     if (selecting === 'in') {
       setCheckIn(date);
       setCheckOut(null);
@@ -149,7 +261,7 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, onConfirm, onClose
     }
   }
 
-  const canConfirm = checkIn && checkOut && checkOut > checkIn;
+  const canConfirm = checkIn && checkOut && checkOut > checkIn && !hasBookedNightBetween(checkIn, checkOut);
 
   const nightCount = canConfirm
     ? Math.round((checkOut!.getTime() - checkIn!.getTime()) / 86400000)
@@ -178,23 +290,34 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, onConfirm, onClose
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex gap-6 text-sm">
-            <button
-              onClick={() => setSelecting('in')}
-              className={`pb-1 border-b-2 transition-colors ${selecting === 'in' ? 'border-brand-accent text-brand-accent' : 'border-transparent text-white/40 hover:text-white/70'}`}
-            >
-              {tr ? 'Giriş' : 'Check-in'}: <span className="font-semibold">{formatDate(checkIn)}</span>
-            </button>
-            <button
-              onClick={() => checkIn && setSelecting('out')}
-              className={`pb-1 border-b-2 transition-colors ${selecting === 'out' ? 'border-brand-accent text-brand-accent' : 'border-transparent text-white/40 hover:text-white/70'}`}
-            >
-              {tr ? 'Çıkış' : 'Check-out'}: <span className="font-semibold">{formatDate(checkOut)}</span>
-            </button>
-            {nightCount > 0 && (
-              <span className="text-white/30 text-xs self-end mb-0.5">
-                {nightCount} {tr ? 'gece' : 'night'}
-              </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              <button
+                onClick={() => setSelecting('in')}
+                className={`pb-1 border-b-2 transition-colors ${selecting === 'in' ? 'border-brand-accent text-brand-accent' : 'border-transparent text-white/40 hover:text-white/70'}`}
+              >
+                {tr ? 'Giriş' : 'Check-in'}: <span className="font-semibold">{formatDate(checkIn)}</span>
+              </button>
+              <button
+                onClick={() => checkIn && setSelecting('out')}
+                className={`pb-1 border-b-2 transition-colors ${selecting === 'out' ? 'border-brand-accent text-brand-accent' : 'border-transparent text-white/40 hover:text-white/70'}`}
+              >
+                {tr ? 'Çıkış' : 'Check-out'}: <span className="font-semibold">{formatDate(checkOut)}</span>
+              </button>
+              {nightCount > 0 && (
+                <span className="text-white/30 text-xs self-end mb-0.5">
+                  {nightCount} {tr ? 'gece' : 'night'}
+                </span>
+              )}
+            </div>
+            {roomId && (
+              <p className="mt-2 text-[11px] text-white/35">
+                {loadingAvailability
+                  ? (tr ? 'Odanın müsait günleri kontrol ediliyor…' : 'Checking available dates for this room…')
+                  : (tr
+                    ? `${roomName ?? 'Seçili oda'} için dolu tarihler kapalı gösteriliyor.`
+                    : `Booked dates are disabled for ${roomName ?? 'the selected room'}.`)}
+              </p>
             )}
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white">
@@ -224,6 +347,8 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, onConfirm, onClose
             year={leftMonth.getFullYear()} month={leftMonth.getMonth()}
             checkIn={checkIn} checkOut={checkOut} hovered={hovered} today={today}
             minDate={today}
+            bookedDates={bookedDates}
+            isDateUnavailable={isDateUnavailable}
             onSelect={handleSelect} onHover={setHovered} tr={tr}
           />
           <div className="w-px bg-white/5" />
@@ -231,6 +356,8 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, onConfirm, onClose
             year={rightMonth.getFullYear()} month={rightMonth.getMonth()}
             checkIn={checkIn} checkOut={checkOut} hovered={hovered} today={today}
             minDate={today}
+            bookedDates={bookedDates}
+            isDateUnavailable={isDateUnavailable}
             onSelect={handleSelect} onHover={setHovered} tr={tr}
           />
         </div>
@@ -238,7 +365,7 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, onConfirm, onClose
         {/* Confirm */}
         <div className="mt-5 flex justify-end">
           <button
-            disabled={!canConfirm}
+            disabled={!canConfirm || loadingAvailability}
             onClick={() => canConfirm && onConfirm(checkIn!, checkOut!)}
             className="px-5 py-2 rounded-lg bg-brand-accent text-black text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-brand-accent/90 transition-colors"
           >
@@ -335,14 +462,17 @@ export function ReservationScreen() {
   const [newAccountProfileOwner, setNewAccountProfileOwner] = useState<NewAccountProfileOwner | null>(null);
   const [result, setResult] = useState<{ ok: boolean; confirmationId?: string; message?: string; needsProfileSetup?: boolean } | null>(null);
 
+  const [savedPeople, setSavedPeople] = useState<AccountPerson[] | null>(null);
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+
   const fetchRooms = useCallback(async (ci?: Date, co?: Date) => {
     setLoadingRooms(true);
     try {
       let url = '/api/rooms';
       if (ci && co) {
         const p = new URLSearchParams({
-          checkIn:  ci.toISOString().split('T')[0],
-          checkOut: co.toISOString().split('T')[0],
+          checkIn:  dateKey(ci),
+          checkOut: dateKey(co),
         });
         url = `/api/rooms?${p}`;
         setDateFilterActive(true);
@@ -363,6 +493,23 @@ export function ReservationScreen() {
 
   useEffect(() => { fetchRooms(); }, [fetchRooms]);
 
+  useEffect(() => {
+    async function detectLogin() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data?.user) return;
+        const peopleRes = await fetch('/api/account/people');
+        const peopleData = await peopleRes.json();
+        if (peopleData.ok && Array.isArray(peopleData.people) && peopleData.people.length > 0) {
+          setSavedPeople(peopleData.people);
+        }
+      } catch { /* not logged in or network error */ }
+    }
+    detectLogin();
+  }, []);
+
   const selectedRoom = rooms.find(r => r.id === selectedRoomId) ?? null;
 
   // Filter rooms by guest capacity in addition to date availability
@@ -381,6 +528,34 @@ export function ReservationScreen() {
   const setField = useCallback(<K extends keyof GuestForm>(key: K, value: GuestForm[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
   }, []);
+
+  function selectPerson(person: AccountPerson) {
+    setSelectedPersonId(person.id);
+    const hasTc = !!(person.tcKimlikNo);
+    setIsTurkish(hasTc || (!person.passportNo && (person.nationality === 'TR' || !person.nationality)));
+    setForm(prev => ({
+      ...prev,
+      firstName:      person.firstName       || prev.firstName,
+      lastName:       person.lastName        || prev.lastName,
+      email:          person.email           || prev.email,
+      phone:          person.phone           || prev.phone,
+      birthDate:      person.birthDate       || prev.birthDate,
+      gender:         person.gender          || prev.gender,
+      nationality:    person.nationality     || prev.nationality,
+      tcKimlikNo:     person.tcKimlikNo      || prev.tcKimlikNo,
+      passportNo:     person.passportNo      || prev.passportNo,
+      passportExpiry: person.passportExpiry  || prev.passportExpiry,
+      companyName:    person.companyName     || prev.companyName,
+      taxNumber:      person.taxNumber       || prev.taxNumber,
+      taxOffice:      person.taxOffice       || prev.taxOffice,
+    }));
+  }
+
+  function clearPersonSelection() {
+    setSelectedPersonId(null);
+    setForm(prev => ({ ...emptyForm, adultsCount: prev.adultsCount, childrenCount: prev.childrenCount }));
+    setIsTurkish(true);
+  }
 
   function formatDate(d: Date | null) {
     if (!d) return '';
@@ -502,8 +677,8 @@ export function ReservationScreen() {
 
     const payload = {
       roomId: selectedRoomId,
-      checkInDate: checkIn!.toISOString().split('T')[0],
-      checkOutDate: checkOut!.toISOString().split('T')[0],
+      checkInDate: dateKey(checkIn!),
+      checkOutDate: dateKey(checkOut!),
       adultsCount: reservationForm.adultsCount,
       childrenCount: reservationForm.childrenCount,
       firstName: reservationForm.firstName,
@@ -833,6 +1008,63 @@ export function ReservationScreen() {
                 transition={{ duration: 0.2 }}
                 className="space-y-3"
               >
+                {/* Saved People Quick-Select */}
+                {savedPeople && savedPeople.length > 0 && (
+                  <div className="space-y-2.5">
+                    <p className="text-[10px] font-bold text-white/35 uppercase tracking-widest">
+                      {tr ? 'Kayıtlı Kişiler' : 'Saved Guests'}
+                    </p>
+                    <div className="flex gap-2 overflow-x-auto pb-1 snap-x scrollbar-none">
+                      {savedPeople.map(person => {
+                        const selected = selectedPersonId === person.id;
+                        const initials = ((person.firstName[0] ?? '') + (person.lastName[0] ?? '')).toUpperCase();
+                        const relationLabel: Record<string, string> = {
+                          self:    tr ? 'Kendim'  : 'Self',
+                          guest:   tr ? 'Misafir' : 'Guest',
+                          family:  tr ? 'Aile'    : 'Family',
+                          company: tr ? 'Şirket'  : 'Company',
+                        };
+                        return (
+                          <button
+                            key={person.id}
+                            type="button"
+                            onClick={() => selected ? clearPersonSelection() : selectPerson(person)}
+                            className={`snap-start shrink-0 flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl border transition-all text-center min-w-[76px] ${
+                              selected
+                                ? 'border-brand-accent/50 bg-brand-accent/10'
+                                : 'border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-white/[0.07]'
+                            }`}
+                          >
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                              selected ? 'bg-brand-accent/25 text-brand-accent' : 'bg-white/10 text-white/50'
+                            }`}>
+                              {selected ? <Check size={14} /> : initials}
+                            </div>
+                            <span className={`text-[11px] font-medium leading-tight max-w-[68px] truncate ${selected ? 'text-brand-accent' : 'text-white/70'}`}>
+                              {person.firstName}
+                            </span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                              selected ? 'bg-brand-accent/20 text-brand-accent' : 'bg-white/8 text-white/30'
+                            }`}>
+                              {relationLabel[person.relation] ?? person.relation}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedPersonId ? (
+                      <p className="text-[10px] text-brand-accent/60">
+                        {tr ? 'Bilgiler otomatik dolduruldu — aşağıdan düzenleyebilirsiniz.' : 'Fields auto-filled — edit below if needed.'}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-white/25">
+                        {tr ? 'Hızlı doldurmak için bir kişi seçin.' : 'Select a person to auto-fill the form.'}
+                      </p>
+                    )}
+                    <div className="border-b border-white/8" />
+                  </div>
+                )}
+
                 {/* Name */}
                 <div className="grid grid-cols-2 gap-3">
                   <Field label={tr ? 'Ad' : 'First Name'} required>
@@ -852,10 +1084,10 @@ export function ReservationScreen() {
                     </div>
                   </Field>
                   <Field label={tr ? 'Telefon' : 'Phone'} required>
-                    <div className="relative">
-                      <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
-                      <input type="tel" value={form.phone} onChange={e => setField('phone', e.target.value)} className={`${inputCls} pl-8`} placeholder="+90 5xx xxx xx xx" />
-                    </div>
+                    <PhoneInput
+                      value={form.phone}
+                      onChange={v => setField('phone', v)}
+                    />
                   </Field>
                 </div>
 
@@ -907,16 +1139,11 @@ export function ReservationScreen() {
 
                 {isTurkish ? (
                   <Field label="TC Kimlik No" required>
-                    <div className="relative">
-                      <FileText size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
-                      <input
-                        value={form.tcKimlikNo}
-                        onChange={e => setField('tcKimlikNo', e.target.value.replace(/\D/g, '').slice(0, 11))}
-                        className={`${inputCls} pl-8`}
-                        placeholder="12345678901"
-                        maxLength={11}
-                      />
-                    </div>
+                    <TcInput
+                      value={form.tcKimlikNo}
+                      onChange={v => setField('tcKimlikNo', v)}
+                      error={form.tcKimlikNo.length > 0 && form.tcKimlikNo.length < 11}
+                    />
                     {form.tcKimlikNo.length > 0 && form.tcKimlikNo.length < 11 && (
                       <p className="text-[10px] text-red-400 mt-0.5">{tr ? '11 haneli olmalı' : 'Must be 11 digits'}</p>
                     )}
@@ -1353,6 +1580,8 @@ export function ReservationScreen() {
           <DatePickerModal
             checkIn={checkIn}
             checkOut={checkOut}
+            roomId={selectedRoom?.id}
+            roomName={selectedRoom?.name}
             onConfirm={(ci, co) => { setCheckIn(ci); setCheckOut(co); setShowDatePicker(false); fetchRooms(ci, co); }}
             onClose={() => setShowDatePicker(false)}
             tr={tr}

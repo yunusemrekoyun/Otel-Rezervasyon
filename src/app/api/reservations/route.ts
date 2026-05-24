@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
+import { sendMail } from '@/lib/mail';
+import { renderReservationEmail } from '@/lib/mail/hotel-templates';
 
 export const runtime = 'nodejs';
 
@@ -118,6 +120,40 @@ export async function POST(request: NextRequest) {
         room: { select: { id: true, name: true, basePrice: true } },
       },
     });
+
+    // Send reservation confirmation email (fire-and-forget)
+    try {
+      const [ciSetting, coSetting] = await Promise.all([
+        prisma.systemSetting.findUnique({ where: { key: 'check_in_time' } }),
+        prisma.systemSetting.findUnique({ where: { key: 'check_out_time' } }),
+      ]);
+      const { html, text, attachments } = await renderReservationEmail({
+        firstName:      data.firstName,
+        lastName:       data.lastName,
+        email:          data.email,
+        confirmationId,
+        roomName:       reservation.room.name,
+        checkInDate:    reservation.checkInDate.toISOString().split('T')[0],
+        checkOutDate:   reservation.checkOutDate.toISOString().split('T')[0],
+        nights:         reservation.nights,
+        adultsCount:    reservation.adultsCount,
+        childrenCount:  reservation.childrenCount,
+        checkInTime:    ciSetting?.value ?? '14:00',
+        checkOutTime:   coSetting?.value ?? '12:00',
+        subtotal:       reservation.subtotal,
+        totalPrice:     reservation.totalPrice,
+        specialRequests: data.specialRequests,
+      });
+      sendMail({
+        to: data.email,
+        subject: `Rezervasyon Onayı #${confirmationId}`,
+        html,
+        text,
+        attachments,
+      }).catch(console.error);
+    } catch (mailError) {
+      console.error('Reservation email send failed.', mailError);
+    }
 
     return NextResponse.json({
       ok: true,

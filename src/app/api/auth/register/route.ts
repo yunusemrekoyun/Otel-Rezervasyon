@@ -1,8 +1,20 @@
 import argon2 from 'argon2';
+import { createHash, randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { issueAuthSession, setAuthCookies } from '@/lib/auth/session';
+import { sendMail } from '@/lib/mail';
+import { renderVerificationEmail } from '@/lib/mail/hotel-templates';
+
+const TOKEN_TTL_HOURS = 24;
+
+function createVerifyToken() { return randomBytes(48).toString('base64url'); }
+function hashToken(t: string)  { return createHash('sha256').update(t).digest('hex'); }
+
+function getAppUrl(request: NextRequest) {
+  return process.env.APP_URL?.trim() || request.nextUrl.origin;
+}
 
 export const runtime = 'nodejs';
 
@@ -108,6 +120,31 @@ export async function POST(request: NextRequest) {
 
       return createdUser;
     });
+
+    // Send verification email (fire-and-forget)
+    try {
+      const token = createVerifyToken();
+      const verifyUrl = new URL('/api/auth/verify-email/confirm', getAppUrl(request));
+      verifyUrl.searchParams.set('token', token);
+
+      await prisma.emailVerificationToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: hashToken(token),
+          expiresAt: new Date(Date.now() + TOKEN_TTL_HOURS * 60 * 60 * 1000),
+        },
+      });
+
+      const { html, text } = renderVerificationEmail(firstName, verifyUrl.toString());
+      sendMail({
+        to: email,
+        subject: 'E-posta adresinizi doğrulayın',
+        html,
+        text,
+      }).catch(console.error);
+    } catch (mailError) {
+      console.error('Verification email send failed.', mailError);
+    }
 
     const issued = await issueAuthSession({ user, request });
     const response = NextResponse.json({

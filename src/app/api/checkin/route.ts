@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
+import { sendMail } from '@/lib/mail';
+import { renderCheckinEmail } from '@/lib/mail/hotel-templates';
 
 export const runtime = 'nodejs';
 
@@ -83,7 +85,8 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => null);
-  const { confirmationId, action } = body ?? {};
+  const { confirmationId, action, vehiclePlate, checkinNote, checkinDocumentUrl, sendToCleaning: sendToCleaningRaw, checkoutNote } = body ?? {};
+  const sendToCleaning = sendToCleaningRaw !== false; // default true
 
   if (!confirmationId || !['checkin', 'checkout'].includes(action)) {
     return NextResponse.json({ ok: false, message: 'Geçersiz istek.' }, { status: 400 });
@@ -104,6 +107,19 @@ export async function PATCH(request: NextRequest) {
       { ok: false, message: 'Bu rezervasyon için check-in yapılamaz.' },
       { status: 409 },
     );
+  }
+
+  if (action === 'checkin') {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const ci = reservation.checkInDate;
+    const checkInStr = `${ci.getFullYear()}-${String(ci.getMonth()+1).padStart(2,'0')}-${String(ci.getDate()).padStart(2,'0')}`;
+    if (checkInStr > todayStr) {
+      return NextResponse.json(
+        { ok: false, message: `Giriş tarihi henüz gelmedi. Rezervasyon giriş tarihi: ${ci.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })}.` },
+        { status: 409 },
+      );
+    }
   }
   if (action === 'checkout' && reservation.status !== 'checked_in') {
     return NextResponse.json(
@@ -135,10 +151,35 @@ export async function PATCH(request: NextRequest) {
 
         return tx.reservation.update({
           where: { confirmationId },
-          data: { status: 'checked_in' },
+          data: {
+            status: 'checked_in',
+            ...(vehiclePlate       !== undefined ? { vehiclePlate }       : {}),
+            ...(checkinNote        !== undefined ? { checkinNote }        : {}),
+            ...(checkinDocumentUrl !== undefined ? { checkinDocumentUrl } : {}),
+          },
           include: { room: ROOM_SEL },
         });
       });
+
+      // Send check-in welcome email (fire-and-forget)
+      try {
+        const coSetting = await prisma.systemSetting.findUnique({ where: { key: 'check_out_time' } });
+        const { html, text } = renderCheckinEmail({
+          firstName:    updated.firstName,
+          roomName:     updated.room.name,
+          checkOutDate: updated.checkOutDate.toISOString().split('T')[0],
+          checkOutTime: coSetting?.value ?? '12:00',
+          confirmationId: updated.confirmationId,
+        });
+        sendMail({
+          to: updated.email,
+          subject: `Hoş Geldiniz — ${updated.room.name}`,
+          html,
+          text,
+        }).catch(console.error);
+      } catch (mailError) {
+        console.error('Check-in email send failed.', mailError);
+      }
 
       return NextResponse.json({ ok: true, reservation: updated });
     } catch (error) {
@@ -156,22 +197,24 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  // checkout — atomically mark room as cleaning and create a task
+  // checkout — atomically update room status and optionally create a cleaning task
   const updated = await prisma.$transaction(async (tx) => {
     await tx.room.update({
       where: { id: reservation.roomId },
-      data: { status: 'cleaning' },
+      data: { status: sendToCleaning ? 'cleaning' : 'available' },
     });
 
-    await tx.cleaningTask.create({
-      data: {
-        roomId: reservation.roomId,
-        reportedById: auth.user.id,
-        status: 'pending',
-        priority: 'normal',
-        notes: 'Check-out sonrası otomatik temizlik görevi',
-      },
-    });
+    if (sendToCleaning) {
+      await tx.cleaningTask.create({
+        data: {
+          roomId: reservation.roomId,
+          reportedById: auth.user.id,
+          status: 'pending',
+          priority: 'normal',
+          notes: checkoutNote ?? 'Check-out sonrası otomatik temizlik görevi',
+        },
+      });
+    }
 
     return tx.reservation.update({
       where: { confirmationId },
