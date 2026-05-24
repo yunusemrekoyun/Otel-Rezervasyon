@@ -6,10 +6,16 @@ export const runtime = 'nodejs';
 
 const ROOM_SEL = {
   select: {
-    id: true, name: true, floor: true,
+    id: true, name: true, floor: true, status: true,
     roomType: { select: { name: true } },
   },
 } as const;
+
+class RoomStatusConflictError extends Error {
+  constructor(readonly status: string | null | undefined) {
+    super('ROOM_STATUS_CONFLICT');
+  }
+}
 
 export async function GET(request: NextRequest) {
   const auth = await getAuthContextFromRequest(request).catch(() => null);
@@ -107,26 +113,57 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (action === 'checkin') {
-    const updated = await prisma.reservation.update({
-      where: { confirmationId },
-      data: { status: 'checked_in' },
-      include: { room: ROOM_SEL },
-    });
-    return NextResponse.json({ ok: true, reservation: updated });
+    try {
+      const updated = await prisma.$transaction(async (tx) => {
+        const roomUpdate = await tx.room.updateMany({
+          where: {
+            id: reservation.roomId,
+            status: 'available',
+          },
+          data: {
+            status: 'occupied',
+          },
+        });
+
+        if (roomUpdate.count !== 1) {
+          const room = await tx.room.findUnique({
+            where: { id: reservation.roomId },
+            select: { status: true },
+          });
+          throw new RoomStatusConflictError(room?.status);
+        }
+
+        return tx.reservation.update({
+          where: { confirmationId },
+          data: { status: 'checked_in' },
+          include: { room: ROOM_SEL },
+        });
+      });
+
+      return NextResponse.json({ ok: true, reservation: updated });
+    } catch (error) {
+      if (error instanceof RoomStatusConflictError) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: `Oda şu anda check-in için uygun değil. Mevcut durum: ${error.status ?? 'bilinmiyor'}.`,
+          },
+          { status: 409 },
+        );
+      }
+
+      throw error;
+    }
   }
 
   // checkout — atomically mark room as cleaning and create a task
-  const [updated] = await prisma.$transaction([
-    prisma.reservation.update({
-      where: { confirmationId },
-      data: { status: 'checked_out' },
-      include: { room: ROOM_SEL },
-    }),
-    prisma.room.update({
+  const updated = await prisma.$transaction(async (tx) => {
+    await tx.room.update({
       where: { id: reservation.roomId },
       data: { status: 'cleaning' },
-    }),
-    prisma.cleaningTask.create({
+    });
+
+    await tx.cleaningTask.create({
       data: {
         roomId: reservation.roomId,
         reportedById: auth.user.id,
@@ -134,8 +171,14 @@ export async function PATCH(request: NextRequest) {
         priority: 'normal',
         notes: 'Check-out sonrası otomatik temizlik görevi',
       },
-    }),
-  ]);
+    });
+
+    return tx.reservation.update({
+      where: { confirmationId },
+      data: { status: 'checked_out' },
+      include: { room: ROOM_SEL },
+    });
+  });
 
   return NextResponse.json({ ok: true, reservation: updated });
 }

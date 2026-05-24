@@ -15,7 +15,7 @@ export interface AccessTokenPayload extends AccessTokenInput {
 }
 
 function getJwtSecret() {
-  const secret = process.env.JWT_ACCESS_SECRET;
+  const secret = process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET;
 
   if (!secret || secret.length < 32) {
     throw new Error('JWT_ACCESS_SECRET must be set to at least 32 characters.');

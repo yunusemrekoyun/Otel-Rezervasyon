@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -9,6 +9,7 @@ import {
   Wifi, Coffee, Car, UtensilsCrossed, Baby,
   Cigarette, ArrowUpDown, Pilcrow, Globe, Shield,
   ChevronDown, CheckCircle2, Building2, Home,
+  Plus, IdCard, Save, Users,
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { CustomerReservations } from '@/components/customer/CustomerReservations';
@@ -22,6 +23,26 @@ interface CustomerDashboardProps {
 }
 
 type TabId = 'reservations' | 'profile' | 'preferences' | 'support';
+
+interface AccountPerson {
+  id: string;
+  label: string | null;
+  relation: string;
+  isDefault: boolean;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  birthDate: string | null;
+  gender: string | null;
+  nationality: string | null;
+  tcKimlikNo: string | null;
+  passportNo: string | null;
+  passportExpiry: string | null;
+  companyName: string | null;
+  taxNumber: string | null;
+  taxOffice: string | null;
+}
 
 // ── Loyalty helpers ────────────────────────────────────────────────────────────
 
@@ -163,43 +184,189 @@ function TabNav({ active, setActive, tr }: { active: TabId; setActive: (t: TabId
 
 const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-brand-accent/40 transition-colors';
 
-function ProfileTab({ user, tr }: { user: AuthUser; tr: boolean }) {
+function PersonInfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="space-y-4">
-      {/* Personal info */}
-      <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <User size={14} className="text-brand-accent" />
-          {tr ? 'Kişisel Bilgiler' : 'Personal Information'}
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[
-            { label: tr ? 'Ad' : 'First Name',           placeholder: tr ? 'Ayşe' : 'Jane' },
-            { label: tr ? 'Soyad' : 'Last Name',         placeholder: tr ? 'Yılmaz' : 'Doe' },
-            { label: 'E-posta',                           placeholder: user.email, disabled: true },
-            { label: tr ? 'Telefon' : 'Phone',           placeholder: '+90 5xx xxx xx xx' },
-            { label: tr ? 'Doğum Tarihi' : 'Birth Date', placeholder: tr ? 'GG / AA / YYYY' : 'DD / MM / YYYY' },
-            { label: tr ? 'Uyruk' : 'Nationality',       placeholder: 'TR' },
-          ].map(f => (
-            <div key={f.label}>
-              <label className="block text-[10px] text-white/35 uppercase tracking-wider mb-1.5">{f.label}</label>
-              <input
-                className={`${inputCls} ${f.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                placeholder={f.placeholder}
-                disabled={f.disabled}
-                defaultValue={f.disabled ? f.placeholder : ''}
-              />
-            </div>
-          ))}
+    <div>
+      <p className="text-[9px] uppercase tracking-wider text-white/25">{label}</p>
+      <p className="text-xs text-white/70 mt-0.5">{value || '—'}</p>
+    </div>
+  );
+}
+
+function PersonCard({ person, tr }: { person: AccountPerson; tr: boolean }) {
+  const relationLabel = person.relation === 'self'
+    ? tr ? 'Hesap sahibi' : 'Account owner'
+    : tr ? 'Rezervasyon kişisi' : 'Reservation guest';
+
+  return (
+    <div className="rounded-2xl border border-white/8 bg-white/3 p-4 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center shrink-0">
+            <User size={17} className="text-brand-accent" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{person.firstName} {person.lastName}</p>
+            <p className="text-[11px] text-white/35">{person.label || relationLabel}</p>
+          </div>
         </div>
-        <div className="mt-4 flex justify-end">
-          <button className="px-5 py-2 rounded-lg bg-brand-accent text-black text-xs font-bold hover:bg-brand-accent/90 transition-colors opacity-50 cursor-not-allowed">
-            {tr ? 'Değişiklikleri Kaydet' : 'Save Changes'}
-          </button>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {person.isDefault && (
+            <span className="rounded-full border border-brand-accent/25 bg-brand-accent/10 px-2 py-0.5 text-[9px] font-bold text-brand-accent">
+              {tr ? 'Varsayılan' : 'Default'}
+            </span>
+          )}
+          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] text-white/45">
+            {relationLabel}
+          </span>
         </div>
       </div>
 
-      {/* Security */}
+      <div className="grid grid-cols-2 gap-3">
+        <PersonInfoRow label="E-posta" value={person.email} />
+        <PersonInfoRow label={tr ? 'Telefon' : 'Phone'} value={person.phone} />
+        <PersonInfoRow label={tr ? 'Doğum tarihi' : 'Birth date'} value={person.birthDate} />
+        <PersonInfoRow label={tr ? 'Uyruk' : 'Nationality'} value={person.nationality} />
+        <PersonInfoRow label={tr ? 'T.C. kimlik no' : 'National ID'} value={person.tcKimlikNo} />
+        <PersonInfoRow label={tr ? 'Pasaport no' : 'Passport no'} value={person.passportNo} />
+        <PersonInfoRow label={tr ? 'Pasaport bitiş' : 'Passport expiry'} value={person.passportExpiry} />
+        <PersonInfoRow label={tr ? 'Cinsiyet' : 'Gender'} value={person.gender} />
+        <PersonInfoRow label={tr ? 'Şirket' : 'Company'} value={person.companyName} />
+        <PersonInfoRow label={tr ? 'Vergi no' : 'Tax no'} value={person.taxNumber} />
+      </div>
+    </div>
+  );
+}
+
+function ProfileTab({
+  user,
+  tr,
+  people,
+  onPeopleChanged,
+}: {
+  user: AuthUser;
+  tr: boolean;
+  people: AccountPerson[];
+  onPeopleChanged: (people: AccountPerson[]) => void;
+}) {
+  const [ownerForm, setOwnerForm] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    birthDate: '',
+    nationality: 'TR',
+    tcKimlikNo: '',
+  });
+  const [savingOwner, setSavingOwner] = useState(false);
+  const [ownerMessage, setOwnerMessage] = useState('');
+  const hasDefaultOwner = people.some((person) => person.isDefault && person.relation === 'self');
+
+  async function saveOwnerProfile(event: FormEvent) {
+    event.preventDefault();
+    if (!ownerForm.firstName || !ownerForm.lastName || !ownerForm.phone) return;
+
+    setSavingOwner(true);
+    setOwnerMessage('');
+
+    try {
+      const response = await fetch('/api/account/people', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          relation: 'self',
+          isDefault: true,
+          email: user.email,
+          ...ownerForm,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.message || 'Profil kaydedilemedi.');
+      }
+
+      const list = await fetch('/api/account/people').then((res) => res.json()).catch(() => null);
+      if (list?.ok) onPeopleChanged(list.people);
+      setOwnerMessage(tr ? 'Bilgileriniz kaydedildi.' : 'Your details have been saved.');
+      setOwnerForm({ firstName: '', lastName: '', phone: '', birthDate: '', nationality: 'TR', tcKimlikNo: '' });
+    } catch (error) {
+      setOwnerMessage(error instanceof Error ? error.message : (tr ? 'Bilgiler kaydedilemedi.' : 'Details could not be saved.'));
+    } finally {
+      setSavingOwner(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Users size={14} className="text-brand-accent" />
+              {tr ? 'Hesaba Tanımlı Bireyler' : 'People on This Account'}
+            </h3>
+            <p className="text-xs text-white/35 mt-1 leading-relaxed">
+              {tr
+                ? 'Kendiniz, aile üyeleriniz ya da adına rezervasyon yaptığınız kişiler burada kart olarak tutulur. Rezervasyon sırasında doğru kişiyi seçmek daha hızlı olur.'
+                : 'You can keep yourself, family members, or guests you book for as cards here. It makes future reservations faster.'}
+            </p>
+          </div>
+          <span className="rounded-full bg-white/5 border border-white/8 px-2.5 py-1 text-[10px] text-white/45">
+            {people.length} {tr ? 'kayıt' : 'saved'}
+          </span>
+        </div>
+
+        {!hasDefaultOwner && (
+          <form onSubmit={saveOwnerProfile} className="rounded-xl border border-brand-accent/20 bg-brand-accent/7 p-4 mb-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <IdCard size={15} className="text-brand-accent mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {tr ? 'Kendi bilgilerinizi tamamlayın' : 'Complete your own details'}
+                </p>
+                <p className="text-xs text-white/45 leading-relaxed mt-1">
+                  {tr
+                    ? 'Rezervasyonu başka biri adına yaptıysanız onu zaten ekledik. Buraya kendi bilgilerinizi yazarsanız sonraki işlemlerde hesabın sahibi net görünür.'
+                    : 'If you booked for someone else, we already saved that guest. Add your own details here so the account owner is clear next time.'}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input className={inputCls} placeholder={tr ? 'Adınız' : 'First name'} value={ownerForm.firstName} onChange={(e) => setOwnerForm((p) => ({ ...p, firstName: e.target.value }))} />
+              <input className={inputCls} placeholder={tr ? 'Soyadınız' : 'Last name'} value={ownerForm.lastName} onChange={(e) => setOwnerForm((p) => ({ ...p, lastName: e.target.value }))} />
+              <input className={inputCls} placeholder={tr ? 'Telefonunuz' : 'Phone'} value={ownerForm.phone} onChange={(e) => setOwnerForm((p) => ({ ...p, phone: e.target.value }))} />
+              <input className={inputCls} placeholder={tr ? 'Doğum tarihi' : 'Birth date'} type="date" value={ownerForm.birthDate} onChange={(e) => setOwnerForm((p) => ({ ...p, birthDate: e.target.value }))} />
+              <input className={inputCls} placeholder={tr ? 'Uyruk' : 'Nationality'} value={ownerForm.nationality} onChange={(e) => setOwnerForm((p) => ({ ...p, nationality: e.target.value }))} />
+              <input className={inputCls} placeholder={tr ? 'T.C. kimlik no' : 'National ID'} value={ownerForm.tcKimlikNo} onChange={(e) => setOwnerForm((p) => ({ ...p, tcKimlikNo: e.target.value }))} />
+            </div>
+            {ownerMessage && <p className="text-xs text-brand-accent/80">{ownerMessage}</p>}
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={savingOwner || !ownerForm.firstName || !ownerForm.lastName || !ownerForm.phone}
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-accent px-4 py-2 text-xs font-bold text-black disabled:opacity-50"
+              >
+                <Save size={12} />
+                {savingOwner ? (tr ? 'Kaydediliyor…' : 'Saving…') : (tr ? 'Bilgilerimi Kaydet' : 'Save My Details')}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          {people.map((person) => (
+            <PersonCard key={person.id} person={person} tr={tr} />
+          ))}
+          {people.length === 0 && (
+            <div className="rounded-xl border border-dashed border-white/10 bg-white/3 p-5 text-center">
+              <Plus size={18} className="mx-auto text-white/25 mb-2" />
+              <p className="text-sm text-white/60">{tr ? 'Henüz kayıtlı birey yok.' : 'No saved people yet.'}</p>
+              <p className="text-xs text-white/30 mt-1">{tr ? 'İlk rezervasyon veya profil kaydıyla burası dolacak.' : 'This area fills after your first reservation or profile entry.'}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
           <Shield size={14} className="text-brand-accent" />
@@ -568,10 +735,27 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
   const [activeTab, setActiveTab] = useState<TabId>('reservations');
   const [loggingOut, setLoggingOut] = useState(false);
   const [mode, setModeState] = useState<'dark' | 'light'>('light');
+  const [people, setPeople] = useState<AccountPerson[]>([]);
+  const [peopleLoaded, setPeopleLoaded] = useState(false);
+  const [showProfileSetupPrompt, setShowProfileSetupPrompt] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('wn-customer-mode-v2');
     if (saved === 'dark' || saved === 'light') setModeState(saved);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/account/people')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) {
+          setPeople(data.people);
+          const hasDefaultOwner = (data.people as AccountPerson[]).some((person) => person.isDefault && person.relation === 'self');
+          if (!hasDefaultOwner) setShowProfileSetupPrompt(true);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => setPeopleLoaded(true));
   }, []);
 
   const toggleMode = () => {
@@ -588,6 +772,53 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
 
   return (
     <div data-mode={mode} className={`min-h-screen panel-root${mode === 'light' ? ' mode-light' : ''}`}>
+      <AnimatePresence>
+        {peopleLoaded && showProfileSetupPrompt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              transition={{ duration: 0.22 }}
+              className="w-full max-w-md rounded-2xl border border-white/10 bg-[#15120f] p-5 shadow-2xl"
+            >
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-xl bg-brand-accent/10 border border-brand-accent/25 flex items-center justify-center shrink-0">
+                  <IdCard size={18} className="text-brand-accent" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-white">
+                    {tr ? 'Hesabınızı tamamlayalım' : 'Let’s complete your account'}
+                  </h2>
+                  <p className="text-sm text-white/50 leading-relaxed mt-2">
+                    {tr
+                      ? 'Rezervasyon kişisini kaydettik. Hesap sahibi olarak kendi bilgilerinizi de eklerseniz sonraki rezervasyonlarda kimin adına işlem yaptığınızı daha rahat seçersiniz.'
+                      : 'We saved the reservation guest. Add your own details as the account owner so future bookings are easier to manage.'}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5 flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => {
+                    setShowProfileSetupPrompt(false);
+                    setActiveTab('profile');
+                  }}
+                  className="flex-1 rounded-lg bg-brand-accent px-4 py-2.5 text-xs font-bold text-black hover:bg-brand-accent/90 transition-colors"
+                >
+                  {tr ? 'Bilgilerimi ekle' : 'Add my details'}
+                </button>
+                <button
+                  onClick={() => setShowProfileSetupPrompt(false)}
+                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-xs text-white/55 hover:bg-white/10 hover:text-white transition-colors"
+                >
+                  {tr ? 'Sonra yaparım' : 'I’ll do it later'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Minimal top bar */}
       <header className="sticky top-0 z-30 border-b border-white/6 backdrop-blur-md" style={{ background: 'var(--m-topbar)' }}>
         <div className="max-w-4xl mx-auto px-4 h-12 flex items-center justify-between">
@@ -650,7 +881,7 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
                 transition={{ duration: 0.18 }}
               >
                 {activeTab === 'reservations' && <CustomerReservations user={user} tr={tr} />}
-                {activeTab === 'profile'      && <ProfileTab user={user} tr={tr} />}
+                {activeTab === 'profile'      && <ProfileTab user={user} tr={tr} people={people} onPeopleChanged={setPeople} />}
                 {activeTab === 'preferences'  && <PreferencesTab tr={tr} />}
                 {activeTab === 'support'      && <SupportTab tr={tr} />}
               </motion.div>

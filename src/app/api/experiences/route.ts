@@ -14,6 +14,10 @@ const experienceSchema = z.object({
   guests: z.coerce.number().int(),
 });
 
+export async function GET() {
+  return NextResponse.json({ ok: true, experiences: experiencesData });
+}
+
 export async function POST(request: NextRequest) {
   const parsed = experienceSchema.safeParse(await request.json().catch(() => null));
 

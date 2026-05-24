@@ -34,7 +34,26 @@ PORT=3000 npm run start
 
 This project uses `output: 'standalone'` in `next.config.ts`, so a production build also creates a standalone server bundle under `.next/standalone`.
 
-Create `.env` from `.env.example`, then set your Supabase Postgres URI values and a strong `JWT_ACCESS_SECRET`.
+Fill the local `.env` file with your Supabase Postgres URI values and a strong `JWT_ACCESS_SECRET`.
+
+Mail is sent through the global SMTP service in `src/lib/mail`. For Gmail, create a Google app password and fill these `.env` fields:
+
+```text
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=465
+MAIL_SECURE=true
+MAIL_USER=yourgmail@gmail.com
+MAIL_APP_PASSWORD=your-google-app-password
+MAIL_FROM_EMAIL=yourgmail@gmail.com
+MAIL_FROM_NAME=WoodNest Hotel
+MAIL_REPLY_TO=optional-reply-address@example.com
+```
+
+Admin-only test endpoint:
+
+```text
+POST /api/mail/test
+```
 
 Useful deployment flow without Docker:
 

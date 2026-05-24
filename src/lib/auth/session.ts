@@ -12,7 +12,6 @@ import {
   hashRefreshToken,
   signAccessToken,
   verifyAccessToken,
-  type AccessTokenPayload,
 } from './tokens';
 
 export interface AuthUser {
@@ -49,19 +48,6 @@ function toAuthUser(user: {
     email: user.email,
     roleName: user.role.name,
     roleSlug: user.role.slug as RoleSlug,
-  };
-}
-
-function fromAccessPayload(payload: AccessTokenPayload): AuthContext {
-  return {
-    user: {
-      id: payload.userId,
-      email: payload.email,
-      roleName: payload.roleName,
-      roleSlug: payload.roleSlug,
-    },
-    sessionId: payload.sessionId,
-    source: 'access',
   };
 }
 
@@ -152,7 +138,32 @@ export async function getAuthContextFromTokens(accessToken?: string, refreshToke
   const accessPayload = await verifyAccessToken(accessToken);
 
   if (accessPayload) {
-    return fromAccessPayload(accessPayload);
+    const session = await prisma.session.findUnique({
+      where: {
+        id: accessPayload.sessionId,
+      },
+      include: {
+        user: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (
+      session &&
+      session.userId === accessPayload.userId &&
+      !session.revokedAt &&
+      session.expiresAt.getTime() > Date.now() &&
+      session.user.isActive
+    ) {
+      return {
+        user: toAuthUser(session.user),
+        sessionId: session.id,
+        source: 'access',
+      };
+    }
   }
 
   if (!refreshToken) return null;

@@ -8,7 +8,7 @@ function getProtectedRole(pathname: string) {
 }
 
 async function verifyRoleFromAccessToken(token?: string) {
-  const secret = process.env.JWT_ACCESS_SECRET;
+  const secret = process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET;
 
   if (!token || !secret || secret.length < 32) {
     return null;

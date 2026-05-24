@@ -48,6 +48,21 @@ interface GuestForm {
   childrenCount: number;
 }
 
+interface AccountProfile {
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  birthDate: string | null;
+  gender: string | null;
+  nationality: string | null;
+  tcKimlikNo: string | null;
+  passportNo: string | null;
+  passportExpiry: string | null;
+}
+
+type ProfileDecision = 'entered' | 'account';
+type NewAccountProfileOwner = 'self' | 'guest';
+
 const emptyForm: GuestForm = {
   firstName: '', lastName: '', email: '', phone: '',
   birthDate: '', gender: '', nationality: 'TR',
@@ -55,6 +70,42 @@ const emptyForm: GuestForm = {
   companyName: '', taxNumber: '', taxOffice: '',
   specialRequests: '', adultsCount: 1, childrenCount: 0,
 };
+
+function normalizeProfileValue(value: string | null | undefined) {
+  return (value ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('tr-TR');
+}
+
+function getGuestProfileMismatchLabels(profile: AccountProfile | null, form: GuestForm, isTurkish: boolean, tr: boolean) {
+  if (!profile) return [];
+
+  const fields = [
+    { label: tr ? 'Ad' : 'First name', account: profile.firstName, entered: form.firstName },
+    { label: tr ? 'Soyad' : 'Last name', account: profile.lastName, entered: form.lastName },
+    { label: tr ? 'Telefon' : 'Phone', account: profile.phone, entered: form.phone },
+    ...(isTurkish
+      ? [{ label: tr ? 'T.C. kimlik no' : 'National ID', account: profile.tcKimlikNo, entered: form.tcKimlikNo }]
+      : [{ label: tr ? 'Pasaport no' : 'Passport no', account: profile.passportNo, entered: form.passportNo }]),
+  ];
+
+  return fields
+    .filter(({ account, entered }) => account && entered && normalizeProfileValue(account) !== normalizeProfileValue(entered))
+    .map(({ label }) => label);
+}
+
+function formWithAccountProfile(form: GuestForm, profile: AccountProfile): GuestForm {
+  return {
+    ...form,
+    firstName: profile.firstName || form.firstName,
+    lastName: profile.lastName || form.lastName,
+    phone: profile.phone || form.phone,
+    birthDate: profile.birthDate || form.birthDate,
+    gender: profile.gender || form.gender,
+    nationality: profile.nationality || form.nationality,
+    tcKimlikNo: profile.tcKimlikNo || form.tcKimlikNo,
+    passportNo: profile.passportNo || form.passportNo,
+    passportExpiry: profile.passportExpiry || form.passportExpiry,
+  };
+}
 
 // ── DatePickerModal ────────────────────────────────────────────────────────────
 
@@ -275,9 +326,14 @@ export function ReservationScreen() {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [existingAccountVerified, setExistingAccountVerified] = useState(false);
+  const [accountProfile, setAccountProfile] = useState<AccountProfile | null>(null);
+  const [profileDecision, setProfileDecision] = useState<ProfileDecision | null>(null);
+  const [passwordResetState, setPasswordResetState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; confirmationId?: string; message?: string } | null>(null);
+  const [newAccountProfileOwner, setNewAccountProfileOwner] = useState<NewAccountProfileOwner | null>(null);
+  const [result, setResult] = useState<{ ok: boolean; confirmationId?: string; message?: string; needsProfileSetup?: boolean } | null>(null);
 
   const fetchRooms = useCallback(async (ci?: Date, co?: Date) => {
     setLoadingRooms(true);
@@ -349,13 +405,28 @@ export function ReservationScreen() {
     (isTurkish ? form.tcKimlikNo.length === 11 : form.passportNo.length > 0);
 
   // Step 2 — account requires password match
+  const mismatchLabels = getGuestProfileMismatchLabels(accountProfile, form, isTurkish, tr);
+  const needsProfileDecision = existingAccountVerified && mismatchLabels.length > 0 && profileDecision === null;
+
   const step2Valid = emailCheckState === 'exists'
-    ? loginPassword.length > 0
-    : wantsAccount === false || (wantsAccount === true && password.length >= 8 && password === passwordConfirm);
+    ? loginPassword.length > 0 && !needsProfileDecision
+    : wantsAccount === false || (
+        wantsAccount === true &&
+        password.length >= 8 &&
+        password === passwordConfirm &&
+        newAccountProfileOwner !== null
+      );
 
   async function goToStep2() {
     setEmailCheckState('checking');
     setStep(2);
+    setLoginPassword('');
+    setLoginError(null);
+    setExistingAccountVerified(false);
+    setAccountProfile(null);
+    setProfileDecision(null);
+    setNewAccountProfileOwner(null);
+    setPasswordResetState('idle');
     try {
       const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(form.email)}`);
       const data = await res.json();
@@ -365,46 +436,106 @@ export function ReservationScreen() {
     }
   }
 
+  async function requestReservationPasswordReset() {
+    setPasswordResetState('sending');
+    setLoginError(null);
+
+    try {
+      const response = await fetch('/api/auth/password-reset/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email }),
+      });
+      const data = await response.json().catch(() => null);
+
+      setPasswordResetState(response.ok && data?.ok ? 'sent' : 'error');
+    } catch {
+      setPasswordResetState('error');
+    }
+  }
+
   async function handleSubmit() {
     if (!step0Valid || !step1Valid || !step2Valid) return;
     setSubmitting(true);
     setLoginError(null);
 
     // Mevcut hesap varsa önce giriş doğrulaması yap
+    let verifiedProfile = accountProfile;
     if (emailCheckState === 'exists') {
-      const loginRes = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, password: loginPassword }),
-      }).catch(() => null);
-      const loginData = loginRes ? await loginRes.json().catch(() => null) : null;
-      if (!loginData?.ok) {
-        setLoginError(loginData?.message ?? (tr ? 'Şifre hatalı.' : 'Incorrect password.'));
+      if (!existingAccountVerified) {
+        const loginRes = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email, password: loginPassword }),
+        }).catch(() => null);
+        const loginData = loginRes ? await loginRes.json().catch(() => null) : null;
+        if (!loginData?.ok) {
+          setLoginError(loginData?.message ?? (tr ? 'Şifre hatalı.' : 'Incorrect password.'));
+          setSubmitting(false);
+          return;
+        }
+
+        const profileRes = await fetch('/api/auth/me?profile=true').catch(() => null);
+        const profileData = profileRes ? await profileRes.json().catch(() => null) : null;
+        verifiedProfile = profileData?.user?.profile ?? null;
+        setAccountProfile(verifiedProfile);
+        setExistingAccountVerified(true);
+
+        const labels = getGuestProfileMismatchLabels(verifiedProfile, form, isTurkish, tr);
+        if (labels.length > 0) {
+          setProfileDecision(null);
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      const labels = getGuestProfileMismatchLabels(verifiedProfile, form, isTurkish, tr);
+      if (labels.length > 0 && profileDecision === null) {
         setSubmitting(false);
         return;
       }
     }
 
+    const reservationForm = emailCheckState === 'exists' && profileDecision === 'account' && verifiedProfile
+      ? formWithAccountProfile(form, verifiedProfile)
+      : form;
+
     const payload = {
       roomId: selectedRoomId,
       checkInDate: checkIn!.toISOString().split('T')[0],
       checkOutDate: checkOut!.toISOString().split('T')[0],
-      adultsCount: form.adultsCount,
-      childrenCount: form.childrenCount,
-      firstName: form.firstName,
-      lastName: form.lastName,
-      email: form.email,
-      phone: form.phone,
-      birthDate: form.birthDate || undefined,
-      gender: form.gender || undefined,
-      nationality: form.nationality || 'TR',
-      tcKimlikNo: isTurkish ? form.tcKimlikNo : undefined,
-      passportNo: !isTurkish ? form.passportNo : undefined,
-      passportExpiry: !isTurkish ? form.passportExpiry : undefined,
-      companyName: showCorporate ? form.companyName : undefined,
-      taxNumber: showCorporate ? form.taxNumber : undefined,
-      taxOffice: showCorporate ? form.taxOffice : undefined,
-      specialRequests: form.specialRequests || undefined,
+      adultsCount: reservationForm.adultsCount,
+      childrenCount: reservationForm.childrenCount,
+      firstName: reservationForm.firstName,
+      lastName: reservationForm.lastName,
+      email: reservationForm.email,
+      phone: reservationForm.phone,
+      birthDate: reservationForm.birthDate || undefined,
+      gender: reservationForm.gender || undefined,
+      nationality: reservationForm.nationality || 'TR',
+      tcKimlikNo: isTurkish ? reservationForm.tcKimlikNo : undefined,
+      passportNo: !isTurkish ? reservationForm.passportNo : undefined,
+      passportExpiry: !isTurkish ? reservationForm.passportExpiry : undefined,
+      companyName: showCorporate ? reservationForm.companyName : undefined,
+      taxNumber: showCorporate ? reservationForm.taxNumber : undefined,
+      taxOffice: showCorporate ? reservationForm.taxOffice : undefined,
+      specialRequests: reservationForm.specialRequests || undefined,
+    };
+
+    const personPayload = {
+      firstName: reservationForm.firstName,
+      lastName: reservationForm.lastName,
+      email: reservationForm.email,
+      phone: reservationForm.phone,
+      birthDate: reservationForm.birthDate || undefined,
+      gender: reservationForm.gender || undefined,
+      nationality: reservationForm.nationality || 'TR',
+      tcKimlikNo: isTurkish ? reservationForm.tcKimlikNo : undefined,
+      passportNo: !isTurkish ? reservationForm.passportNo : undefined,
+      passportExpiry: !isTurkish ? reservationForm.passportExpiry : undefined,
+      companyName: showCorporate ? reservationForm.companyName : undefined,
+      taxNumber: showCorporate ? reservationForm.taxNumber : undefined,
+      taxOffice: showCorporate ? reservationForm.taxOffice : undefined,
     };
 
     try {
@@ -421,31 +552,36 @@ export function ReservationScreen() {
         return;
       }
 
-      // Hesap oluşturma — yalnızca yeni kayıt akışında
-      if (wantsAccount === true && emailCheckState !== 'exists') {
-        await fetch('/api/auth/register', {
+      let needsProfileSetup = false;
+
+      if (emailCheckState === 'exists' && profileDecision === 'entered') {
+        await fetch('/api/account/people', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: form.email,
-            password,
-            firstName: form.firstName,
-            lastName: form.lastName,
-            phone: form.phone,
-            birthDate: form.birthDate || undefined,
-            gender: form.gender || undefined,
-            nationality: form.nationality || 'TR',
-            tcKimlikNo: isTurkish ? form.tcKimlikNo : undefined,
-            passportNo: !isTurkish ? form.passportNo : undefined,
-            passportExpiry: !isTurkish ? form.passportExpiry : undefined,
-            companyName: showCorporate ? form.companyName : undefined,
-            taxNumber: showCorporate ? form.taxNumber : undefined,
-            taxOffice: showCorporate ? form.taxOffice : undefined,
+            ...personPayload,
+            relation: 'guest',
+            isDefault: false,
           }),
         }).catch(() => null);
       }
 
-      setResult({ ok: true, confirmationId: resData.confirmationId });
+      // Hesap oluşturma — yalnızca yeni kayıt akışında
+      if (wantsAccount === true && emailCheckState !== 'exists') {
+        const registerRes = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...personPayload,
+            password,
+            profileOwner: newAccountProfileOwner ?? 'self',
+          }),
+        }).catch(() => null);
+        const registerData = registerRes ? await registerRes.json().catch(() => null) : null;
+        needsProfileSetup = !!registerData?.needsProfileSetup;
+      }
+
+      setResult({ ok: true, confirmationId: resData.confirmationId, needsProfileSetup });
     } catch {
       setResult({ ok: false, message: tr ? 'Bağlantı hatası.' : 'Connection error.' });
     } finally {
@@ -497,9 +633,24 @@ export function ReservationScreen() {
               </p>
             )}
             {emailCheckState !== 'exists' && wantsAccount === true && (
-              <p className="mt-4 text-xs text-brand-accent/70">
-                {tr ? 'Hesabınız oluşturuldu, giriş yapabilirsiniz.' : 'Your account has been created. You can log in now.'}
-              </p>
+              <div className="mt-4 text-xs text-brand-accent/70 space-y-2">
+                <p>
+                  {result.needsProfileSetup
+                    ? tr
+                      ? 'Hesabınız oluşturuldu. Rezervasyon kişisini hesabınıza ekledik; kendi bilgilerinizi müşteri panelinde tamamlayabilirsiniz.'
+                      : 'Your account has been created. We saved the reservation guest to your account; you can complete your own details in your panel.'
+                    : tr
+                      ? 'Hesabınız oluşturuldu ve bu bilgiler varsayılan profiliniz olarak kaydedildi.'
+                      : 'Your account has been created and these details were saved as your default profile.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => window.location.assign('/musteri')}
+                  className="inline-flex rounded-lg bg-brand-accent px-4 py-2 text-[11px] font-bold text-black hover:bg-brand-accent/90 transition-colors"
+                >
+                  {tr ? 'Müşteri paneline git' : 'Go to customer panel'}
+                </button>
+              </div>
             )}
           </>
         ) : (
@@ -915,16 +1066,105 @@ export function ReservationScreen() {
                       <input
                         type="password"
                         value={loginPassword}
-                        onChange={e => { setLoginPassword(e.target.value); setLoginError(null); }}
+                        onChange={e => {
+                          setLoginPassword(e.target.value);
+                          setLoginError(null);
+                          setExistingAccountVerified(false);
+                          setAccountProfile(null);
+                          setProfileDecision(null);
+                          setPasswordResetState('idle');
+                        }}
                         onKeyDown={e => e.key === 'Enter' && step2Valid && !submitting && handleSubmit()}
                         className={inputCls}
                         placeholder="••••••••"
                         autoFocus
                       />
                     </Field>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={requestReservationPasswordReset}
+                        disabled={passwordResetState === 'sending'}
+                        className="text-[11px] text-brand-accent/70 hover:text-brand-accent disabled:opacity-50 transition-colors"
+                      >
+                        {passwordResetState === 'sending'
+                          ? tr ? 'Bağlantı gönderiliyor…' : 'Sending link…'
+                          : tr ? 'Şifremi unuttum' : 'Forgot password'}
+                      </button>
+                      {existingAccountVerified && !needsProfileDecision && (
+                        <span className="text-[10px] text-emerald-300/80 flex items-center gap-1">
+                          <Check size={11} />
+                          {tr ? 'Hesap doğrulandı' : 'Account verified'}
+                        </span>
+                      )}
+                    </div>
+                    {passwordResetState === 'sent' && (
+                      <p className="text-[10px] leading-relaxed text-emerald-300/80">
+                        {tr
+                          ? 'Bu e-posta kayıtlıysa şifre sıfırlama bağlantısı gönderildi. Gelen kutunuzu kontrol edebilirsiniz.'
+                          : 'If this email is registered, a reset link has been sent. Please check your inbox.'}
+                      </p>
+                    )}
+                    {passwordResetState === 'error' && (
+                      <p className="text-[10px] text-red-400">
+                        {tr ? 'Şu anda sıfırlama bağlantısı gönderilemedi.' : 'The reset link could not be sent right now.'}
+                      </p>
+                    )}
                     {loginError && (
                       <p className="text-[10px] text-red-400">{loginError}</p>
                     )}
+                  </div>
+                )}
+
+                {emailCheckState === 'exists' && existingAccountVerified && mismatchLabels.length > 0 && (
+                  <div className="rounded-xl border border-amber-300/25 bg-amber-400/10 p-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={15} className="text-amber-200 mt-0.5 shrink-0" />
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-white">
+                          {tr ? 'Bu rezervasyon farklı bir kişi için olabilir' : 'This stay may be for a different guest'}
+                        </p>
+                        <p className="text-xs leading-relaxed text-white/55">
+                          {tr
+                            ? `Hesabınızdaki bilgilerle rezervasyonda yazdıklarınız arasında ${mismatchLabels.join(', ')} alanında fark var. Aile üyesi, ekip arkadaşı ya da başka bir misafir için rezervasyon yapıyorsanız sorun yok; sadece nasıl kaydedelim seçin.`
+                            : `Some details differ from your account profile: ${mismatchLabels.join(', ')}. If you are booking for a family member, colleague, or another guest, that is fine; just choose how we should save it.`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setProfileDecision('entered')}
+                        className={`rounded-lg px-3 py-2 text-left text-xs border transition-colors ${
+                          profileDecision === 'entered'
+                            ? 'bg-brand-accent text-black border-brand-accent'
+                            : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
+                        }`}
+                      >
+                        <span className="block font-semibold">
+                          {tr ? 'Girilen kişi adına kalsın' : 'Keep entered guest'}
+                        </span>
+                        <span className={profileDecision === 'entered' ? 'text-black/60' : 'text-white/35'}>
+                          {tr ? 'Rezervasyon bu kişiyle hesabınıza bağlanır.' : 'The reservation is linked to your account with this guest.'}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProfileDecision('account')}
+                        className={`rounded-lg px-3 py-2 text-left text-xs border transition-colors ${
+                          profileDecision === 'account'
+                            ? 'bg-brand-accent text-black border-brand-accent'
+                            : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
+                        }`}
+                      >
+                        <span className="block font-semibold">
+                          {tr ? 'Hesap bilgilerimi kullan' : 'Use my account details'}
+                        </span>
+                        <span className={profileDecision === 'account' ? 'text-black/60' : 'text-white/35'}>
+                          {tr ? 'Rezervasyon hesabınızdaki kişiyle oluşturulur.' : 'The reservation will use your saved profile.'}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -944,13 +1184,19 @@ export function ReservationScreen() {
                     </p>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setWantsAccount(true)}
+                        onClick={() => {
+                          setWantsAccount(true);
+                          setNewAccountProfileOwner(null);
+                        }}
                         className="flex-1 py-2 rounded-lg bg-brand-accent text-black text-xs font-bold hover:bg-brand-accent/90 transition-colors"
                       >
                         {tr ? 'Evet, hesap oluştur' : 'Yes, create account'}
                       </button>
                       <button
-                        onClick={() => setWantsAccount(false)}
+                        onClick={() => {
+                          setWantsAccount(false);
+                          setNewAccountProfileOwner(null);
+                        }}
                         className="flex-1 py-2 rounded-lg bg-white/5 text-white/60 text-xs hover:bg-white/10 hover:text-white transition-colors"
                       >
                         {tr ? 'Hayır, devam et' : 'No, continue'}
@@ -993,8 +1239,59 @@ export function ReservationScreen() {
                     {passwordConfirm && password !== passwordConfirm && (
                       <p className="text-[10px] text-red-400">{tr ? 'Şifreler eşleşmiyor.' : 'Passwords do not match.'}</p>
                     )}
+                    {password.length >= 8 && password === passwordConfirm && (
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+                        <div className="flex items-start gap-2">
+                          <User size={15} className="text-brand-accent mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-white">
+                              {tr ? 'Bu bilgiler kime ait?' : 'Who are these details for?'}
+                            </p>
+                            <p className="text-xs text-white/45 leading-relaxed mt-1">
+                              {tr
+                                ? 'Hesabınızı doğru başlatmak için bunu bir kez soruyoruz. Rezervasyon sizin adınıza değilse sorun değil; bu kişiyi hesabınızda ayrı bir birey olarak saklarız.'
+                                : 'We ask this once to set up your account correctly. If this stay is not for you, no problem; we will save this guest as a separate person in your account.'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid sm:grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setNewAccountProfileOwner('self')}
+                            className={`rounded-lg px-3 py-2 text-left text-xs border transition-colors ${
+                              newAccountProfileOwner === 'self'
+                                ? 'bg-brand-accent text-black border-brand-accent'
+                                : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
+                            }`}
+                          >
+                            <span className="block font-semibold">
+                              {tr ? 'Bana ait' : 'These are mine'}
+                            </span>
+                            <span className={newAccountProfileOwner === 'self' ? 'text-black/60' : 'text-white/35'}>
+                              {tr ? 'Varsayılan profiliniz bu bilgilerle oluşur.' : 'Your default profile will use these details.'}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNewAccountProfileOwner('guest')}
+                            className={`rounded-lg px-3 py-2 text-left text-xs border transition-colors ${
+                              newAccountProfileOwner === 'guest'
+                                ? 'bg-brand-accent text-black border-brand-accent'
+                                : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
+                            }`}
+                          >
+                            <span className="block font-semibold">
+                              {tr ? 'Başka biri adına' : 'For someone else'}
+                            </span>
+                            <span className={newAccountProfileOwner === 'guest' ? 'text-black/60' : 'text-white/35'}>
+                              {tr ? 'Bu kişi kart olarak kaydolur; kendi bilgilerinizi panelde tamamlarsınız.' : 'This guest is saved as a card; you can complete your own details later.'}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <button
-                      onClick={() => { setWantsAccount(null); setPassword(''); setPasswordConfirm(''); }}
+                      onClick={() => { setWantsAccount(null); setPassword(''); setPasswordConfirm(''); setNewAccountProfileOwner(null); }}
                       className="text-[10px] text-white/30 hover:text-white/50 transition-colors"
                     >
                       {tr ? 'Vazgeç, hesap istemiyorum' : 'Never mind, skip account'}
@@ -1019,6 +1316,10 @@ export function ReservationScreen() {
                       setEmailCheckState('idle');
                       setLoginPassword('');
                       setLoginError(null);
+                      setExistingAccountVerified(false);
+                      setAccountProfile(null);
+                      setProfileDecision(null);
+                      setPasswordResetState('idle');
                     }}
                     className="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-sm transition-colors"
                   >
