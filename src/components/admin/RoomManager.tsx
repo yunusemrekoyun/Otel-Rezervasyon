@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, Loader2, DoorOpen, BedDouble, X, ImagePlus, Film, Pencil, AlertTriangle, ChevronDown, Check } from 'lucide-react';
+import { Plus, Trash2, Loader2, DoorOpen, BedDouble, X, ImagePlus, Film, Pencil, AlertTriangle, Check, Sparkles, Wrench, RotateCcw } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -59,8 +59,6 @@ const STATUS_LABEL: Record<string, { tr: string; en: string }> = {
   maintenance: { tr: 'Bakım',    en: 'Maintenance'  },
 };
 
-const STATUS_OPTIONS = ['available', 'occupied', 'cleaning', 'maintenance'];
-
 const STATUS_STYLE: Record<string, { dot: string; text: string; border: string; glow: string }> = {
   available:   { dot: 'bg-emerald-400', text: 'text-emerald-400', border: 'border-emerald-500/35', glow: 'rgba(52,211,153,0.15)'  },
   occupied:    { dot: 'bg-sky-400',     text: 'text-sky-400',     border: 'border-sky-500/35',     glow: 'rgba(56,189,248,0.15)'  },
@@ -68,82 +66,119 @@ const STATUS_STYLE: Record<string, { dot: string; text: string; border: string; 
   maintenance: { dot: 'bg-red-400',     text: 'text-red-400',     border: 'border-red-500/35',     glow: 'rgba(248,113,113,0.15)' },
 };
 
-// ── Status Dropdown ───────────────────────────────────────────────────────────
+// ── Static status badge (read-only) ──────────────────────────────────────────
 
-function StatusDropdown({
-  roomId,
-  status,
-  onChange,
-  tr,
-}: {
-  roomId: string;
-  status: string;
-  onChange: (id: string, newStatus: string) => void;
-  tr: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+function StatusBadge({ status, tr }: { status: string; tr: boolean }) {
   const style = STATUS_STYLE[status] ?? STATUS_STYLE.available;
+  return (
+    <div
+      className={`flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${style.text} ${style.border}`}
+      style={{ background: `linear-gradient(135deg, ${style.glow} 0%, rgba(0,0,0,0.65) 100%)`, backdropFilter: 'blur(8px)' }}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot}`} />
+      {tr ? STATUS_LABEL[status]?.tr : STATUS_LABEL[status]?.en}
+    </div>
+  );
+}
+
+// ── Send to Cleaning modal ────────────────────────────────────────────────────
+
+function SendToCleaningModal({
+  room, tr, onClose, onSent,
+}: {
+  room: { id: string; name: string };
+  tr: boolean;
+  onClose: () => void;
+  onSent: () => void;
+}) {
+  const toast = useToast();
+  const [staff, setStaff] = useState<{ id: string; firstName: string | null; lastName: string | null; email: string }[]>([]);
+  const [assignedToId, setAssignedToId] = useState('');
+  const [priority, setPriority] = useState<'normal' | 'urgent'>('normal');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+    fetch('/api/users', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => { if (d.ok) setStaff(d.users.filter((u: { role: { slug: string } }) => u.role.slug === 'temizlikci')); });
+  }, []);
+
+  async function handleSubmit() {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/cleaning', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId: room.id, assignedToId: assignedToId || null, priority, notes: notes || null }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message);
+      toast.success(tr ? 'Temizliğe gönderildi.' : 'Sent to cleaning.');
+      onSent();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : (tr ? 'Hata.' : 'Error.'));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <div ref={ref} className="relative">
-
-      {/* Trigger pill */}
-      <button
-        onClick={e => { e.stopPropagation(); setOpen(v => !v); }}
-        className={`flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all ${style.text} ${style.border}`}
-        style={{
-          background: `linear-gradient(135deg, ${style.glow} 0%, rgba(0,0,0,0.65) 100%)`,
-          backdropFilter: 'blur(8px)',
-        }}
-      >
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot} shadow-[0_0_4px_currentColor]`} />
-        {tr ? STATUS_LABEL[status]?.tr : STATUS_LABEL[status]?.en}
-        <ChevronDown
-          size={9}
-          className={`ml-0.5 opacity-60 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {/* Dropdown menu */}
-      {open && (
-        <div
-          className="absolute top-full left-0 mt-1.5 min-w-[148px] rounded-xl overflow-hidden z-50 shadow-2xl"
-          style={{ background: '#141618', border: '1px solid rgba(255,255,255,0.10)' }}
-        >
-          {STATUS_OPTIONS.map(s => {
-            const st = STATUS_STYLE[s];
-            const isActive = s === status;
-            return (
-              <button
-                key={s}
-                onClick={e => { e.stopPropagation(); onChange(roomId, s); setOpen(false); }}
-                className={`
-                  w-full flex items-center gap-2.5 px-3 py-2.5 text-[11px] font-semibold
-                  transition-colors text-left
-                  ${isActive ? 'bg-white/[0.04]' : 'hover:bg-white/[0.04]'}
-                `}
-              >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${st.dot}`} />
-                <span className={st.text}>
-                  {tr ? STATUS_LABEL[s].tr : STATUS_LABEL[s].en}
-                </span>
-                {isActive && <Check size={11} className="ml-auto text-white/30 shrink-0" />}
-              </button>
-            );
-          })}
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl" style={{ background: '#0d0f13' }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.06] rounded-t-2xl">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
+              <Sparkles size={14} className="text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white/90">{tr ? 'Temizliğe Gönder' : 'Send to Cleaning'}</p>
+              <p className="text-[11px] text-white/30">{room.name}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-colors"><X size={14} /></button>
         </div>
-      )}
 
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Atanan Kişi (opsiyonel)' : 'Assign To (optional)'}</label>
+            <select value={assignedToId} onChange={e => setAssignedToId(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 focus:outline-none focus:border-brand-accent/40 appearance-none">
+              <option value="">{tr ? '— Atanmamış —' : '— Unassigned —'}</option>
+              {staff.map(s => {
+                const name = [s.firstName, s.lastName].filter(Boolean).join(' ') || s.email;
+                return <option key={s.id} value={s.id}>{name}</option>;
+              })}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Öncelik' : 'Priority'}</label>
+            <div className="flex gap-2">
+              {(['normal', 'urgent'] as const).map(p => (
+                <button key={p} type="button" onClick={() => setPriority(p)} className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${priority === p ? (p === 'urgent' ? 'text-red-400 border-red-500/20 bg-red-500/8' : 'text-white/70 border-white/15 bg-white/5') : 'text-white/25 border-white/6'}`}>
+                  {p === 'urgent' ? (tr ? 'Acil' : 'Urgent') : (tr ? 'Normal' : 'Normal')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Not (opsiyonel)' : 'Note (optional)'}</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder={tr ? 'Özel talimatlar...' : 'Special instructions...'} className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-brand-accent/40 resize-none" />
+          </div>
+        </div>
+
+        <div className="flex gap-2.5 px-5 pb-5">
+          <button onClick={onClose} className="btn-secondary flex-1 text-sm">{tr ? 'İptal' : 'Cancel'}</button>
+          <button onClick={handleSubmit} disabled={saving} className="btn-primary flex-1 text-sm flex items-center justify-center gap-2">
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+            {tr ? 'Gönder' : 'Send'}
+          </button>
+        </div>
+      </div>
+      </div>
     </div>
   );
 }
@@ -167,7 +202,6 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
   const [floor, setFloor] = useState('');
   const [basePrice, setBasePrice] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState('available');
   const [maxAdults, setMaxAdults] = useState('2');
   const [maxChildren, setMaxChildren] = useState('0');
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
@@ -179,7 +213,6 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
   const [editFloor, setEditFloor] = useState('');
   const [editBasePrice, setEditBasePrice] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editStatus, setEditStatus] = useState('available');
   const [editMaxAdults, setEditMaxAdults] = useState('2');
   const [editMaxChildren, setEditMaxChildren] = useState('0');
   const [editPendingItems, setEditPendingItems] = useState<PendingItem[]>([]);
@@ -188,6 +221,10 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
   // ── Delete confirm ────────────────────────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState<Room | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // ── Cleaning / maintenance ────────────────────────────────────────────────
+  const [cleaningTarget, setCleaningTarget] = useState<Room | null>(null);
+  const [maintenanceLoadingId, setMaintenanceLoadingId] = useState<string | null>(null);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -221,7 +258,6 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
     setFloor('');
     setBasePrice('');
     setDescription('');
-    setStatus('available');
     setMaxAdults('2');
     setMaxChildren('0');
     setPendingItems(prev => {
@@ -308,7 +344,6 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
     setEditFloor(room.floor != null ? String(room.floor) : '');
     setEditBasePrice(String(room.basePrice));
     setEditDescription(room.description ?? '');
-    setEditStatus(room.status);
     setEditMaxAdults(String(room.maxAdults));
     setEditMaxChildren(String(room.maxChildren));
     setEditPendingItems([]);
@@ -354,7 +389,6 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
           floor: editFloor ? parseInt(editFloor, 10) : null,
           basePrice: parseInt(editBasePrice, 10),
           description: editDescription.trim() || null,
-          status: editStatus,
           maxAdults: parseInt(editMaxAdults, 10) || 2,
           maxChildren: parseInt(editMaxChildren, 10) || 0,
         }),
@@ -416,15 +450,20 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
     }
   };
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    setRooms(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
+  const handleToggleMaintenance = async (room: Room) => {
+    const newStatus = room.status === 'maintenance' ? 'available' : 'maintenance';
+    setMaintenanceLoadingId(room.id);
     try {
-      await fetch(`/api/rooms/${id}`, {
+      const res = await fetch(`/api/rooms/${room.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
+        credentials: 'include',
       });
+      const data = await res.json();
+      if (data.ok) setRooms(prev => prev.map(r => r.id === room.id ? { ...r, status: newStatus } : r));
     } catch { /* silent */ }
+    finally { setMaintenanceLoadingId(null); }
   };
 
   // ── Media handlers ─────────────────────────────────────────────────────────
@@ -494,7 +533,6 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
           floor={floor} setFloor={setFloor}
           basePrice={basePrice} setBasePrice={setBasePrice}
           description={description} setDescription={setDescription}
-          status={status} setStatus={setStatus}
           maxAdults={maxAdults} setMaxAdults={setMaxAdults}
           maxChildren={maxChildren} setMaxChildren={setMaxChildren}
           roomTypes={roomTypes}
@@ -523,7 +561,6 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
             floor={editFloor} setFloor={setEditFloor}
             basePrice={editBasePrice} setBasePrice={setEditBasePrice}
             description={editDescription} setDescription={setEditDescription}
-            status={editStatus} setStatus={setEditStatus}
             maxAdults={editMaxAdults} setMaxAdults={setEditMaxAdults}
             maxChildren={editMaxChildren} setMaxChildren={setEditMaxChildren}
             roomTypes={roomTypes}
@@ -576,6 +613,19 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
           </div>
         )}
       </Modal>
+
+      {/* ── Cleaning modal ───────────────────────────────────── */}
+      {cleaningTarget && (
+        <SendToCleaningModal
+          room={cleaningTarget}
+          tr={tr}
+          onClose={() => setCleaningTarget(null)}
+          onSent={() => {
+            setRooms(prev => prev.map(r => r.id === cleaningTarget.id ? { ...r, status: 'cleaning' } : r));
+            setCleaningTarget(null);
+          }}
+        />
+      )}
 
       {/* ── Empty state ───────────────────────────────────────── */}
       {rooms.length === 0 && (
@@ -633,14 +683,9 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
                     </div>
                   )}
 
-                  {/* Status dropdown — top left */}
+                  {/* Status badge — top left (read-only) */}
                   <div className="absolute top-2.5 left-2.5">
-                    <StatusDropdown
-                      roomId={room.id}
-                      status={room.status}
-                      onChange={handleStatusChange}
-                      tr={tr}
-                    />
+                    <StatusBadge status={room.status} tr={tr} />
                   </div>
 
                   {/* Edit / Delete — top right, hover */}
@@ -697,7 +742,7 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 mt-3">
+                  <div className="flex flex-wrap gap-1.5 mt-2.5">
                     <span className="tag tag-muted">
                       {room.maxAdults}{tr ? 'y' : 'a'}
                       {room.maxChildren > 0 ? ` + ${room.maxChildren}${tr ? 'ç' : 'c'}` : ''}
@@ -705,10 +750,37 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
                     {!room.isActive && (
                       <span className="tag tag-danger">{tr ? 'Pasif' : 'Inactive'}</span>
                     )}
-                    {room.description && (
-                      <span className="tag tag-muted text-white/20 italic truncate max-w-[120px]">{room.description}</span>
-                    )}
                   </div>
+
+                  {/* Action buttons */}
+                  {(room.status === 'available' || room.status === 'maintenance') && (
+                    <div className="flex gap-2 mt-3 pt-2.5 border-t border-white/[0.05]">
+                      {room.status === 'available' && (
+                        <button
+                          onClick={() => setCleaningTarget(room)}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-400 border border-amber-400/20 bg-amber-400/6 hover:bg-amber-400/12 transition-colors"
+                        >
+                          <Sparkles size={10} />
+                          {tr ? 'Temizliğe Gönder' : 'Send to Cleaning'}
+                        </button>
+                      )}
+                      {maintenanceLoadingId === room.id ? (
+                        <div className="flex items-center px-2.5"><Loader2 size={11} className="animate-spin text-white/30" /></div>
+                      ) : (
+                        <button
+                          onClick={() => handleToggleMaintenance(room)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors ${
+                            room.status === 'maintenance'
+                              ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/6 hover:bg-emerald-400/12'
+                              : 'text-white/35 border-white/8 bg-white/[0.02] hover:bg-white/[0.06] hover:text-white/60'
+                          }`}
+                        >
+                          {room.status === 'maintenance' ? <RotateCcw size={10} /> : <Wrench size={10} />}
+                          {room.status === 'maintenance' ? (tr ? 'Aktife Al' : 'Reactivate') : (tr ? 'Askıya Al' : 'Suspend')}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -742,19 +814,36 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 shrink-0">
-                  <select
-                    value={room.status}
-                    onChange={e => handleStatusChange(room.id, e.target.value)}
-                    className={`text-[10px] font-semibold uppercase tracking-wide rounded-full px-2.5 py-1 border cursor-pointer focus:outline-none transition-colors ${STATUS_TAG[room.status] ?? 'tag tag-muted'}`}
-                    style={{ background: 'transparent' }}
-                  >
-                    {STATUS_OPTIONS.map(s => (
-                      <option key={s} value={s} style={{ background: '#0f1115', color: '#fff' }}>
-                        {tr ? STATUS_LABEL[s].tr : STATUS_LABEL[s].en}
-                      </option>
-                    ))}
-                  </select>
+                <div className="flex items-center gap-2.5 shrink-0 flex-wrap justify-end">
+                  <StatusBadge status={room.status} tr={tr} />
+
+                  {room.status === 'available' && (
+                    <button
+                      onClick={() => setCleaningTarget(room)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-400 border border-amber-400/20 bg-amber-400/6 hover:bg-amber-400/12 transition-colors"
+                    >
+                      <Sparkles size={11} />
+                      {tr ? 'Temizliğe Gönder' : 'Send to Cleaning'}
+                    </button>
+                  )}
+
+                  {(room.status === 'available' || room.status === 'maintenance') && (
+                    maintenanceLoadingId === room.id ? (
+                      <Loader2 size={13} className="animate-spin text-white/30" />
+                    ) : (
+                      <button
+                        onClick={() => handleToggleMaintenance(room)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors ${
+                          room.status === 'maintenance'
+                            ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/6 hover:bg-emerald-400/12'
+                            : 'text-white/35 border-white/8 bg-white/[0.02] hover:bg-white/[0.06] hover:text-white/60'
+                        }`}
+                      >
+                        {room.status === 'maintenance' ? <RotateCcw size={11} /> : <Wrench size={11} />}
+                        {room.status === 'maintenance' ? (tr ? 'Aktife Al' : 'Reactivate') : (tr ? 'Askıya Al' : 'Suspend')}
+                      </button>
+                    )
+                  )}
 
                   <button onClick={() => openEdit(room)} className="btn-secondary px-3 py-1.5 rounded-lg text-xs gap-1.5">
                     <Pencil size={13} />
@@ -822,7 +911,7 @@ export function RoomManager({ viewMode = 'list' }: { viewMode?: 'card' | 'list' 
 
 function RoomFormFields({
   tr, name, setName, roomTypeId, setRoomTypeId, floor, setFloor,
-  basePrice, setBasePrice, description, setDescription, status, setStatus,
+  basePrice, setBasePrice, description, setDescription,
   maxAdults, setMaxAdults, maxChildren, setMaxChildren,
   roomTypes, pendingItems, onFileChange, onRemovePendingItem,
   existingMedia, onDeleteExistingMedia,
@@ -834,7 +923,6 @@ function RoomFormFields({
   floor: string; setFloor: (v: string) => void;
   basePrice: string; setBasePrice: (v: string) => void;
   description: string; setDescription: (v: string) => void;
-  status: string; setStatus: (v: string) => void;
   maxAdults: string; setMaxAdults: (v: string) => void;
   maxChildren: string; setMaxChildren: (v: string) => void;
   roomTypes: RoomType[];
@@ -878,21 +966,9 @@ function RoomFormFields({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <label className="label-sm">{tr ? 'Gecelik Fiyat (₺)' : 'Base Price (₺)'}</label>
-          <input type="number" value={basePrice} onChange={e => setBasePrice(e.target.value)} placeholder="0" className="input-base" min={0} />
-        </div>
-        <div className="space-y-2">
-          <label className="label-sm">{tr ? 'Durum' : 'Status'}</label>
-          <select value={status} onChange={e => setStatus(e.target.value)} className="input-base">
-            {STATUS_OPTIONS.map(s => (
-              <option key={s} value={s} style={{ background: '#0f1115' }}>
-                {tr ? STATUS_LABEL[s].tr : STATUS_LABEL[s].en}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="space-y-2">
+        <label className="label-sm">{tr ? 'Gecelik Fiyat (₺)' : 'Base Price (₺)'}</label>
+        <input type="number" value={basePrice} onChange={e => setBasePrice(e.target.value)} placeholder="0" className="input-base" min={0} />
       </div>
 
       <div className="grid grid-cols-2 gap-3">

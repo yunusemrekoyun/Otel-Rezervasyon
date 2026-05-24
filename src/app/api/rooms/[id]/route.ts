@@ -18,6 +18,13 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
+    // Status can only be toggled manually between 'available' and 'maintenance'
+    // 'occupied' and 'cleaning' are set by the system (check-in / cleaning task APIs)
+    const MANUAL_STATUSES = ['available', 'maintenance'];
+    if (body.status !== undefined && !MANUAL_STATUSES.includes(body.status)) {
+      return NextResponse.json({ ok: false, message: 'Bu durum sistem tarafından yönetilir.' }, { status: 400 });
+    }
+
     const room = await prisma.room.update({
       where: { id },
       data: {

@@ -92,7 +92,8 @@ function CreateModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex min-h-full items-center justify-center p-4">
       <div
         className="w-full max-w-md rounded-2xl border border-white/10 shadow-2xl"
         style={{ background: '#0d0f13' }}
@@ -187,6 +188,7 @@ function CreateModal({
             {tr ? 'Oluştur' : 'Create'}
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

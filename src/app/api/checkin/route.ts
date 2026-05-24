@@ -106,11 +106,36 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const updated = await prisma.reservation.update({
-    where: { confirmationId },
-    data:  { status: action === 'checkin' ? 'checked_in' : 'checked_out' },
-    include: { room: ROOM_SEL },
-  });
+  if (action === 'checkin') {
+    const updated = await prisma.reservation.update({
+      where: { confirmationId },
+      data: { status: 'checked_in' },
+      include: { room: ROOM_SEL },
+    });
+    return NextResponse.json({ ok: true, reservation: updated });
+  }
+
+  // checkout — atomically mark room as cleaning and create a task
+  const [updated] = await prisma.$transaction([
+    prisma.reservation.update({
+      where: { confirmationId },
+      data: { status: 'checked_out' },
+      include: { room: ROOM_SEL },
+    }),
+    prisma.room.update({
+      where: { id: reservation.roomId },
+      data: { status: 'cleaning' },
+    }),
+    prisma.cleaningTask.create({
+      data: {
+        roomId: reservation.roomId,
+        reportedById: auth.user.id,
+        status: 'pending',
+        priority: 'normal',
+        notes: 'Check-out sonrası otomatik temizlik görevi',
+      },
+    }),
+  ]);
 
   return NextResponse.json({ ok: true, reservation: updated });
 }

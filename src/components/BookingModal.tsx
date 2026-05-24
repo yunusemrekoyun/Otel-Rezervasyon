@@ -79,13 +79,22 @@ export function BookingModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        className="fixed inset-0 z-[100] overflow-y-auto bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <div className="flex min-h-full items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
           className="w-full max-w-lg overflow-hidden panel-glass-dashed select-none text-white shadow-2xl"
+          onClick={e => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex justify-between items-center px-6 py-4 border-b border-white/10">
@@ -196,7 +205,8 @@ export function BookingModal({
             </button>
           </div>
         </motion.div>
-      </div>
+        </div>
+      </motion.div>
     </AnimatePresence>
   );
 }

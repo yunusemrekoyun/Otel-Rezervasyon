@@ -171,7 +171,8 @@ function EditModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex min-h-full items-center justify-center p-4">
       <div
         className="w-full max-w-md rounded-2xl border border-white/10 shadow-2xl"
         style={{ background: '#0d0f13' }}
@@ -271,6 +272,7 @@ function EditModal({
           </button>
         </div>
       </div>
+      </div>
     </div>
   );
 }
@@ -287,7 +289,8 @@ function DeleteModal({
 }) {
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex min-h-full items-center justify-center p-4">
       <div
         className="w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
         style={{ background: '#0d0f13' }}
@@ -317,6 +320,7 @@ function DeleteModal({
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

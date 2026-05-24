@@ -7,7 +7,7 @@ import {
   LogOut, ShieldCheck, LayoutDashboard, Users, CalendarCheck,
   Settings, ClipboardList, Bell, LineChart, FileText, CreditCard,
   User, Calendar, MessageSquare, CheckSquare, DoorOpen, Package,
-  Building2, ChevronRight, Sun, Moon, Home, Globe, AlertTriangle,
+  Building2, ChevronRight, Sun, Moon, Home, Globe, AlertTriangle, Wrench,
 } from 'lucide-react';
 import type { AuthUser } from '@/lib/auth/session';
 import type { RoleSlug } from '@/lib/auth/constants';
@@ -18,11 +18,15 @@ import { AdminOverview } from '@/components/admin/AdminOverview';
 import { AdminReservations } from '@/components/admin/AdminReservations';
 import { AdminSettings } from '@/components/admin/AdminSettings';
 import { AdminUserManager } from '@/components/admin/AdminUserManager';
+import { AdminOperationsPanel } from '@/components/admin/AdminOperationsPanel';
 import { CustomerDashboard } from '@/components/customer/CustomerDashboard';
 import { CheckinPanel } from '@/components/personel/CheckinPanel';
 import { PersonelDashboard } from '@/components/personel/PersonelDashboard';
 import { ActiveGuests } from '@/components/personel/ActiveGuests';
 import { ConciergePanel } from '@/components/personel/ConciergePanel';
+import { TaskList } from '@/components/housekeeping/TaskList';
+import { MaintenancePanel } from '@/components/housekeeping/MaintenancePanel';
+import { LostItemsPanel } from '@/components/housekeeping/LostItemsPanel';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,6 +51,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'users',        label: 'Kullanıcı Yönetimi', description: 'Tüm personel, muhasebe ve müşteri hesaplarını yönetebileceğiniz alan.',                   icon: Users },
       { id: 'reservations', label: 'Tüm Rezervasyonlar', description: 'Sistemdeki tüm rezervasyonları görüntüleyebilir, iptal veya onay işlemlerini yapabilirsiniz.', icon: CalendarCheck },
       { id: 'rooms',        label: 'Odalar',              description: 'Oda çeşitlerini, imkanlarını ve medyalarını buradan yönetebilirsiniz.',                    icon: DoorOpen },
+      { id: 'operations',   label: 'Hasar & Kayıp Eşya', description: 'Personelden gelen hasar bildirimleri ve kayıp eşya kayıtlarını buradan yönetin.',           icon: Wrench },
       { id: 'settings',     label: 'Sistem Ayarları',     description: 'Kabin fiyatlandırmaları, site ayarları ve genel yapılandırmalar.',                         icon: Settings },
     ],
     personel: [
@@ -78,6 +83,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'users',        label: 'User Management',   description: 'Area where you can manage all staff, accounting and customer accounts.',              icon: Users },
       { id: 'reservations', label: 'All Reservations',  description: 'You can view all reservations in the system, cancel or approve them.',               icon: CalendarCheck },
       { id: 'rooms',        label: 'Rooms',             description: 'Manage room types, their amenities and media from here.',                            icon: DoorOpen },
+      { id: 'operations',   label: 'Damage & Lost Items', description: 'Manage damage reports and lost item logs submitted by housekeeping staff.',          icon: Wrench },
       { id: 'settings',     label: 'Settings',          description: 'Cabin pricing, site configurations and general structures.',                         icon: Settings },
     ],
     personel: [
@@ -319,6 +325,10 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           ) : activeTabId === 'reservations' && user.roleSlug === 'admin' ? (
             <AdminReservations tr={language === 'tr'} />
 
+          /* ── Admin operations (damage reports + lost items) ── */
+          ) : activeTabId === 'operations' && user.roleSlug === 'admin' ? (
+            <AdminOperationsPanel tr={language === 'tr'} />
+
           /* ── Admin settings ── */
           ) : activeTabId === 'settings' && user.roleSlug === 'admin' ? (
             <AdminSettings tr={language === 'tr'} />
@@ -338,6 +348,18 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           /* ── Personel concierge ── */
           ) : activeTabId === 'concierge' && user.roleSlug === 'personel' ? (
             <ConciergePanel tr={language === 'tr'} />
+
+          /* ── Kat Hizmetleri: görev listesi ── */
+          ) : activeTabId === 'tasks' && user.roleSlug === 'temizlikci' ? (
+            <TaskList tr={language === 'tr'} />
+
+          /* ── Kat Hizmetleri: hasar bildirimi ── */
+          ) : activeTabId === 'maintenance' && user.roleSlug === 'temizlikci' ? (
+            <MaintenancePanel tr={language === 'tr'} />
+
+          /* ── Kat Hizmetleri: kayıp eşya ── */
+          ) : activeTabId === 'lostitems' && user.roleSlug === 'temizlikci' ? (
+            <LostItemsPanel tr={language === 'tr'} />
 
           /* ── Coming soon placeholder ── */
           ) : (
