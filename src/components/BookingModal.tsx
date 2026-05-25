@@ -68,7 +68,7 @@ export function BookingModal({
         throw new Error(payload?.message || 'Reservation could not be confirmed.');
       }
 
-      alert(`Booking successful for ${cabin.name}. Reference: ${payload.confirmationId}. Digital key queued to YunusemreKoyun26@gmail.com.`);
+      alert(`Rezervasyonunuz alındı. Onay kodu: ${payload.confirmationId}. Detaylar e-posta adresinize gönderildi.`);
       onClose();
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Reservation could not be confirmed.');

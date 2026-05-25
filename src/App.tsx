@@ -299,7 +299,7 @@ export default function App() {
         throw new Error(payload?.message || 'Contact request failed.');
       }
 
-      alert(`Message dispatched to Garden Hotel hosts. Reference: ${payload.ticketId}. Secure fallback copy queued to YunusemreKoyun26@gmail.com.`);
+      alert(`Mesajınız iletildi. Referans: ${payload.ticketId}.`);
       setContactName('');
       setContactMessage('');
     } catch (error) {
@@ -727,11 +727,11 @@ export default function App() {
                       <div className="grid grid-cols-2 gap-3 text-xs border-t border-white/10 pt-3 text-white/80">
                         <div className="flex flex-col">
                           <span className="text-[9px] text-brand-accent tracking-widest uppercase font-mono mb-1 font-semibold">{t('contact.activeCoord')}</span>
-                          <span>60.1132° N, 6.0124° E</span>
+                          <span>39.4242° K, 29.9835° D</span>
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[9px] text-brand-accent tracking-widest uppercase font-mono mb-1 font-semibold">{t('contact.inbound')}</span>
-                          <span>YunusemreKoyun26@gmail.com</span>
+                          <span>info@gardenhotel.com.tr</span>
                         </div>
                       </div>
                     </div>

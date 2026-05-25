@@ -9,7 +9,7 @@ function e(v: string) {
 }
 
 function hotelName() {
-  return getMailConfig().fromName || 'WoodNest Hotel';
+  return getMailConfig().fromName || 'Garden Hotel';
 }
 
 function formatPrice(amount: number) {
@@ -144,7 +144,7 @@ export async function renderReservationEmail(data: ReservationEmailData): Promis
   const qrSection = qrBuffer
     ? `<div style="margin:24px 0;text-align:center;padding:20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
         <p style="margin:0 0 12px;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;">Check-in Kodunuz</p>
-        <img src="cid:reservation-qr@woodnest" width="160" height="160" alt="QR Kod" style="display:block;margin:0 auto 14px;border-radius:8px;"/>
+        <img src="cid:reservation-qr@gardenhotel" width="160" height="160" alt="QR Kod" style="display:block;margin:0 auto 14px;border-radius:8px;"/>
         <p style="margin:0;font-family:monospace;font-size:28px;font-weight:900;color:#0f172a;letter-spacing:.3em;">${e(data.confirmationId)}</p>
         <p style="margin:8px 0 0;color:#94a3b8;font-size:12px;">Otele geldiğinizde bu kodu veya QR kodu gösterin</p>
        </div>`
@@ -198,7 +198,7 @@ export async function renderReservationEmail(data: ReservationEmailData): Promis
   ].filter(l => l !== null).join('\n');
 
   const attachments: MailAttachment[] = qrBuffer
-    ? [{ filename: 'rezervasyon-qr.png', content: qrBuffer, contentType: 'image/png', cid: 'reservation-qr@woodnest' }]
+    ? [{ filename: 'rezervasyon-qr.png', content: qrBuffer, contentType: 'image/png', cid: 'reservation-qr@gardenhotel' }]
     : [];
 
   return { html, text, attachments };

@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const ticketId = `WN-CON-${Date.now().toString(36).toUpperCase()}`;
+  const ticketId = `GH-CON-${Date.now().toString(36).toUpperCase()}`;
   const auth = await getAuthContextFromRequest(request).catch(() => null);
 
   try {

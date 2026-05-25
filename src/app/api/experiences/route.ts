@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
   }
 
   const totalPrice = (experience.price + insuranceAndGearFee) * guests;
-  const confirmationId = `WN-EXP-${Date.now().toString(36).toUpperCase()}`;
+  const confirmationId = `GH-EXP-${Date.now().toString(36).toUpperCase()}`;
   const auth = await getAuthContextFromRequest(request).catch(() => null);
   const date = new Date(Date.UTC(2026, 4, day));
 

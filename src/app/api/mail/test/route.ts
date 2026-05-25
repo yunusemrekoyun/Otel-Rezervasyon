@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
   const to = parsed.data.to ?? auth.user.email;
   const { html, text } = renderBrandedMail({
     title: 'Mail sistemi testi',
-    preview: 'WoodNest mail sistemi başarıyla çalışıyor.',
-    intro: 'Bu e-posta, WoodNest Hotel mail altyapısının çalıştığını doğrulamak için gönderildi.',
+    preview: 'Garden Hotel mail sistemi başarıyla çalışıyor.',
+    intro: 'Bu e-posta, Garden Hotel mail altyapısının çalıştığını doğrulamak için gönderildi.',
     lines: [
       'Bu endpoint sadece admin rolüyle kullanılabilir.',
       'Gelecek adımlarda şifre sıfırlama, rol atama, rezervasyon ve operasyon bildirimleri aynı global servis üzerinden gönderilecek.',
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
   try {
     const result = await sendMail({
       to,
-      subject: 'WoodNest mail sistemi testi',
+      subject: 'Garden Hotel mail sistemi testi',
       html,
       text,
     });
