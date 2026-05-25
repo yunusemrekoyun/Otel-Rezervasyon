@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { issueAuthSession, setAuthCookies } from '@/lib/auth/session';
 import { sendMail } from '@/lib/mail';
 import { renderVerificationEmail } from '@/lib/mail/hotel-templates';
+import { writeAuditLog } from '@/lib/audit';
 
 const TOKEN_TTL_HOURS = 24;
 
@@ -147,6 +148,15 @@ export async function POST(request: NextRequest) {
     }
 
     const issued = await issueAuthSession({ user, request });
+    await writeAuditLog({
+      request,
+      auth: { user: issued.user, sessionId: '', source: 'access' },
+      action: 'auth.register',
+      entityType: 'user',
+      entityId: issued.user.id,
+      summary: `Müşteri hesabı oluşturuldu: ${issued.user.email}`,
+    });
+
     const response = NextResponse.json({
       ok: true,
       user: issued.user,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
+import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -17,6 +18,10 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
+    const before = await prisma.room.findUnique({
+      where: { id },
+      select: { id: true, name: true, status: true, isActive: true },
+    });
 
     // Status can only be toggled manually between 'available' and 'maintenance'
     // 'occupied' and 'cleaning' are set by the system (check-in / cleaning task APIs)
@@ -43,6 +48,19 @@ export async function PATCH(
       },
     });
 
+    if (body.status !== undefined && before?.status !== body.status) {
+      await writeAuditLog({
+        request,
+        auth: authContext,
+        action: 'room.status_update',
+        entityType: 'room',
+        entityId: room.id,
+        summary: `Oda durumu değişti: ${before?.name ?? room.name} ${before?.status ?? 'bilinmiyor'} → ${room.status}`,
+        before: before ? { status: before.status } : undefined,
+        after: { status: room.status },
+      });
+    }
+
     return NextResponse.json({ ok: true, room });
   } catch (error) {
     console.error('Room update error:', error);
@@ -62,7 +80,21 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    const before = await prisma.room.findUnique({
+      where: { id },
+      select: { id: true, name: true, status: true },
+    });
     await prisma.room.delete({ where: { id } });
+
+    await writeAuditLog({
+      request,
+      auth: authContext,
+      action: 'room.delete',
+      entityType: 'room',
+      entityId: id,
+      summary: `Oda silindi: ${before?.name ?? id}`,
+      before: before ?? undefined,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

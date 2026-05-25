@@ -18,26 +18,16 @@ interface MediaItem {
 
 interface RoomData {
   id: string;
+  roomTypeId: string;
   name: string;
-  floor: number | null;
-  status: string;
   basePrice: number;
   description: string | null;
-  isActive: boolean;
+  available: boolean;
   maxAdults: number;
   maxChildren: number;
   roomType: { id: string; name: string; amenities: string[] };
   media: MediaItem[];
 }
-
-// ── Status config ─────────────────────────────────────────────────────────────
-
-const STATUS: Record<string, { tr: string; en: string; dot: string; pill: string }> = {
-  available:   { tr: 'Müsait',   en: 'Available',   dot: 'bg-emerald-400', pill: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/25' },
-  occupied:    { tr: 'Dolu',     en: 'Occupied',     dot: 'bg-sky-400',     pill: 'text-sky-400 bg-sky-400/10 border-sky-400/25'             },
-  cleaning:    { tr: 'Temizlik', en: 'Cleaning',     dot: 'bg-amber-400',   pill: 'text-amber-400 bg-amber-400/10 border-amber-400/25'       },
-  maintenance: { tr: 'Bakım',    en: 'Maintenance',  dot: 'bg-red-400',     pill: 'text-red-400 bg-red-400/10 border-red-400/25'             },
-};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -58,13 +48,13 @@ export function RoomsScreen() {
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    fetch('/api/rooms')
+    fetch('/api/public/rooms')
       .then(r => r.json())
       .then(data => {
         if (data.ok) {
-          const active = (data.rooms as RoomData[]).filter(r => r.isActive);
-          setRooms(active);
-          if (active.length > 0) setSelectedId(active[0].id);
+          const publicRooms = data.rooms as RoomData[];
+          setRooms(publicRooms);
+          if (publicRooms.length > 0) setSelectedId(publicRooms[0].id);
         }
       })
       .catch(console.error)
@@ -92,7 +82,6 @@ export function RoomsScreen() {
   const prevLightbox = () => setLightboxIndex(i => (i <= 0 ? media.length - 1 : i - 1));
   const nextLightbox = () => setLightboxIndex(i => (i >= media.length - 1 ? 0 : i + 1));
 
-  const statusInfo = selected ? (STATUS[selected.status] ?? STATUS.available) : null;
   const currentMedia = media[safeIndex];
 
   // ── Lightbox portal ───────────────────────────────────────────────────────
@@ -245,11 +234,6 @@ export function RoomsScreen() {
                   {selected.roomType.name}
                 </p>
                 <h2 className="text-xl font-bold text-white leading-tight truncate">{selected.name}</h2>
-                {selected.floor != null && (
-                  <p className="text-[11px] text-white/40 mt-0.5">
-                    {selected.floor}. {tr ? 'Kat' : 'Floor'}
-                  </p>
-                )}
                 <p className="text-[11px] text-brand-accent/70 mt-0.5 font-medium">
                   {(selected.maxAdults ?? 2)} {tr ? 'yetişkin' : 'adult'}
                   {(selected.maxChildren ?? 0) > 0
@@ -265,12 +249,14 @@ export function RoomsScreen() {
               </div>
             </div>
 
-            {statusInfo && (
-              <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border ${statusInfo.pill}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`} />
-                {tr ? statusInfo.tr : statusInfo.en}
-              </span>
-            )}
+            <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+              selected.available
+                ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/25'
+                : 'text-white/35 bg-white/5 border-white/10'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${selected.available ? 'bg-emerald-400' : 'bg-white/25'}`} />
+              {selected.available ? (tr ? 'Müsait' : 'Available') : (tr ? 'Seçili tarihte uygun değil' : 'Unavailable for selected dates')}
+            </span>
 
             {selected.description && (
               <p className="text-xs text-white/55 leading-relaxed">{selected.description}</p>
@@ -389,7 +375,6 @@ export function RoomsScreen() {
                 const thumbItem = room.media?.find(m => m.mimeType.startsWith('image/')) ?? room.media?.[0];
                 const thumbSrc = thumbItem ? `/uploads/${thumbItem.pathThumb ?? thumbItem.pathOriginal}` : null;
                 const thumbIsVideo = thumbItem?.mimeType.startsWith('video/') ?? false;
-                const si = STATUS[room.status] ?? STATUS.available;
                 const isActive = room.id === selectedId;
 
                 return (
@@ -416,14 +401,17 @@ export function RoomsScreen() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <p className="text-xs font-semibold text-white/90 truncate">{room.name}</p>
-                        <span className={`shrink-0 inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${si.pill}`}>
-                          <span className={`w-1 h-1 rounded-full ${si.dot}`} />
-                          {tr ? si.tr : si.en}
+                        <span className={`shrink-0 inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${
+                          room.available
+                            ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/25'
+                            : 'text-white/35 bg-white/5 border-white/10'
+                        }`}>
+                          <span className={`w-1 h-1 rounded-full ${room.available ? 'bg-emerald-400' : 'bg-white/25'}`} />
+                          {room.available ? (tr ? 'Müsait' : 'Available') : (tr ? 'Uygun değil' : 'Unavailable')}
                         </span>
                       </div>
                       <p className="text-[10px] text-white/35 truncate">
                         {room.roomType.name}
-                        {room.floor != null ? ` · ${room.floor}. ${tr ? 'Kat' : 'Floor'}` : ''}
                         {' · '}{(room.maxAdults ?? 2)}{tr ? 'y' : 'a'}{(room.maxChildren ?? 0) > 0 ? `+${room.maxChildren}${tr ? 'ç' : 'c'}` : ''}
                       </p>
                     </div>

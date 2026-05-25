@@ -19,6 +19,7 @@ export interface AuthUser {
   email: string;
   roleName: string;
   roleSlug: RoleSlug;
+  emailVerified: boolean;
 }
 
 export interface AuthContext {
@@ -38,6 +39,7 @@ const secureCookies = process.env.NODE_ENV === 'production';
 function toAuthUser(user: {
   id: string;
   email: string;
+  emailVerified: boolean;
   role: {
     name: string;
     slug: string;
@@ -48,6 +50,7 @@ function toAuthUser(user: {
     email: user.email,
     roleName: user.role.name,
     roleSlug: user.role.slug as RoleSlug,
+    emailVerified: user.emailVerified,
   };
 }
 
@@ -62,6 +65,7 @@ export async function issueAuthSession({
   user: {
     id: string;
     email: string;
+    emailVerified: boolean;
     role: {
       name: string;
       slug: string;

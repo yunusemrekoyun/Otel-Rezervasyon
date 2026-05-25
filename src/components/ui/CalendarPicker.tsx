@@ -92,7 +92,7 @@ export function CalendarMonth({
           const s = cellState(date);
 
           let cls = 'text-xs py-1.5 select-none ';
-          if (s.disabled && (s.isBooked || s.unavailable)) cls += 'bg-red-500/20 text-red-400/70 rounded-lg cursor-not-allowed';
+          if (s.disabled && (s.isBooked || s.unavailable)) cls += 'bg-white/8 text-white/25 rounded-lg cursor-not-allowed';
           else if (s.disabled)                    cls += 'text-white/15 cursor-not-allowed';
           else if (s.isSelected || s.isCheckIn || s.isCheckOut) cls += 'bg-brand-accent text-black font-bold rounded-lg cursor-pointer';
           else if (s.inRange)                     cls += 'bg-brand-accent/20 text-white cursor-pointer';

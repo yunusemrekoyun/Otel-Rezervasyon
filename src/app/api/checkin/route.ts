@@ -3,6 +3,7 @@ import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
 import { sendMail } from '@/lib/mail';
 import { renderCheckinEmail } from '@/lib/mail/hotel-templates';
+import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -85,7 +86,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => null);
-  const { confirmationId, action, vehiclePlate, checkinNote, checkinDocumentUrl, sendToCleaning: sendToCleaningRaw, checkoutNote } = body ?? {};
+  const { confirmationId, action, vehiclePlate, checkinNote, sendToCleaning: sendToCleaningRaw, checkoutNote } = body ?? {};
   const sendToCleaning = sendToCleaningRaw !== false; // default true
 
   if (!confirmationId || !['checkin', 'checkout'].includes(action)) {
@@ -155,7 +156,6 @@ export async function PATCH(request: NextRequest) {
             status: 'checked_in',
             ...(vehiclePlate       !== undefined ? { vehiclePlate }       : {}),
             ...(checkinNote        !== undefined ? { checkinNote }        : {}),
-            ...(checkinDocumentUrl !== undefined ? { checkinDocumentUrl } : {}),
           },
           include: { room: ROOM_SEL },
         });
@@ -180,6 +180,17 @@ export async function PATCH(request: NextRequest) {
       } catch (mailError) {
         console.error('Check-in email send failed.', mailError);
       }
+
+      await writeAuditLog({
+        request,
+        auth,
+        action: 'reservation.checkin',
+        entityType: 'reservation',
+        entityId: updated.id,
+        summary: `Check-in yapıldı: #${updated.confirmationId}`,
+        before: { status: reservation.status, roomId: reservation.roomId },
+        after: { status: updated.status, roomId: updated.room.id, roomStatus: updated.room.status },
+      });
 
       return NextResponse.json({ ok: true, reservation: updated });
     } catch (error) {
@@ -221,6 +232,22 @@ export async function PATCH(request: NextRequest) {
       data: { status: 'checked_out' },
       include: { room: ROOM_SEL },
     });
+  });
+
+  await writeAuditLog({
+    request,
+    auth,
+    action: 'reservation.checkout',
+    entityType: 'reservation',
+    entityId: updated.id,
+    summary: `Check-out yapıldı: #${updated.confirmationId}`,
+    before: { status: reservation.status, roomId: reservation.roomId },
+    after: {
+      status: updated.status,
+      roomId: updated.room.id,
+      roomStatus: updated.room.status,
+      sendToCleaning,
+    },
   });
 
   return NextResponse.json({ ok: true, reservation: updated });

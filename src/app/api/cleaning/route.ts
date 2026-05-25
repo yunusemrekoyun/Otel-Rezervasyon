@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
+import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
 const STAFF_ROLES = ['admin', 'personel', 'temizlikci'];
+const cleaningCreateSchema = z.object({
+  roomId: z.string().min(1),
+  assignedToId: z.string().nullable().optional(),
+  priority: z.enum(['normal', 'urgent']).default('normal'),
+  notes: z.string().max(1000).nullable().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,14 +48,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, message: 'Yetkisiz erişim.' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { roomId, assignedToId, priority = 'normal', notes } = body;
-
-    if (!roomId) {
-      return NextResponse.json({ ok: false, message: 'Oda seçilmedi.' }, { status: 400 });
+    const parsed = cleaningCreateSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ ok: false, message: 'Temizlik görevi bilgileri geçersiz.' }, { status: 400 });
     }
+    const { roomId, assignedToId, priority, notes } = parsed.data;
 
     const task = await prisma.$transaction(async tx => {
+      const roomUpdate = await tx.room.updateMany({
+        where: { id: roomId, status: 'available' },
+        data: { status: 'cleaning' },
+      });
+
+      if (roomUpdate.count !== 1) {
+        throw new Error('ROOM_NOT_AVAILABLE');
+      }
+
       const t = await tx.cleaningTask.create({
         data: {
           roomId,
@@ -63,13 +79,32 @@ export async function POST(request: NextRequest) {
           reportedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
         },
       });
-      // Mark room as cleaning
-      await tx.room.update({ where: { id: roomId }, data: { status: 'cleaning' } });
       return t;
+    });
+
+    await writeAuditLog({
+      request,
+      auth,
+      action: 'cleaning.create',
+      entityType: 'cleaning_task',
+      entityId: task.id,
+      summary: `Temizlik görevi oluşturuldu: oda ${task.room.name}`,
+      after: {
+        roomId,
+        assignedToId: assignedToId ?? null,
+        priority,
+        status: task.status,
+      },
     });
 
     return NextResponse.json({ ok: true, task }, { status: 201 });
   } catch (err) {
+    if (err instanceof Error && err.message === 'ROOM_NOT_AVAILABLE') {
+      return NextResponse.json(
+        { ok: false, message: 'Oda şu anda manuel temizlik atamasına uygun değil.' },
+        { status: 409 },
+      );
+    }
     const msg = err instanceof Error ? err.message : 'Görev oluşturulamadı.';
     return NextResponse.json({ ok: false, message: msg }, { status: 500 });
   }

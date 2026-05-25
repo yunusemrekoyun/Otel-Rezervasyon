@@ -9,7 +9,7 @@ import {
   Wifi, Coffee, Car, UtensilsCrossed, Baby,
   Cigarette, ArrowUpDown, Pilcrow, Globe, Shield,
   ChevronDown, CheckCircle2, Building2, Home,
-  Plus, IdCard, Save, Users,
+  Plus, IdCard, Save, Users, MailCheck, X,
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { CustomerReservations } from '@/components/customer/CustomerReservations';
@@ -262,7 +262,23 @@ function ProfileTab({
   });
   const [savingOwner, setSavingOwner] = useState(false);
   const [ownerMessage, setOwnerMessage] = useState('');
+  const [verifyHidden, setVerifyHidden] = useState(false);
+  const [verifyState, setVerifyState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const hasDefaultOwner = people.some((person) => person.isDefault && person.relation === 'self');
+
+  async function resendVerification() {
+    setVerifyState('sending');
+    try {
+      const response = await fetch('/api/auth/verify-email/resend', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const payload = await response.json().catch(() => null);
+      setVerifyState(response.ok && payload?.ok ? 'sent' : 'error');
+    } catch {
+      setVerifyState('error');
+    }
+  }
 
   async function saveOwnerProfile(event: FormEvent) {
     event.preventDefault();
@@ -301,6 +317,55 @@ function ProfileTab({
 
   return (
     <div className="space-y-4">
+      {!user.emailVerified && !verifyHidden && (
+        <div className="rounded-2xl border border-brand-accent/25 bg-brand-accent/8 p-5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-accent/12 border border-brand-accent/25 flex items-center justify-center shrink-0">
+              <MailCheck size={18} className="text-brand-accent" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-white">
+                {tr ? 'E-posta adresinizi doğrulayın' : 'Verify your email address'}
+              </h3>
+              <p className="text-xs text-white/45 leading-relaxed mt-1">
+                {tr
+                  ? 'Profil ve güvenlik işlemlerinde hesabın size ait olduğundan emin olmak için e-postanızı doğrulamanızı öneririz.'
+                  : 'We recommend verifying your email before profile and security changes so your account ownership is clear.'}
+              </p>
+              {verifyState === 'sent' && (
+                <p className="text-xs text-brand-accent/80 mt-2">
+                  {tr ? 'Doğrulama bağlantısı e-posta adresinize gönderildi.' : 'Verification link has been sent to your email.'}
+                </p>
+              )}
+              {verifyState === 'error' && (
+                <p className="text-xs text-red-300 mt-2">
+                  {tr ? 'E-posta gönderilemedi. Daha sonra tekrar deneyin.' : 'Email could not be sent. Please try again later.'}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={resendVerification}
+                  disabled={verifyState === 'sending'}
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-accent px-4 py-2 text-xs font-bold text-black disabled:opacity-50"
+                >
+                  <MailCheck size={12} />
+                  {verifyState === 'sending' ? (tr ? 'Gönderiliyor…' : 'Sending…') : (tr ? 'Hemen doğrula' : 'Verify now')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVerifyHidden(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs text-white/35 hover:text-white/60"
+                >
+                  <X size={11} />
+                  {tr ? 'Hayır teşekkürler' : 'No thanks'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>

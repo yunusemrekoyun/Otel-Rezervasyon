@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
           tcKimlikNo: true,
           passportNo: true,
           passportExpiry: true,
+          emailVerified: true,
         },
       })
     : null;
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
       email:    auth.user.email,
       roleName: auth.user.roleName,
       roleSlug: auth.user.roleSlug,
+      emailVerified: auth.user.emailVerified,
       ...(includeProfile && {
         profile: profile
           ? {
@@ -45,6 +47,7 @@ export async function GET(request: NextRequest) {
               tcKimlikNo: profile.tcKimlikNo,
               passportNo: profile.passportNo,
               passportExpiry: profile.passportExpiry?.toISOString().split('T')[0] ?? null,
+              emailVerified: profile.emailVerified,
             }
           : null,
       }),

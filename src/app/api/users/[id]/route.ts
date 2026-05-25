@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
+import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -16,6 +17,19 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
+    const before = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        roleId: true,
+        isActive: true,
+        role: { select: { slug: true } },
+      },
+    });
 
     // Müşteri rolü bu panel üzerinden atanamaz
     if (body.roleId !== undefined) {
@@ -57,6 +71,31 @@ export async function PATCH(
       },
     });
 
+    await writeAuditLog({
+      request,
+      auth,
+      action: 'user.update',
+      entityType: 'user',
+      entityId: user.id,
+      summary: `Kullanıcı güncellendi: ${user.email}`,
+      before: before ? {
+        firstName: before.firstName,
+        lastName: before.lastName,
+        phone: before.phone,
+        roleId: before.roleId,
+        roleSlug: before.role.slug,
+        isActive: before.isActive,
+      } : undefined,
+      after: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        roleId: user.role.id,
+        roleSlug: user.role.slug,
+        isActive: user.isActive,
+      },
+    });
+
     return NextResponse.json({ ok: true, user });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Güncelleme başarısız.';
@@ -80,7 +119,10 @@ export async function DELETE(
       return NextResponse.json({ ok: false, message: 'Kendi hesabınızı silemezsiniz.' }, { status: 400 });
     }
 
-    const target = await prisma.user.findUnique({ where: { id }, select: { role: { select: { slug: true } } } });
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { email: true, isActive: true, role: { select: { slug: true } } },
+    });
     if (target?.role.slug === 'admin') {
       const adminCount = await prisma.user.count({ where: { role: { slug: 'admin' }, isActive: true } });
       if (adminCount <= 1) {
@@ -89,6 +131,15 @@ export async function DELETE(
     }
 
     await prisma.user.delete({ where: { id } });
+    await writeAuditLog({
+      request,
+      auth,
+      action: 'user.delete',
+      entityType: 'user',
+      entityId: id,
+      summary: `Kullanıcı silindi: ${target?.email ?? id}`,
+      before: target ? { email: target.email, roleSlug: target.role.slug, isActive: target.isActive } : undefined,
+    });
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Silme başarısız.';

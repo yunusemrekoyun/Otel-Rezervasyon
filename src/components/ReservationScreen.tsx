@@ -15,17 +15,17 @@ import {
 } from '@/components/ui/CalendarPicker';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { TcInput } from '@/components/ui/TcInput';
+import { QRCodeImage } from '@/components/ui/QRCodeImage';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface RoomData {
   id: string;
+  roomTypeId: string;
   name: string;
-  floor: number | null;
-  status: string;
   basePrice: number;
   description: string | null;
-  isActive: boolean;
+  available: boolean;
   maxAdults: number;
   maxChildren: number;
   roomType: { id: string; name: string; amenities: string[] };
@@ -134,7 +134,7 @@ function formWithAccountProfile(form: GuestForm, profile: AccountProfile): Guest
 interface DatePickerModalProps {
   checkIn: Date | null;
   checkOut: Date | null;
-  roomId?: string;
+  roomTypeId?: string;
   roomName?: string;
   onConfirm: (ci: Date, co: Date) => void;
   onClose: () => void;
@@ -154,7 +154,7 @@ function addDays(date: Date, days: number) {
   return startOfDay(new Date(date.getFullYear(), date.getMonth(), date.getDate() + days));
 }
 
-function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomId, roomName, onConfirm, onClose, tr }: DatePickerModalProps) {
+function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomTypeId, roomName, onConfirm, onClose, tr }: DatePickerModalProps) {
   const today = startOfDay(new Date());
   const [leftMonth, setLeftMonth] = useState(() => {
     const base = initCi ?? today;
@@ -172,7 +172,7 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomId, roomName, 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    if (!roomId) {
+    if (!roomTypeId) {
       setBookedDates(new Set());
       setLoadingAvailability(false);
       return;
@@ -188,9 +188,9 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomId, roomName, 
           const params = new URLSearchParams({
             year: String(monthDate.getFullYear()),
             month: String(monthDate.getMonth()),
-            roomId: roomId!,
+            roomTypeId: roomTypeId!,
           });
-          return fetch(`/api/availability?${params}`).then((response) => response.json());
+          return fetch(`/api/public/availability?${params}`).then((response) => response.json());
         }));
 
         if (cancelled) return;
@@ -198,13 +198,8 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomId, roomName, 
         const next = new Set<string>();
         for (const response of responses) {
           if (!response?.ok) continue;
-          for (const range of response.ranges as Array<{ checkIn: string; checkOut: string }>) {
-            let day = parseDateKey(range.checkIn);
-            const end = parseDateKey(range.checkOut);
-            while (day < end) {
-              next.add(dateKey(day));
-              day = addDays(day, 1);
-            }
+          for (const date of response.unavailableDates as string[]) {
+            next.add(date);
           }
         }
 
@@ -221,7 +216,7 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomId, roomName, 
     return () => {
       cancelled = true;
     };
-  }, [leftMonth, roomId]);
+  }, [leftMonth, roomTypeId]);
 
   function hasBookedNightBetween(start: Date, end: Date) {
     let day = startOfDay(start);
@@ -236,7 +231,7 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomId, roomName, 
   }
 
   function isDateUnavailable(date: Date) {
-    if (!roomId) return false;
+    if (!roomTypeId) return false;
     if (!checkIn || selecting === 'in' || date <= checkIn) return bookedDates.has(dateKey(date));
 
     return hasBookedNightBetween(checkIn, date);
@@ -310,7 +305,7 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomId, roomName, 
                 </span>
               )}
             </div>
-            {roomId && (
+            {roomTypeId && (
               <p className="mt-2 text-[11px] text-white/35">
                 {loadingAvailability
                   ? (tr ? 'Odanın müsait günleri kontrol ediliyor…' : 'Checking available dates for this room…')
@@ -468,13 +463,13 @@ export function ReservationScreen() {
   const fetchRooms = useCallback(async (ci?: Date, co?: Date) => {
     setLoadingRooms(true);
     try {
-      let url = '/api/rooms';
+      let url = '/api/public/rooms';
       if (ci && co) {
         const p = new URLSearchParams({
           checkIn:  dateKey(ci),
           checkOut: dateKey(co),
         });
-        url = `/api/rooms?${p}`;
+        url = `/api/public/rooms?${p}`;
         setDateFilterActive(true);
       } else {
         setDateFilterActive(false);
@@ -482,7 +477,7 @@ export function ReservationScreen() {
       const r = await fetch(url);
       const data = await r.json();
       if (data.ok) {
-        const available = (data.rooms as RoomData[]).filter(r => r.isActive && r.status === 'available');
+        const available = (data.rooms as RoomData[]).filter(r => !ci || !co || r.available);
         setRooms(available);
         // If selected room is no longer available, clear the selection
         setSelectedRoomId(prev => available.find(r => r.id === prev) ? prev : '');
@@ -676,7 +671,7 @@ export function ReservationScreen() {
       : form;
 
     const payload = {
-      roomId: selectedRoomId,
+      roomTypeId: selectedRoomId,
       checkInDate: dateKey(checkIn!),
       checkOutDate: dateKey(checkOut!),
       adultsCount: reservationForm.adultsCount,
@@ -782,11 +777,10 @@ export function ReservationScreen() {
             </p>
             {/* QR Code */}
             <div className="bg-white rounded-2xl p-4 mb-4 shadow-lg inline-block">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(result.confirmationId!)}&bgcolor=ffffff&color=1c1714&qzone=1&margin=0`}
+              <QRCodeImage
+                value={result.confirmationId!}
                 alt="QR"
-                width={180}
-                height={180}
+                size={180}
                 className="rounded-xl block"
               />
             </div>
@@ -875,7 +869,7 @@ export function ReservationScreen() {
             <p className="text-[10px] text-brand-accent uppercase tracking-widest font-semibold">
               {tr ? 'Seçilen Oda' : 'Selected Room'}
             </p>
-            <p className="text-white font-bold">{selectedRoom.name} — {selectedRoom.roomType.name}</p>
+            <p className="text-white font-bold">{selectedRoom.name}</p>
             <div className="text-xs text-white/50 space-y-0.5">
               <p>{formatDate(checkIn)} → {formatDate(checkOut)}</p>
               <p>{nights} {tr ? 'gece' : 'night'} × ₺{selectedRoom.basePrice.toLocaleString('tr-TR')}</p>
@@ -927,8 +921,7 @@ export function ReservationScreen() {
                       </option>
                       {capacityFilteredRooms.map(r => (
                         <option key={r.id} value={r.id}>
-                          {r.name} — {r.roomType.name} · ₺{r.basePrice.toLocaleString('tr-TR')}/{tr ? 'gece' : 'night'}
-                          {r.floor ? ` (${r.floor}. kat)` : ''}
+                          {r.name} · ₺{r.basePrice.toLocaleString('tr-TR')}/{tr ? 'gece' : 'night'}
                           {' · '}{r.maxAdults}{tr ? 'y' : 'a'}{r.maxChildren > 0 ? `+${r.maxChildren}${tr ? 'ç' : 'c'}` : ''}
                         </option>
                       ))}
@@ -1249,7 +1242,7 @@ export function ReservationScreen() {
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-white/50">
                     <span className="text-white/30">{tr ? 'Oda' : 'Room'}</span>
-                    <span className="text-white">{selectedRoom?.name} — {selectedRoom?.roomType.name}</span>
+                    <span className="text-white">{selectedRoom?.name}</span>
                     <span className="text-white/30">{tr ? 'Giriş' : 'Check-in'}</span>
                     <span className="text-white">{formatDate(checkIn)}</span>
                     <span className="text-white/30">{tr ? 'Çıkış' : 'Check-out'}</span>
@@ -1580,7 +1573,7 @@ export function ReservationScreen() {
           <DatePickerModal
             checkIn={checkIn}
             checkOut={checkOut}
-            roomId={selectedRoom?.id}
+            roomTypeId={selectedRoom?.roomTypeId}
             roomName={selectedRoom?.name}
             onConfirm={(ci, co) => { setCheckIn(ci); setCheckOut(co); setShowDatePicker(false); fetchRooms(ci, co); }}
             onClose={() => setShowDatePicker(false)}

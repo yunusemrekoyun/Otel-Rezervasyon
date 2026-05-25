@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { issueAuthSession, setAuthCookies } from '@/lib/auth/session';
+import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -57,6 +58,15 @@ export async function POST(request: NextRequest) {
     });
 
     setAuthCookies(response, issued.accessToken, issued.refreshToken);
+
+    await writeAuditLog({
+      request,
+      auth: { user: issued.user, sessionId: '', source: 'access' },
+      action: 'auth.login',
+      entityType: 'user',
+      entityId: issued.user.id,
+      summary: `Oturum açıldı: ${issued.user.email}`,
+    });
 
     return response;
   } catch (error) {

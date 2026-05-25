@@ -1136,8 +1136,6 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
 
   const handleCheckinConfirm = useCallback(async () => {
     if (!pendingCheckinId) return;
-    let docUrl = modalDocUrl;
-
     if (modalDocFile && !modalDocUrl) {
       setModalDocUploading(true);
       const fd = new FormData();
@@ -1147,8 +1145,7 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
         const r = await fetch("/api/checkin/document", { method: "POST", body: fd });
         const d = await r.json();
         if (d.ok) {
-          docUrl = d.url;
-          setModalDocUrl(d.url);
+          setModalDocUrl(d.fileName ?? modalDocFile.name);
         } else {
           setModalDocError(d.message ?? (isTr ? "Belge yüklenemedi." : "Upload failed."));
           setModalDocUploading(false);
@@ -1166,7 +1163,6 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
     await handleAction(pendingCheckinId, "checkin", {
       vehiclePlate:       modalVehiclePlate || undefined,
       checkinNote:        modalStaffNote    || undefined,
-      checkinDocumentUrl: docUrl            || undefined,
     });
     setPendingCheckinId(null);
   }, [

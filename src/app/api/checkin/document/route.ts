@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
-import { saveFile } from '@/lib/media/storage';
+import { saveEncryptedDocument } from '@/lib/private-documents';
+import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
 
   const reservation = await prisma.reservation.findUnique({
     where:  { confirmationId },
-    select: { id: true },
+    select: { id: true, confirmationId: true },
   });
   if (!reservation) {
     return NextResponse.json(
@@ -64,17 +65,50 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const fileName = `${randomUUID()}.${ext}`;
+  const fileName = `${randomUUID()}.${ext}.enc`;
+  const privatePath = `checkin-docs/${fileName}`;
   const buffer   = Buffer.from(await file.arrayBuffer());
 
-  await saveFile(buffer, fileName, 'checkin-docs');
-
-  const url = `/uploads/checkin-docs/${fileName}`;
+  try {
+    await saveEncryptedDocument(buffer, privatePath);
+  } catch (error) {
+    console.error('Check-in document encryption failed.', error);
+    return NextResponse.json(
+      { ok: false, message: 'Belge güvenli şekilde saklanamadı. Şifreleme anahtarını kontrol edin.' },
+      { status: 503 },
+    );
+  }
 
   await prisma.reservation.update({
     where: { confirmationId },
-    data:  { checkinDocumentUrl: url },
+    data:  {
+      checkinDocumentUrl: null,
+      checkinDocumentPrivatePath: privatePath,
+      checkinDocumentOriginalName: file.name,
+      checkinDocumentMimeType: file.type,
+      checkinDocumentSize: file.size,
+      checkinDocumentUploadedAt: new Date(),
+    },
   });
 
-  return NextResponse.json({ ok: true, url });
+  await writeAuditLog({
+    request,
+    auth,
+    action: 'checkin_document.upload',
+    entityType: 'reservation',
+    entityId: reservation.id,
+    summary: `Check-in belgesi yüklendi: #${reservation.confirmationId}`,
+    after: {
+      fileName: file.name,
+      mimeType: file.type,
+      size: file.size,
+    },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    fileName: file.name,
+    mimeType: file.type,
+    size: file.size,
+  });
 }

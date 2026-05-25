@@ -5,7 +5,7 @@ import type { ElementType } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   LogOut, ShieldCheck, LayoutDashboard, Users, CalendarCheck,
-  Settings, ClipboardList, Bell, LineChart, FileText, CreditCard,
+  Settings, ClipboardList, Bell, LineChart, FileText, CreditCard, FileClock,
   User, Calendar, MessageSquare, CheckSquare, DoorOpen, Package,
   Building2, ChevronRight, Sun, Moon, Home, Globe, AlertTriangle, Wrench,
 } from 'lucide-react';
@@ -20,6 +20,7 @@ import { AdminReservations } from '@/components/admin/AdminReservations';
 import { AdminSettings } from '@/components/admin/AdminSettings';
 import { AdminUserManager } from '@/components/admin/AdminUserManager';
 import { AdminOperationsPanel } from '@/components/admin/AdminOperationsPanel';
+import { AuditLogPanel } from '@/components/admin/AuditLogPanel';
 import { CustomerDashboard } from '@/components/customer/CustomerDashboard';
 import { CheckinPanel } from '@/components/personel/CheckinPanel';
 import { PersonelDashboard } from '@/components/personel/PersonelDashboard';
@@ -54,6 +55,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'checkinout',   label: 'Giriş / Çıkış',     description: 'Misafir giriş ve çıkış işlemleri ile QR tarama terminali.',                                icon: DoorOpen },
       { id: 'rooms',        label: 'Odalar',              description: 'Oda çeşitlerini, imkanlarını ve medyalarını buradan yönetebilirsiniz.',                    icon: Building2 },
       { id: 'operations',   label: 'Hasar & Kayıp Eşya', description: 'Personelden gelen hasar bildirimleri ve kayıp eşya kayıtlarını buradan yönetin.',           icon: Wrench },
+      { id: 'audit',        label: 'İşlem Logları',       description: 'Kritik sistem işlemleri ve yetkili kullanıcı hareketlerini takip edin.',                    icon: FileClock },
       { id: 'settings',     label: 'Sistem Ayarları',     description: 'Kabin fiyatlandırmaları, site ayarları ve genel yapılandırmalar.',                         icon: Settings },
     ],
     personel: [
@@ -88,6 +90,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'checkinout',   label: 'Check-in / Out',   description: 'Guest check-in and check-out operations with QR scanning terminal.',                  icon: DoorOpen },
       { id: 'rooms',        label: 'Rooms',             description: 'Manage room types, their amenities and media from here.',                            icon: Building2 },
       { id: 'operations',   label: 'Damage & Lost Items', description: 'Manage damage reports and lost item logs submitted by housekeeping staff.',          icon: Wrench },
+      { id: 'audit',        label: 'Audit Logs',        description: 'Track critical system operations and authorized user activity.',                    icon: FileClock },
       { id: 'settings',     label: 'Settings',          description: 'Cabin pricing, site configurations and general structures.',                         icon: Settings },
     ],
     personel: [
@@ -315,7 +318,7 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
         <div className="flex-1 p-4 md:p-5">
 
           {/* ── Rooms ── */}
-          {activeTabId === 'rooms' ? (
+          {activeTabId === 'rooms' && user.roleSlug === 'admin' ? (
             <OdalarSection />
 
           /* ── Admin user management ── */
@@ -333,6 +336,10 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           /* ── Admin operations (damage reports + lost items) ── */
           ) : activeTabId === 'operations' && user.roleSlug === 'admin' ? (
             <AdminOperationsPanel tr={language === 'tr'} />
+
+          /* ── Admin audit logs ── */
+          ) : activeTabId === 'audit' && user.roleSlug === 'admin' ? (
+            <AuditLogPanel tr={language === 'tr'} />
 
           /* ── Admin settings ── */
           ) : activeTabId === 'settings' && user.roleSlug === 'admin' ? (

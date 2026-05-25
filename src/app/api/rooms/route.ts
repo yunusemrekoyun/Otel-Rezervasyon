@@ -9,6 +9,14 @@ export const runtime = 'nodejs';
  *  that have a conflicting active reservation in that date range.
  */
 export async function GET(request: NextRequest) {
+  const authContext = await getAuthContextFromRequest(request).catch(() => null);
+  if (!authContext || !['admin', 'personel', 'temizlikci'].includes(authContext.user.roleSlug)) {
+    return NextResponse.json(
+      { ok: false, message: 'Yetkisiz erişim.' },
+      { status: 403 },
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const checkInParam  = searchParams.get('checkIn');
   const checkOutParam = searchParams.get('checkOut');

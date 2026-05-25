@@ -10,6 +10,7 @@ import {
 import type { AuthUser } from '@/lib/auth/session';
 import { formatBirthDate } from '@/components/ui/BirthDateInput';
 import { maskTc } from '@/components/ui/TcInput';
+import { QRCodeImage } from '@/components/ui/QRCodeImage';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -145,7 +146,6 @@ function GuestInfoModal({ res, onClose, tr }: { res: Reservation; onClose: () =>
 // ── QR Modal ──────────────────────────────────────────────────────────────────
 
 function QRModal({ code, onClose, tr, title }: { code: string; onClose: () => void; tr: boolean; title?: string }) {
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}&bgcolor=ffffff&color=1c1714&qzone=1&margin=0`;
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
@@ -167,13 +167,7 @@ function QRModal({ code, onClose, tr, title }: { code: string; onClose: () => vo
             <X size={16} />
           </button>
         </div>
-        <img
-          src={qrUrl}
-          alt={`QR ${code}`}
-          width={220}
-          height={220}
-          className="rounded-xl"
-        />
+        <QRCodeImage value={code} alt={`QR ${code}`} size={220} className="rounded-xl" />
         <div className="text-center">
           <p className="font-mono text-2xl font-bold text-[#1c1714] tracking-[0.2em]">{code}</p>
           <p className="text-[11px] text-[#1c1714]/40 mt-1">

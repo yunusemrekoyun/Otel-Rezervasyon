@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAuthContextFromRequest } from '@/lib/auth/session';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
+  const auth = await getAuthContextFromRequest(request).catch(() => null);
+  if (!auth || !['admin', 'personel'].includes(auth.user.roleSlug)) {
+    return NextResponse.json({ ok: false, message: 'Yetkisiz erişim.' }, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const year  = parseInt(searchParams.get('year')  ?? '', 10);
   const month = parseInt(searchParams.get('month') ?? '', 10); // 0-based

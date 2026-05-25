@@ -137,7 +137,9 @@ function QuickReservationModal({
   const nights = nightsBetween(form.checkInDate, form.checkOutDate);
   const totalPrice = nights * room.basePrice;
   const checkInIsToday = form.checkInDate === today;
-  const canSubmit = room.status === 'available' && room.isActive && nights > 0
+  const needsCurrentAvailability = checkInIsToday;
+  const canSubmit = room.isActive && nights > 0
+    && (!needsCurrentAvailability || room.status === 'available')
     && form.firstName.trim() && form.lastName.trim() && form.email.trim() && form.phone.trim();
 
   useEffect(() => {
@@ -217,9 +219,11 @@ function QuickReservationModal({
           </div>
         </div>
 
-        {room.status !== 'available' && (
+        {needsCurrentAvailability && room.status !== 'available' && (
           <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            {tr ? 'Bu oda şu anda hızlı rezervasyona uygun değil.' : 'This room is not available for quick reservation right now.'}
+            {tr
+              ? 'Bugün giriş için oda şu anda müsait olmalı. İleri tarih seçerseniz uygunluk takvime göre kontrol edilir.'
+              : 'Same-day check-in requires the room to be available now. Future dates are checked by calendar availability.'}
           </div>
         )}
 
@@ -985,17 +989,15 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                   </div>
 
                   {/* Action buttons */}
-                  {(room.status === 'available' || room.status === 'maintenance') && (
+                  {room.isActive && (
                     <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2.5 border-t border-white/[0.05]">
-                      {room.status === 'available' && (
-                        <button
-                          onClick={() => setQuickReservationRoom(room)}
-                          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-bold text-black bg-brand-accent hover:brightness-105 transition-colors"
-                        >
-                          <CalendarCheck size={10} />
-                          {tr ? 'Rezervasyon' : 'Reserve'}
-                        </button>
-                      )}
+                      <button
+                        onClick={() => setQuickReservationRoom(room)}
+                        className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-bold text-black bg-brand-accent hover:brightness-105 transition-colors"
+                      >
+                        <CalendarCheck size={10} />
+                        {tr ? 'Rezervasyon' : 'Reserve'}
+                      </button>
                       {room.status === 'available' && (
                         <button
                           onClick={() => setCleaningTarget(room)}
@@ -1005,7 +1007,7 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                           {tr ? 'Temizlik' : 'Clean'}
                         </button>
                       )}
-                      {canManageRooms && (
+                      {canManageRooms && (room.status === 'available' || room.status === 'maintenance') && (
                         maintenanceLoadingId === room.id ? (
                           <div className="flex items-center px-2"><Loader2 size={11} className="animate-spin text-white/30" /></div>
                         ) : (
@@ -1060,7 +1062,7 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                 <div className="flex items-center gap-2.5 shrink-0 flex-wrap justify-end">
                   <StatusBadge status={room.status} tr={tr} />
 
-                  {room.status === 'available' && (
+                  {room.isActive && (
                     <button
                       onClick={() => setQuickReservationRoom(room)}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-black bg-brand-accent hover:brightness-105 transition-colors"

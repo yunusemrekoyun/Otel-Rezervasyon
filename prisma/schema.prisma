@@ -20,39 +20,39 @@ model Role {
 }
 
 model User {
-  id                 String              @id @default(cuid())
-  email              String              @unique
-  passwordHash       String              @map("password_hash")
-  isActive           Boolean             @default(true) @map("is_active")
-  roleId             String              @map("role_id")
-  role               Role                @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  id                      String                   @id @default(cuid())
+  email                   String                   @unique
+  passwordHash            String                   @map("password_hash")
+  isActive                Boolean                  @default(true) @map("is_active")
+  roleId                  String                   @map("role_id")
+  role                    Role                     @relation(fields: [roleId], references: [id], onDelete: Restrict)
   sessions                Session[]
   passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
   accountPeople           AccountPerson[]
-  reservations       Reservation[]
-  contactRequests    ContactRequest[]
-  experienceBookings ExperienceBooking[]
-  assignedTasks      CleaningTask[]      @relation("assigned_tasks")
-  reportedTasks      CleaningTask[]      @relation("reported_tasks")
-  maintenanceReports MaintenanceReport[]
-  lostItems          LostItem[]
+  reservations            Reservation[]
+  contactRequests         ContactRequest[]
+  experienceBookings      ExperienceBooking[]
+  assignedTasks           CleaningTask[]           @relation("assigned_tasks")
+  reportedTasks           CleaningTask[]           @relation("reported_tasks")
+  maintenanceReports      MaintenanceReport[]
+  lostItems               LostItem[]
   // Profile
-  firstName          String?             @map("first_name")
-  lastName           String?             @map("last_name")
-  phone              String?
-  birthDate          DateTime?           @map("birth_date")
-  gender             String?
-  nationality        String?             @default("TR")
-  tcKimlikNo         String?             @map("tc_kimlik_no")
-  passportNo         String?             @map("passport_no")
-  passportExpiry     DateTime?           @map("passport_expiry")
-  companyName        String?             @map("company_name")
-  taxNumber          String?             @map("tax_number")
-  taxOffice          String?             @map("tax_office")
-  emailVerified      Boolean             @default(false) @map("email_verified")
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
+  firstName               String?                  @map("first_name")
+  lastName                String?                  @map("last_name")
+  phone                   String?
+  birthDate               DateTime?                @map("birth_date")
+  gender                  String?
+  nationality             String?                  @default("TR")
+  tcKimlikNo              String?                  @map("tc_kimlik_no")
+  passportNo              String?                  @map("passport_no")
+  passportExpiry          DateTime?                @map("passport_expiry")
+  companyName             String?                  @map("company_name")
+  taxNumber               String?                  @map("tax_number")
+  taxOffice               String?                  @map("tax_office")
+  emailVerified           Boolean                  @default(false) @map("email_verified")
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  updatedAt               DateTime                 @updatedAt @map("updated_at")
 
   @@index([roleId])
   @@map("users")
@@ -104,27 +104,27 @@ model PasswordResetToken {
 }
 
 model AccountPerson {
-  id             String   @id @default(cuid())
-  userId         String   @map("user_id")
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  userId         String    @map("user_id")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   label          String?
-  relation       String   @default("self")
-  isDefault      Boolean  @default(false) @map("is_default")
-  firstName      String   @map("first_name")
-  lastName       String   @map("last_name")
+  relation       String    @default("self")
+  isDefault      Boolean   @default(false) @map("is_default")
+  firstName      String    @map("first_name")
+  lastName       String    @map("last_name")
   email          String?
   phone          String?
   birthDate      DateTime? @map("birth_date")
   gender         String?
-  nationality    String?  @default("TR")
-  tcKimlikNo     String?  @map("tc_kimlik_no")
-  passportNo     String?  @map("passport_no")
+  nationality    String?   @default("TR")
+  tcKimlikNo     String?   @map("tc_kimlik_no")
+  passportNo     String?   @map("passport_no")
   passportExpiry DateTime? @map("passport_expiry")
-  companyName    String?  @map("company_name")
-  taxNumber      String?  @map("tax_number")
-  taxOffice      String?  @map("tax_office")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  companyName    String?   @map("company_name")
+  taxNumber      String?   @map("tax_number")
+  taxOffice      String?   @map("tax_office")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([userId, isDefault])
@@ -132,48 +132,53 @@ model AccountPerson {
 }
 
 model Reservation {
-  id              String    @id @default(cuid())
-  confirmationId  String    @unique @map("confirmation_id")
+  id                          String    @id @default(cuid())
+  confirmationId              String    @unique @map("confirmation_id")
   // Room
-  roomId          String    @map("room_id")
-  room            Room      @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  roomId                      String    @map("room_id")
+  room                        Room      @relation(fields: [roomId], references: [id], onDelete: Restrict)
   // Dates
-  checkInDate     DateTime  @map("check_in_date")
-  checkOutDate    DateTime  @map("check_out_date")
-  nights          Int
+  checkInDate                 DateTime  @map("check_in_date")
+  checkOutDate                DateTime  @map("check_out_date")
+  nights                      Int
   // Guest counts
-  adultsCount     Int       @default(1) @map("adults_count")
-  childrenCount   Int       @default(0) @map("children_count")
+  adultsCount                 Int       @default(1) @map("adults_count")
+  childrenCount               Int       @default(0) @map("children_count")
   // Guest identity
-  firstName       String    @map("first_name")
-  lastName        String    @map("last_name")
-  email           String
-  phone           String
-  birthDate       DateTime? @map("birth_date")
-  gender          String?
-  nationality     String?   @default("TR")
+  firstName                   String    @map("first_name")
+  lastName                    String    @map("last_name")
+  email                       String
+  phone                       String
+  birthDate                   DateTime? @map("birth_date")
+  gender                      String?
+  nationality                 String?   @default("TR")
   // Legal ID
-  tcKimlikNo      String?   @map("tc_kimlik_no")
-  passportNo      String?   @map("passport_no")
-  passportExpiry  DateTime? @map("passport_expiry")
+  tcKimlikNo                  String?   @map("tc_kimlik_no")
+  passportNo                  String?   @map("passport_no")
+  passportExpiry              DateTime? @map("passport_expiry")
   // Corporate (optional)
-  companyName     String?   @map("company_name")
-  taxNumber       String?   @map("tax_number")
-  taxOffice       String?   @map("tax_office")
+  companyName                 String?   @map("company_name")
+  taxNumber                   String?   @map("tax_number")
+  taxOffice                   String?   @map("tax_office")
   // Pricing
-  subtotal        Int
-  totalPrice      Int       @map("total_price")
+  subtotal                    Int
+  totalPrice                  Int       @map("total_price")
   // Extra
-  specialRequests    String?   @map("special_requests")
-  vehiclePlate       String?   @map("vehicle_plate")
-  checkinNote        String?   @map("checkin_note")
-  checkinDocumentUrl String?   @map("checkin_document_url")
-  status             String    @default("pending")
+  specialRequests             String?   @map("special_requests")
+  vehiclePlate                String?   @map("vehicle_plate")
+  checkinNote                 String?   @map("checkin_note")
+  checkinDocumentUrl          String?   @map("checkin_document_url")
+  checkinDocumentPrivatePath  String?   @map("checkin_document_private_path")
+  checkinDocumentOriginalName String?   @map("checkin_document_original_name")
+  checkinDocumentMimeType     String?   @map("checkin_document_mime_type")
+  checkinDocumentSize         Int?      @map("checkin_document_size")
+  checkinDocumentUploadedAt   DateTime? @map("checkin_document_uploaded_at")
+  status                      String    @default("pending")
   // Optional user account link
-  userId          String?   @map("user_id")
-  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  userId                      String?   @map("user_id")
+  user                        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt                   DateTime  @default(now()) @map("created_at")
+  updatedAt                   DateTime  @updatedAt @map("updated_at")
 
   @@index([roomId])
   @@index([userId])
@@ -267,8 +272,8 @@ model CleaningTask {
   assignedTo   User?     @relation("assigned_tasks", fields: [assignedToId], references: [id], onDelete: SetNull)
   reportedById String    @map("reported_by_id")
   reportedBy   User      @relation("reported_tasks", fields: [reportedById], references: [id], onDelete: Restrict)
-  status       String    @default("pending")  // pending | in_progress | done
-  priority     String    @default("normal")   // normal | urgent
+  status       String    @default("pending") // pending | in_progress | done
+  priority     String    @default("normal") // normal | urgent
   notes        String?
   completedAt  DateTime? @map("completed_at")
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -286,8 +291,8 @@ model MaintenanceReport {
   reportedById String   @map("reported_by_id")
   reportedBy   User     @relation(fields: [reportedById], references: [id], onDelete: Restrict)
   description  String
-  priority     String   @default("normal")  // normal | urgent
-  status       String   @default("open")    // open | resolved
+  priority     String   @default("normal") // normal | urgent
+  status       String   @default("open") // open | resolved
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -296,16 +301,16 @@ model MaintenanceReport {
 }
 
 model LostItem {
-  id           String   @id @default(cuid())
-  roomId       String   @map("room_id")
-  room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  foundById    String   @map("found_by_id")
-  foundBy      User     @relation(fields: [foundById], references: [id], onDelete: Restrict)
-  description  String
-  status       String   @default("found")  // found | claimed | discarded
-  foundAt      DateTime @default(now()) @map("found_at")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(cuid())
+  roomId      String   @map("room_id")
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  foundById   String   @map("found_by_id")
+  foundBy     User     @relation(fields: [foundById], references: [id], onDelete: Restrict)
+  description String
+  status      String   @default("found") // found | claimed | discarded
+  foundAt     DateTime @default(now()) @map("found_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@index([roomId])
   @@map("lost_items")
@@ -328,4 +333,26 @@ model Media {
 
   @@index([entityType, entityId])
   @@map("media")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?  @map("actor_user_id")
+  actorEmail  String?  @map("actor_email")
+  actorRole   String?  @map("actor_role")
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String?  @map("entity_id")
+  summary     String
+  before      Json?
+  after       Json?
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([actorUserId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

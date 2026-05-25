@@ -4,6 +4,8 @@ import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
 import { sendMail } from '@/lib/mail';
 import { renderCheckinEmail, renderReservationEmail } from '@/lib/mail/hotel-templates';
+import { writeAuditLog } from '@/lib/audit';
+import { getRoomAvailability } from '@/lib/reservations/availability';
 
 export const runtime = 'nodejs';
 
@@ -106,25 +108,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const conflicting = await prisma.reservation.findFirst({
-    where: {
-      roomId: data.roomId,
-      status: { notIn: ['cancelled'] },
-      AND: [
-        { checkInDate: { lt: checkOut } },
-        { checkOutDate: { gt: checkIn } },
-      ],
-    },
-    select: { id: true },
-  });
-
-  if (conflicting) {
-    return NextResponse.json(
-      { ok: false, message: 'Seçilen tarihler için bu oda müsait değil.' },
-      { status: 409 },
-    );
-  }
-
   const nights = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
   const subtotal = room.basePrice * nights;
   const totalPrice = subtotal;
@@ -138,6 +121,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const reservation = await prisma.$transaction(async (tx) => {
+      const availability = await getRoomAvailability(tx, room.id, checkIn, checkOut);
+      if (!availability.available) {
+        throw new Error('ROOM_NOT_AVAILABLE');
+      }
+
       if (data.checkInNow) {
         const update = await tx.room.updateMany({
           where: { id: room.id, status: 'available' },
@@ -177,6 +165,24 @@ export async function POST(request: NextRequest) {
           room: { select: { id: true, name: true, basePrice: true } },
         },
       });
+    });
+
+    await writeAuditLog({
+      request,
+      auth,
+      action: data.checkInNow ? 'reservation.instant_checkin' : 'reservation.instant_create',
+      entityType: 'reservation',
+      entityId: reservation.id,
+      summary: data.checkInNow
+        ? `Hızlı rezervasyon ve check-in oluşturuldu: #${reservation.confirmationId}`
+        : `Hızlı rezervasyon oluşturuldu: #${reservation.confirmationId}`,
+      after: {
+        confirmationId: reservation.confirmationId,
+        roomId: reservation.room.id,
+        status: reservation.status,
+        checkInDate: reservation.checkInDate.toISOString(),
+        checkOutDate: reservation.checkOutDate.toISOString(),
+      },
     });
 
     try {
@@ -247,7 +253,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof Error && error.message === 'ROOM_NOT_AVAILABLE') {
       return NextResponse.json(
-        { ok: false, message: 'Oda durumu değişti. Listeyi yenileyip tekrar deneyin.' },
+        { ok: false, message: 'Seçilen tarihler için bu oda müsait değil.' },
         { status: 409 },
       );
     }

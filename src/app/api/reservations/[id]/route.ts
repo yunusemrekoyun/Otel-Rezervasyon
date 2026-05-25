@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
+import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -40,6 +41,17 @@ export async function PATCH(
   const updated = await prisma.reservation.update({
     where: { id },
     data:  { status: 'cancelled' },
+  });
+
+  await writeAuditLog({
+    request,
+    auth,
+    action: 'reservation.cancel',
+    entityType: 'reservation',
+    entityId: updated.id,
+    summary: `Rezervasyon iptal edildi: #${updated.confirmationId}`,
+    before: { status: reservation.status },
+    after: { status: updated.status },
   });
 
   return NextResponse.json({ ok: true, reservation: updated });
