@@ -75,24 +75,24 @@ export function Modal({
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               onClick={e => e.stopPropagation()}
-              className={`w-full ${SIZE[size]} panel-glass-raised`}
+              className={`w-full ${SIZE[size]} modal-shell overflow-hidden`}
             >
               {/* Modal header */}
               <div
-                className="px-6 py-4 border-b border-white/[0.07] flex items-start justify-between"
+                className="px-6 py-4 border-b border-m-border flex items-start justify-between"
                 style={{
                   background: 'linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 9%, transparent) 0%, transparent 65%)',
                 }}
               >
                 <div>
-                  <h2 className="font-bold text-white/95 text-base leading-snug">{title}</h2>
+                  <h2 className="font-bold text-main text-base leading-snug">{title}</h2>
                   {description && (
-                    <p className="text-[11px] text-white/35 mt-0.5 leading-relaxed">{description}</p>
+                    <p className="text-[11px] text-subtle mt-0.5 leading-relaxed">{description}</p>
                   )}
                 </div>
                 <button
                   onClick={onClose}
-                  className="btn-icon w-8 h-8 text-white/35 hover:text-white/75 shrink-0 ml-4 mt-0.5"
+                  className="btn-icon w-8 h-8 shrink-0 ml-4 mt-0.5"
                   aria-label="Close"
                 >
                   <X size={16} />

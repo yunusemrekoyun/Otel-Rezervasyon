@@ -22,6 +22,7 @@ import {
   StickyNote,
   Users,
 } from "lucide-react";
+import { useTheme } from "@/theme/ThemeContext";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -78,7 +79,7 @@ const STATUS_MAP: Record<string, { tr: string; en: string; cls: string }> = {
   checked_out: {
     tr: "Ayrıldı",
     en: "Checked Out",
-    cls: "text-white/30 bg-white/5 border-white/8",
+    cls: "text-muted bg-m-surface2 border-m-border",
   },
   cancelled: {
     tr: "İptal",
@@ -91,7 +92,7 @@ function StatusBadge({ status, isTr }: { status: string; isTr: boolean }) {
   const s = STATUS_MAP[status] ?? {
     tr: status,
     en: status,
-    cls: "text-white/30 bg-white/5 border-white/8",
+    cls: "text-muted bg-m-surface2 border-m-border",
   };
   return (
     <span
@@ -332,7 +333,7 @@ function DetailCard({
     ? "rgba(52,211,153,0.2)"
     : canCheckout
       ? "rgba(var(--app-accent-rgb,255,183,128),0.2)"
-      : "rgba(255,255,255,0.06)";
+      : "var(--m-surface)";
 
   return (
     <motion.div
@@ -364,11 +365,11 @@ function DetailCard({
         {/* Header row */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[9px] text-white/25 uppercase tracking-widest mb-1.5">
+            <p className="text-[9px] text-subtle uppercase tracking-widest mb-1.5">
               {isTr ? "Rezervasyon" : "Reservation"}
             </p>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="font-mono text-2xl font-black text-white tracking-[0.15em]">
+              <span className="font-mono text-2xl font-black text-main tracking-[0.15em]">
                 {res.confirmationId}
               </span>
               <StatusBadge status={res.status} isTr={isTr} />
@@ -376,7 +377,7 @@ function DetailCard({
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg hover:bg-white/8 flex items-center justify-center text-white/25 hover:text-white transition-colors shrink-0 mt-1"
+            className="w-7 h-7 rounded-lg hover:bg-m-hover flex items-center justify-center text-subtle hover:text-main transition-colors shrink-0 mt-1"
           >
             <X size={13} />
           </button>
@@ -406,15 +407,15 @@ function DetailCard({
               sub: `${checkOutTime} · ${res.nights} ${isTr ? "gece" : "nights"} · ${res.adultsCount}${isTr ? "y" : "a"}${res.childrenCount > 0 ? `+${res.childrenCount}` : ""}`,
             },
           ].map(({ label, value, sub }) => (
-            <div key={label} className="bg-white/3 rounded-xl p-3 min-w-0">
-              <p className="text-[9px] text-white/22 uppercase tracking-wider mb-1">
+            <div key={label} className="surface-soft p-3 min-w-0">
+              <p className="text-[9px] text-subtle uppercase tracking-wider mb-1">
                 {label}
               </p>
-              <p className="text-sm font-bold text-white leading-snug truncate">
+              <p className="text-sm font-bold text-main leading-snug truncate">
                 {value}
               </p>
               {sub && (
-                <p className="text-[10px] text-white/30 truncate">{sub}</p>
+                <p className="text-[10px] text-subtle truncate">{sub}</p>
               )}
             </div>
           ))}
@@ -455,7 +456,7 @@ function DetailCard({
               </button>
             )}
             {!canCheckin && !canCheckout && (
-              <div className="flex-1 flex items-center justify-center gap-1.5 py-3 text-white/20 text-xs">
+              <div className="flex-1 flex items-center justify-center gap-1.5 py-3 text-faint text-xs">
                 <AlertCircle size={12} />
                 {isTr
                   ? "Bu rezervasyon için işlem yapılamaz."
@@ -502,6 +503,8 @@ function CheckinConfirmModal({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const { mode } = useTheme();
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     const f = e.dataTransfer.files[0];
@@ -521,6 +524,7 @@ function CheckinConfirmModal({
 
   return createPortal(
     <div
+      data-mode={mode}
       className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
       onClick={onClose}
     >
@@ -530,25 +534,25 @@ function CheckinConfirmModal({
         exit={{ opacity: 0, y: 24, scale: 0.97 }}
         transition={{ duration: 0.18 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md bg-[#141210] border border-white/12 rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-md modal-shell overflow-hidden"
       >
         {/* Header */}
         <div className="h-[3px] bg-gradient-to-r from-emerald-500 to-transparent" />
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-m-border">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <LogIn size={14} className="text-emerald-400" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white/90">
+              <p className="text-sm font-bold text-main">
                 {isTr ? "Check-in Onayı" : "Confirm Check-in"}
               </p>
-              <p className="text-[10px] text-white/30 font-mono">{res.confirmationId}</p>
+              <p className="text-[10px] text-subtle font-mono">{res.confirmationId}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg hover:bg-white/8 flex items-center justify-center text-white/30 hover:text-white transition-colors"
+            className="w-7 h-7 rounded-lg hover:bg-m-hover flex items-center justify-center text-subtle hover:text-main transition-colors"
           >
             <X size={14} />
           </button>
@@ -557,21 +561,21 @@ function CheckinConfirmModal({
         <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
           {/* Guest + room summary */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-white/3 rounded-xl p-3">
-              <p className="text-[9px] text-white/22 uppercase tracking-wider mb-1">
+            <div className="surface-soft p-3">
+              <p className="text-[9px] text-subtle uppercase tracking-wider mb-1">
                 {isTr ? "Misafir" : "Guest"}
               </p>
-              <p className="text-sm font-bold text-white leading-snug">
+              <p className="text-sm font-bold text-main leading-snug">
                 {res.firstName} {res.lastName}
               </p>
-              <p className="text-[10px] text-white/35 mt-0.5 truncate">{res.phone}</p>
+              <p className="text-[10px] text-subtle mt-0.5 truncate">{res.phone}</p>
             </div>
-            <div className="bg-white/3 rounded-xl p-3">
-              <p className="text-[9px] text-white/22 uppercase tracking-wider mb-1">
+            <div className="surface-soft p-3">
+              <p className="text-[9px] text-subtle uppercase tracking-wider mb-1">
                 {isTr ? "Oda" : "Room"}
               </p>
-              <p className="text-sm font-bold text-white leading-snug">{res.room.name}</p>
-              <p className="text-[10px] text-white/35 mt-0.5 truncate">
+              <p className="text-sm font-bold text-main leading-snug">{res.room.name}</p>
+              <p className="text-[10px] text-subtle mt-0.5 truncate">
                 {res.room.roomType.name}
               </p>
             </div>
@@ -579,9 +583,9 @@ function CheckinConfirmModal({
 
           {/* Document upload */}
           <div>
-            <p className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">
+            <p className="text-[10px] text-muted uppercase tracking-widest font-semibold mb-2">
               {isTr ? "Kimlik Belgesi" : "ID Document"}{" "}
-              <span className="text-white/20 normal-case font-normal">
+              <span className="text-subtle normal-case font-normal">
                 ({isTr ? "opsiyonel" : "optional"})
               </span>
             </p>
@@ -593,18 +597,18 @@ function CheckinConfirmModal({
                 </p>
                 <button
                   onClick={() => onDocChange(null)}
-                  className="text-white/30 hover:text-white/60 transition-colors"
+                  className="text-subtle hover:text-main transition-colors"
                 >
                   <X size={12} />
                 </button>
               </div>
             ) : docFile ? (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/4 border border-white/10">
-                <FileText size={14} className="text-white/40 shrink-0" />
-                <p className="text-xs text-white/60 flex-1 truncate">{docFile.name}</p>
+              <div className="surface-soft flex items-center gap-2 px-3 py-2.5">
+                <FileText size={14} className="text-subtle shrink-0" />
+                <p className="text-xs text-muted flex-1 truncate">{docFile.name}</p>
                 <button
                   onClick={() => onDocChange(null)}
-                  className="text-white/30 hover:text-white/60 transition-colors"
+                  className="text-subtle hover:text-main transition-colors"
                 >
                   <X size={12} />
                 </button>
@@ -614,16 +618,16 @@ function CheckinConfirmModal({
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
                 onClick={pickFile}
-                className="flex flex-col items-center gap-2 px-4 py-5 rounded-xl border border-dashed border-white/12 hover:border-white/25 hover:bg-white/3 cursor-pointer transition-all text-center"
+                className="flex flex-col items-center gap-2 px-4 py-5 rounded-xl border border-dashed border-m-border hover:border-m-border2 hover:bg-m-hover cursor-pointer transition-all text-center"
               >
-                <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                  <Upload size={15} className="text-white/25" />
+                <div className="w-9 h-9 rounded-xl surface-soft flex items-center justify-center">
+                  <Upload size={15} className="text-subtle" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/40">
+                  <p className="text-xs text-muted">
                     {isTr ? "Dosya seçin veya buraya bırakın" : "Click or drop file here"}
                   </p>
-                  <p className="text-[10px] text-white/20 mt-0.5">
+                  <p className="text-[10px] text-subtle mt-0.5">
                     PDF, JPG, PNG · maks. 10 MB
                   </p>
                 </div>
@@ -636,10 +640,10 @@ function CheckinConfirmModal({
 
           {/* Vehicle plate */}
           <div>
-            <label className="text-[10px] text-white/40 uppercase tracking-widest font-semibold flex items-center gap-1.5 mb-1.5">
+            <label className="text-[10px] text-muted uppercase tracking-widest font-semibold flex items-center gap-1.5 mb-1.5">
               <Car size={11} />
               {isTr ? "Araç Plakası" : "Vehicle Plate"}{" "}
-              <span className="text-white/20 normal-case font-normal">
+              <span className="text-subtle normal-case font-normal">
                 ({isTr ? "opsiyonel" : "optional"})
               </span>
             </label>
@@ -647,16 +651,16 @@ function CheckinConfirmModal({
               value={vehiclePlate}
               onChange={(e) => onVehiclePlate(e.target.value.toUpperCase())}
               placeholder="34 ABC 1234"
-              className="w-full bg-white/4 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder-white/15 focus:outline-none focus:border-brand-accent/40 transition-colors tracking-widest"
+              className="control-base px-3 py-2 text-sm font-mono tracking-widest"
             />
           </div>
 
           {/* Staff note */}
           <div>
-            <label className="text-[10px] text-white/40 uppercase tracking-widest font-semibold flex items-center gap-1.5 mb-1.5">
+            <label className="text-[10px] text-muted uppercase tracking-widest font-semibold flex items-center gap-1.5 mb-1.5">
               <StickyNote size={11} />
               {isTr ? "Personel Notu" : "Staff Note"}{" "}
-              <span className="text-white/20 normal-case font-normal">
+              <span className="text-subtle normal-case font-normal">
                 ({isTr ? "opsiyonel" : "optional"})
               </span>
             </label>
@@ -669,7 +673,7 @@ function CheckinConfirmModal({
                   ? "Özel talep, gözlem veya not…"
                   : "Special request, observation or note…"
               }
-              className="w-full bg-white/4 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/15 focus:outline-none focus:border-brand-accent/40 transition-colors resize-none"
+              className="control-base px-3 py-2 text-sm resize-none"
             />
           </div>
 
@@ -677,7 +681,7 @@ function CheckinConfirmModal({
           <div className="flex gap-2 pt-1">
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/40 text-sm font-semibold hover:bg-white/5 transition-colors"
+              className="btn-secondary flex-1 py-2.5 text-sm"
             >
               {isTr ? "İptal" : "Cancel"}
             </button>
@@ -724,8 +728,11 @@ function CheckoutConfirmModal({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const { mode } = useTheme();
+
   return createPortal(
     <div
+      data-mode={mode}
       className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
       onClick={onClose}
     >
@@ -735,25 +742,25 @@ function CheckoutConfirmModal({
         exit={{ opacity: 0, y: 24, scale: 0.97 }}
         transition={{ duration: 0.18 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md bg-[#141210] border border-white/12 rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-md modal-shell overflow-hidden"
       >
         {/* Header */}
         <div className="h-[3px] bg-gradient-to-r from-brand-accent to-transparent" />
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-m-border">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
               <LogOutIcon size={14} className="text-brand-accent" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white/90">
+              <p className="text-sm font-bold text-main">
                 {isTr ? "Check-out Onayı" : "Confirm Check-out"}
               </p>
-              <p className="text-[10px] text-white/30 font-mono">{res.confirmationId}</p>
+              <p className="text-[10px] text-subtle font-mono">{res.confirmationId}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg hover:bg-white/8 flex items-center justify-center text-white/30 hover:text-white transition-colors"
+            className="w-7 h-7 rounded-lg hover:bg-m-hover flex items-center justify-center text-subtle hover:text-main transition-colors"
           >
             <X size={14} />
           </button>
@@ -762,21 +769,21 @@ function CheckoutConfirmModal({
         <div className="p-5 space-y-4">
           {/* Guest + room summary */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-white/3 rounded-xl p-3">
-              <p className="text-[9px] text-white/22 uppercase tracking-wider mb-1">
+            <div className="surface-soft p-3">
+              <p className="text-[9px] text-subtle uppercase tracking-wider mb-1">
                 {isTr ? "Misafir" : "Guest"}
               </p>
-              <p className="text-sm font-bold text-white leading-snug">
+              <p className="text-sm font-bold text-main leading-snug">
                 {res.firstName} {res.lastName}
               </p>
-              <p className="text-[10px] text-white/35 mt-0.5 truncate">{res.phone}</p>
+              <p className="text-[10px] text-subtle mt-0.5 truncate">{res.phone}</p>
             </div>
-            <div className="bg-white/3 rounded-xl p-3">
-              <p className="text-[9px] text-white/22 uppercase tracking-wider mb-1">
+            <div className="surface-soft p-3">
+              <p className="text-[9px] text-subtle uppercase tracking-wider mb-1">
                 {isTr ? "Oda" : "Room"}
               </p>
-              <p className="text-sm font-bold text-white leading-snug">{res.room.name}</p>
-              <p className="text-[10px] text-white/35 mt-0.5 truncate">
+              <p className="text-sm font-bold text-main leading-snug">{res.room.name}</p>
+              <p className="text-[10px] text-subtle mt-0.5 truncate">
                 {res.room.roomType.name}
               </p>
             </div>
@@ -784,7 +791,7 @@ function CheckoutConfirmModal({
 
           {/* Cleaning toggle */}
           <div>
-            <p className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-3">
+            <p className="text-[10px] text-muted uppercase tracking-widest font-semibold mb-3">
               {isTr ? "Oda Temizliğe Gönderilsin mi?" : "Send Room to Cleaning?"}
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -793,7 +800,7 @@ function CheckoutConfirmModal({
                 className={`py-3 rounded-xl border text-sm font-bold transition-all ${
                   sendToCleaning
                     ? "bg-brand-accent/15 border-brand-accent/35 text-brand-accent"
-                    : "bg-white/3 border-white/10 text-white/30 hover:bg-white/6"
+                    : "bg-m-surface border-m-border text-subtle hover:bg-m-hover"
                 }`}
               >
                 {isTr ? "Evet" : "Yes"}
@@ -802,8 +809,8 @@ function CheckoutConfirmModal({
                 onClick={() => { if (sendToCleaning) onToggleCleaning(); }}
                 className={`py-3 rounded-xl border text-sm font-bold transition-all ${
                   !sendToCleaning
-                    ? "bg-white/10 border-white/25 text-white"
-                    : "bg-white/3 border-white/10 text-white/30 hover:bg-white/6"
+                    ? "bg-m-surface2 border-m-border2 text-main"
+                    : "bg-m-surface border-m-border text-subtle hover:bg-m-hover"
                 }`}
               >
                 {isTr ? "Hayır" : "No"}
@@ -813,10 +820,10 @@ function CheckoutConfirmModal({
 
           {/* Staff note */}
           <div>
-            <label className="text-[10px] text-white/40 uppercase tracking-widest font-semibold flex items-center gap-1.5 mb-1.5">
+            <label className="text-[10px] text-muted uppercase tracking-widest font-semibold flex items-center gap-1.5 mb-1.5">
               <StickyNote size={11} />
               {isTr ? "Personel Notu" : "Staff Note"}{" "}
-              <span className="text-white/20 normal-case font-normal">
+              <span className="text-subtle normal-case font-normal">
                 ({isTr ? "opsiyonel" : "optional"})
               </span>
             </label>
@@ -827,7 +834,7 @@ function CheckoutConfirmModal({
               placeholder={
                 isTr ? "Check-out notu veya gözlem…" : "Check-out note or observation…"
               }
-              className="w-full bg-white/4 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/15 focus:outline-none focus:border-brand-accent/40 transition-colors resize-none"
+              className="control-base px-3 py-2 text-sm resize-none"
             />
           </div>
 
@@ -835,7 +842,7 @@ function CheckoutConfirmModal({
           <div className="flex gap-2 pt-1">
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/40 text-sm font-semibold hover:bg-white/5 transition-colors"
+              className="btn-secondary flex-1 py-2.5 text-sm"
             >
               {isTr ? "İptal" : "Cancel"}
             </button>
@@ -889,8 +896,8 @@ function GuestRow({
       onClick={onSelect}
       className={`flex items-center gap-3 px-3 py-3 rounded-xl border cursor-pointer transition-all ${
         isSelected
-          ? "bg-white/5 border-white/10"
-          : "border-transparent hover:bg-white/3 hover:border-white/6"
+          ? "bg-m-surface2 border-m-border2"
+          : "border-transparent hover:bg-m-hover hover:border-m-border"
       }`}
     >
       <div
@@ -908,14 +915,14 @@ function GuestRow({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <p className="text-sm font-bold text-white/90 truncate">
+          <p className="text-sm font-bold text-main truncate">
             {res.room.name}
           </p>
           <StatusBadge status={res.status} isTr={isTr} />
         </div>
-        <p className="text-xs text-white/35 truncate mt-0.5">
+        <p className="text-xs text-subtle truncate mt-0.5">
           {res.firstName} {res.lastName}
-          <span className="mx-1 text-white/15">·</span>
+          <span className="mx-1 text-faint">·</span>
           <span className="font-mono">{res.confirmationId}</span>
           {res.specialRequests && (
             <span className="ml-1.5 text-amber-400/50">★</span>
@@ -1194,12 +1201,12 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
             <DoorOpen size={18} className="text-brand-accent" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white/90 leading-none">
+            <h2 className="text-base font-bold text-main leading-none">
               {isTr
                 ? "Giriş / Çıkış Terminali"
                 : "Check-in / Check-out Terminal"}
             </h2>
-            <p className="text-[11px] text-white/25 mt-0.5 capitalize">
+            <p className="text-[11px] text-subtle mt-0.5 capitalize">
               {dateStr}
             </p>
           </div>
@@ -1209,13 +1216,13 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
             <p className="font-mono text-xl font-black text-brand-accent leading-none tabular-nums">
               {timeStr}
             </p>
-            <p className="font-mono text-xs text-white/20 tabular-nums">
+            <p className="font-mono text-xs text-subtle tabular-nums">
               :{secStr}
             </p>
           </div>
           <button
             onClick={fetchToday}
-            className="w-9 h-9 rounded-xl border border-white/8 hover:bg-white/5 flex items-center justify-center text-white/25 hover:text-white transition-colors"
+            className="w-9 h-9 rounded-xl border border-m-border hover:bg-m-hover flex items-center justify-center text-subtle hover:text-main transition-colors"
             title={isTr ? "Yenile" : "Refresh"}
           >
             <RefreshCw
@@ -1258,7 +1265,7 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
             <p className={`text-xl font-black tabular-nums ${s.cls}`}>
               {s.value}
             </p>
-            <p className="text-[10px] text-white/28 mt-0.5 leading-tight">
+            <p className="text-[10px] text-subtle mt-0.5 leading-tight">
               {s.label}
             </p>
           </div>
@@ -1270,10 +1277,10 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
         {/* ══ LEFT: input station ══ */}
         <div className="lg:col-span-2 space-y-3">
           {/* Code input card */}
-          <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 space-y-4">
+          <div className="surface-card p-5 space-y-4">
             <div className="flex items-center gap-2 mb-1">
               <Hash size={12} className="text-brand-accent" />
-              <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">
+              <p className="text-[10px] text-subtle uppercase tracking-widest font-semibold">
                 {isTr ? "Rezervasyon Kodu Gir" : "Enter Reservation Code"}
               </p>
             </div>
@@ -1293,7 +1300,7 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
                 }}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 placeholder="00000000"
-                className="w-full bg-white/4 border border-white/8 rounded-xl px-5 py-5 font-mono text-[2.2rem] font-black text-white text-center tracking-[0.3em] placeholder-white/8 focus:outline-none focus:border-brand-accent/35 transition-colors"
+                className="control-base px-5 py-5 font-mono text-[2.2rem] font-black text-main text-center tracking-[0.3em]"
                 maxLength={8}
                 inputMode="numeric"
               />
@@ -1305,7 +1312,7 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
                     setSearchError(null);
                     setSelectedId(null);
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-white/15 hover:text-white/50 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg hover:bg-m-hover flex items-center justify-center text-subtle hover:text-main transition-colors"
                 >
                   <X size={13} />
                 </button>
@@ -1320,7 +1327,7 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
                   className={`rounded-full transition-all duration-150 ${
                     i < code.length
                       ? "w-4 h-1.5 bg-brand-accent"
-                      : "w-1.5 h-1.5 bg-white/10"
+                      : "w-1.5 h-1.5 bg-m-surface2"
                   }`}
                 />
               ))}
@@ -1361,19 +1368,19 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
           {/* QR scan button */}
           <button
             onClick={() => setShowQR(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-white/8 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/12 text-white/40 hover:text-white text-sm font-semibold transition-all group"
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-m-border bg-m-surface hover:bg-m-hover hover:border-m-border2 text-muted hover:text-main text-sm font-semibold transition-all group"
           >
-            <div className="w-8 h-8 rounded-lg bg-white/4 border border-white/8 flex items-center justify-center shrink-0 group-hover:bg-brand-accent/10 group-hover:border-brand-accent/20 transition-colors">
+            <div className="w-8 h-8 rounded-lg surface-soft flex items-center justify-center shrink-0 group-hover:bg-brand-accent/10 group-hover:border-brand-accent/20 transition-colors">
               <Camera
                 size={14}
                 className="group-hover:text-brand-accent transition-colors"
               />
             </div>
             <div className="flex-1 text-left">
-              <p className="text-xs font-bold text-white/50 group-hover:text-white transition-colors">
+              <p className="text-xs font-bold text-muted group-hover:text-main transition-colors">
                 {isTr ? "Kamera ile QR Tara" : "Scan QR via Camera"}
               </p>
-              <p className="text-[10px] text-white/20 mt-0.5">
+              <p className="text-[10px] text-subtle mt-0.5">
                 {isTr
                   ? "Misafirin telefonunu kameraya gösterin"
                   : "Point camera at guest's phone"}
@@ -1381,7 +1388,7 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
             </div>
             <QrCode
               size={15}
-              className="text-white/15 group-hover:text-brand-accent/50 transition-colors shrink-0"
+              className="text-subtle group-hover:text-brand-accent/70 transition-colors shrink-0"
             />
           </button>
 
@@ -1411,11 +1418,11 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
 
         {/* ══ RIGHT: today's list ══ */}
         <div
-          className="lg:col-span-3 bg-white/[0.02] border border-white/8 rounded-2xl overflow-hidden flex flex-col"
+          className="lg:col-span-3 surface-card overflow-hidden flex flex-col"
           style={{ minHeight: 420 }}
         >
           {/* Tab bar */}
-          <div className="flex border-b border-white/8 shrink-0">
+          <div className="flex border-b border-m-border shrink-0">
             {[
               {
                 id: "arrivals" as const,
@@ -1435,13 +1442,13 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
                 onClick={() => setListTab(t.id)}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3.5 text-xs font-bold border-b-2 transition-colors ${
                   listTab === t.id
-                    ? "border-brand-accent text-white bg-white/2"
-                    : "border-transparent text-white/28 hover:text-white/55"
+                    ? "border-brand-accent text-main bg-m-surface2"
+                    : "border-transparent text-subtle hover:text-main"
                 }`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />
                 {t.label}
-                <span className="px-1.5 py-0.5 rounded-full bg-white/6 text-white/35 text-[10px] font-mono min-w-[1.5rem] text-center">
+                <span className="px-1.5 py-0.5 rounded-full bg-m-surface2 text-subtle text-[10px] font-mono min-w-[1.5rem] text-center">
                   {t.count}
                 </span>
               </button>
@@ -1452,22 +1459,22 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
           <div className="flex-1 overflow-y-auto p-3">
             {loadingToday ? (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <RefreshCw size={20} className="animate-spin text-white/15" />
-                <p className="text-xs text-white/20">
+                <RefreshCw size={20} className="animate-spin text-faint" />
+                <p className="text-xs text-subtle">
                   {isTr ? "Yükleniyor…" : "Loading…"}
                 </p>
               </div>
             ) : listItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-white/3 border border-white/6 flex items-center justify-center">
+                <div className="w-14 h-14 rounded-2xl surface-soft flex items-center justify-center">
                   {listTab === "arrivals" ? (
-                    <Users size={22} className="text-white/12" />
+                    <Users size={22} className="text-faint" />
                   ) : (
-                    <LogOutIcon size={22} className="text-white/12" />
+                    <LogOutIcon size={22} className="text-faint" />
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white/20">
+                  <p className="text-sm font-semibold text-subtle">
                     {isTr
                       ? listTab === "arrivals"
                         ? "Bugün beklenen misafir yok"
@@ -1476,7 +1483,7 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
                         ? "No arrivals expected today"
                         : "No departures today"}
                   </p>
-                  <p className="text-xs text-white/12 mt-1">
+                  <p className="text-xs text-faint mt-1">
                     {isTr
                       ? "Yeni rezervasyonlar burada görünecek"
                       : "New reservations will appear here"}

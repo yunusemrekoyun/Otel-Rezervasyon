@@ -30,7 +30,7 @@ export function OdalarSection() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
 
         {/* Sub-tab bar */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/[0.07] w-fit">
+        <div className="tab-list w-fit">
           {tabs.map(({ id, label, icon: Icon }) => {
             const isActive = activeTab === id;
             return (
@@ -41,7 +41,7 @@ export function OdalarSection() {
                   flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer
                   ${isActive
                     ? 'bg-brand-accent/15 text-brand-accent border border-brand-accent/20'
-                    : 'text-white/40 hover:text-white/70 border border-transparent hover:bg-white/5'}
+                    : 'text-muted hover:text-main border border-transparent hover:bg-m-hover'}
                 `}
               >
                 <Icon size={14} />
@@ -52,7 +52,7 @@ export function OdalarSection() {
         </div>
 
         {/* View mode toggle — only for rooms/types tabs */}
-        <div className={`flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/[0.07] ${activeTab === 'cleaning' ? 'invisible' : ''}`}>
+        <div className={`tab-list ${activeTab === 'cleaning' ? 'invisible' : ''}`}>
           {([
             { id: 'card' as ViewMode, Icon: LayoutGrid, title: tr ? 'Kart Görünümü' : 'Card View'  },
             { id: 'list' as ViewMode, Icon: List,        title: tr ? 'Liste Görünümü' : 'List View' },
@@ -67,7 +67,7 @@ export function OdalarSection() {
                   flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200 cursor-pointer
                   ${isActive
                     ? 'bg-brand-accent/15 text-brand-accent border border-brand-accent/20'
-                    : 'text-white/30 hover:text-white/60 border border-transparent hover:bg-white/5'}
+                    : 'text-subtle hover:text-main border border-transparent hover:bg-m-hover'}
                 `}
               >
                 <Icon size={14} />

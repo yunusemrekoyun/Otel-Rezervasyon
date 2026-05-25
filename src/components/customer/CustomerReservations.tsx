@@ -55,9 +55,9 @@ function statusBadge(status: string, tr: boolean) {
     case 'checked_in':
       return { label: tr ? 'Check-in Yapıldı' : 'Checked In', icon: MapPin, cls: 'text-brand-accent bg-brand-accent/10 border-brand-accent/20' };
     case 'checked_out':
-      return { label: tr ? 'Ayrıldı' : 'Checked Out', icon: CheckCircle2, cls: 'text-white/40 bg-white/5 border-white/10' };
+      return { label: tr ? 'Ayrıldı' : 'Checked Out', icon: CheckCircle2, cls: 'text-muted bg-m-surface2 border-m-border' };
     default:
-      return { label: status, icon: AlertCircle, cls: 'text-white/40 bg-white/5 border-white/10' };
+      return { label: status, icon: AlertCircle, cls: 'text-muted bg-m-surface2 border-m-border' };
   }
 }
 
@@ -98,22 +98,22 @@ function GuestInfoModal({ res, onClose, tr }: { res: Reservation; onClose: () =>
           exit={{ opacity: 0, scale: 0.95, y: 12 }}
           transition={{ duration: 0.18 }}
           onClick={e => e.stopPropagation()}
-          className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#15120f] shadow-2xl overflow-hidden"
+          className="w-full max-w-sm modal-shell overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-m-border">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
                 <User size={14} className="text-brand-accent" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">{tr ? 'Misafir Bilgileri' : 'Guest Details'}</p>
-                <p className="text-[10px] text-white/35 font-mono">{res.confirmationId}</p>
+                <p className="text-sm font-semibold text-main">{tr ? 'Misafir Bilgileri' : 'Guest Details'}</p>
+                <p className="text-[10px] text-subtle font-mono">{res.confirmationId}</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/8 transition-colors"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-subtle hover:text-main hover:bg-m-hover transition-colors"
             >
               <X size={14} />
             </button>
@@ -124,16 +124,16 @@ function GuestInfoModal({ res, onClose, tr }: { res: Reservation; onClose: () =>
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               {rows.map(row => (
                 <div key={row.label} className={row.full ? 'col-span-2' : ''}>
-                  <p className="text-[9px] uppercase tracking-wider text-white/25 mb-0.5">{row.label}</p>
-                  <p className="text-xs text-white/75 font-medium break-all">{row.value}</p>
+                  <p className="text-[9px] uppercase tracking-wider text-subtle mb-0.5">{row.label}</p>
+                  <p className="text-xs text-muted font-medium break-all">{row.value}</p>
                 </div>
               ))}
             </div>
 
             {res.specialRequests && (
-              <div className="pt-3 border-t border-white/6">
-                <p className="text-[9px] uppercase tracking-wider text-white/25 mb-1">{tr ? 'Özel İstekler' : 'Special Requests'}</p>
-                <p className="text-xs text-white/60 leading-relaxed italic">"{res.specialRequests}"</p>
+              <div className="pt-3 border-t border-m-border">
+                <p className="text-[9px] uppercase tracking-wider text-subtle mb-1">{tr ? 'Özel İstekler' : 'Special Requests'}</p>
+                <p className="text-xs text-muted leading-relaxed italic">"{res.specialRequests}"</p>
               </div>
             )}
           </div>
@@ -217,7 +217,7 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white/3 border border-white/8 rounded-xl p-4 hover:border-white/12 transition-colors"
+      className="surface-card p-4 hover:border-m-border2 transition-colors"
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2.5">
@@ -225,8 +225,8 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
             <BedDouble size={14} className="text-brand-accent" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white leading-none">{res.room.name}</p>
-            <p className="text-[10px] text-white/35 mt-0.5">{res.room.roomType.name}</p>
+            <p className="text-sm font-semibold text-main leading-none">{res.room.name}</p>
+            <p className="text-[10px] text-subtle mt-0.5">{res.room.roomType.name}</p>
           </div>
         </div>
         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-semibold shrink-0 ${badge.cls}`}>
@@ -235,40 +235,40 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <div className="bg-white/3 rounded-lg p-2">
-          <p className="text-white/25 text-[9px] uppercase tracking-wider mb-0.5">
+      <div className="grid grid-cols-1 min-[440px]:grid-cols-3 gap-2 mb-3">
+        <div className="surface-card-raised p-2">
+          <p className="text-subtle text-[9px] uppercase tracking-wider mb-0.5">
             {tr ? 'Giriş' : 'Check-in'}
           </p>
-          <p className="text-white/80 font-medium text-[11px]">{fmtDate(res.checkInDate, tr)}</p>
+          <p className="text-main font-medium text-[11px]">{fmtDate(res.checkInDate, tr)}</p>
           <p className="text-brand-accent/70 text-[10px] font-semibold tabular-nums">{checkInTime}</p>
         </div>
-        <div className="bg-white/3 rounded-lg p-2">
-          <p className="text-white/25 text-[9px] uppercase tracking-wider mb-0.5">
+        <div className="surface-card-raised p-2">
+          <p className="text-subtle text-[9px] uppercase tracking-wider mb-0.5">
             {tr ? 'Çıkış' : 'Check-out'}
           </p>
-          <p className="text-white/80 font-medium text-[11px]">{fmtDate(res.checkOutDate, tr)}</p>
+          <p className="text-main font-medium text-[11px]">{fmtDate(res.checkOutDate, tr)}</p>
           <p className="text-brand-accent/70 text-[10px] font-semibold tabular-nums">{checkOutTime}</p>
         </div>
-        <div className="bg-white/3 rounded-lg p-2">
-          <p className="text-white/25 text-[9px] uppercase tracking-wider mb-0.5">
+        <div className="surface-card-raised p-2">
+          <p className="text-subtle text-[9px] uppercase tracking-wider mb-0.5">
             {tr ? 'Gece / Kişi' : 'Nights / Guests'}
           </p>
-          <p className="text-white/80 font-medium text-[11px]">
+          <p className="text-main font-medium text-[11px]">
             {res.nights}{tr ? 'g' : 'n'} · {res.adultsCount}{tr ? 'y' : 'a'}{res.childrenCount > 0 ? `+${res.childrenCount}` : ''}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[10px] text-white/25">{tr ? 'Onay Kodu' : 'Confirmation'}</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[10px] text-subtle">{tr ? 'Onay Kodu' : 'Confirmation'}</p>
           <p className="text-xs font-mono text-brand-accent/80 tracking-widest">{res.confirmationId}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-end gap-2 sm:justify-end">
           <button
             onClick={() => setShowGuest(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/8 border border-white/8 text-white/40 hover:text-white/70 text-[10px] font-medium transition-colors"
+            className="btn-secondary min-h-8 px-2.5 py-1.5 text-[10px]"
           >
             <User size={11} />
             {tr ? 'Misafir' : 'Guest'}
@@ -276,7 +276,7 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
           {res.status !== 'cancelled' && (
             <button
               onClick={() => setShowQR(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/8 border border-white/8 text-white/40 hover:text-white/70 text-[10px] font-medium transition-colors"
+              className="btn-secondary min-h-8 px-2.5 py-1.5 text-[10px]"
             >
               <QrCode size={11} />
               QR
@@ -291,15 +291,15 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
               {tr ? 'Çıkış QR' : 'Check-out QR'}
             </button>
           )}
-          <div className="text-right">
-            <p className="text-[10px] text-white/25">{tr ? 'Toplam' : 'Total'}</p>
+          <div className="min-w-[5rem] text-left sm:text-right">
+            <p className="text-[10px] text-subtle">{tr ? 'Toplam' : 'Total'}</p>
             <p className="text-sm font-bold text-brand-accent">₺{res.totalPrice.toLocaleString('tr-TR')}</p>
           </div>
         </div>
       </div>
 
       {isUpcoming && (
-        <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between gap-2">
+        <div className="mt-2 pt-2 border-t border-m-border flex items-center justify-between gap-2">
           <p className="text-[10px] text-brand-accent/60">
             {tr ? `Check-in'e ${daysLeft} gün kaldı` : `${daysLeft} days until check-in`}
           </p>
@@ -323,7 +323,7 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setConfirmCancel(false)}
-              className="px-2.5 py-1 rounded-lg text-[10px] text-white/40 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+              className="btn-secondary px-2.5 py-1 text-[10px]"
             >
               {tr ? 'Hayır' : 'No'}
             </button>
@@ -396,15 +396,15 @@ export function CustomerReservations({ user, tr }: { user: AuthUser; tr: boolean
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-1 bg-white/3 border border-white/8 rounded-xl p-1 w-fit">
+      <div className="tab-list w-fit">
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`tab-item min-h-8 px-4 py-1.5 ${
               tab === t.id
-                ? 'bg-brand-accent text-black'
-                : 'text-white/40 hover:text-white/70'
+                ? 'tab-item-active'
+                : ''
             }`}
           >
             {t.label}
@@ -413,21 +413,21 @@ export function CustomerReservations({ user, tr }: { user: AuthUser; tr: boolean
       </div>
 
       {loading ? (
-        <div className="py-16 flex items-center justify-center text-white/30 text-sm">
+        <div className="py-16 flex items-center justify-center text-subtle text-sm">
           {tr ? 'Yükleniyor…' : 'Loading…'}
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-16 flex flex-col items-center justify-center text-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-white/3 border border-white/8 flex items-center justify-center">
-            <Calendar size={20} className="text-white/20" />
+          <div className="w-12 h-12 rounded-xl surface-card flex items-center justify-center">
+            <Calendar size={20} className="text-subtle" />
           </div>
-          <p className="text-sm text-white/30">
+          <p className="text-sm text-subtle">
             {tr ? 'Bu kategoride rezervasyon bulunamadı.' : 'No reservations found in this category.'}
           </p>
         </div>
       ) : (
         <AnimatePresence mode="popLayout">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 xl:grid-cols-2">
             {filtered.map(r => (
               <ReservationCard key={r.id} res={r} tr={tr} onCancel={handleCancel} checkInTime={checkInTime} checkOutTime={checkOutTime} />
             ))}

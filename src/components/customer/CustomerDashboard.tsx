@@ -12,6 +12,7 @@ import {
   Plus, IdCard, Save, Users, MailCheck, X,
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useTheme } from '@/theme/ThemeContext';
 import { CustomerReservations } from '@/components/customer/CustomerReservations';
 import type { AuthUser } from '@/lib/auth/session';
 import { PhoneInput } from '@/components/ui/PhoneInput';
@@ -88,19 +89,15 @@ function ProfileHero({ user, tr }: { user: AuthUser; tr: boolean }) {
   const progress = nextTier ? Math.round(((pts - tier.minPts) / (nextTier.minPts - tier.minPts)) * 100) : 100;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-gradient-to-br from-white/4 via-white/2 to-transparent p-6">
-      {/* Decorative orbs */}
-      <div className="pointer-events-none absolute -top-12 -right-12 w-48 h-48 rounded-full bg-brand-accent/5 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-8 -left-8 w-36 h-36 rounded-full bg-brand-accent/3 blur-2xl" />
-
-      <div className="relative flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+    <div className="surface-panel overflow-hidden p-5 sm:p-6">
+      <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-center">
         {/* Avatar */}
         <Avatar email={user.email} size="xl" />
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h1 className="text-xl font-bold text-white leading-none">
+            <h1 className="text-xl font-bold text-main leading-none">
               {tr ? 'Hoş Geldiniz' : 'Welcome back'}
             </h1>
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold ${tier.bg} ${tier.border} ${tier.color}`}>
@@ -108,7 +105,7 @@ function ProfileHero({ user, tr }: { user: AuthUser; tr: boolean }) {
               {tr ? tier.labelTr : tier.labelEn}
             </span>
           </div>
-          <p className="text-white/40 text-sm truncate mb-3">{user.email}</p>
+          <p className="text-muted text-sm truncate mb-3">{user.email}</p>
 
           {/* Quick stats */}
           <div className="flex items-center gap-4 flex-wrap">
@@ -119,8 +116,8 @@ function ProfileHero({ user, tr }: { user: AuthUser; tr: boolean }) {
             ].map(({ icon: Icon, value, label }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <Icon size={13} className="text-brand-accent/60" />
-                <span className="text-sm font-bold text-white">{value}</span>
-                <span className="text-xs text-white/35">{label}</span>
+                <span className="text-sm font-bold text-main">{value}</span>
+                <span className="text-xs text-subtle">{label}</span>
               </div>
             ))}
           </div>
@@ -129,17 +126,17 @@ function ProfileHero({ user, tr }: { user: AuthUser; tr: boolean }) {
         {/* Loyalty progress (desktop) */}
         {nextTier && (
           <div className="hidden md:block w-48 shrink-0">
-            <div className="flex justify-between text-[10px] text-white/30 mb-1.5">
+            <div className="flex justify-between text-[10px] text-subtle mb-1.5">
               <span>{tr ? tier.labelTr : tier.labelEn}</span>
               <span>{tr ? nextTier.labelTr : nextTier.labelEn}</span>
             </div>
-            <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
+            <div className="h-1.5 rounded-full bg-m-surface2 overflow-hidden">
               <div
                 className="h-full rounded-full bg-brand-accent transition-all duration-700"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-[10px] text-white/25 mt-1.5 text-right">
+            <p className="text-[10px] text-subtle mt-1.5 text-right">
               {(nextTier.minPts - pts).toLocaleString('tr-TR')} {tr ? 'puan kaldı' : 'pts to go'}
             </p>
           </div>
@@ -160,7 +157,7 @@ const TABS: { id: TabId; labelTr: string; labelEn: string; icon: React.ElementTy
 
 function TabNav({ active, setActive, tr }: { active: TabId; setActive: (t: TabId) => void; tr: boolean }) {
   return (
-    <div className="flex gap-1 overflow-x-auto no-scrollbar bg-white/3 border border-white/8 rounded-xl p-1">
+    <div className="tab-list no-scrollbar">
       {TABS.map(t => {
         const Icon = t.icon;
         const isActive = active === t.id;
@@ -168,10 +165,10 @@ function TabNav({ active, setActive, tr }: { active: TabId; setActive: (t: TabId
           <button
             key={t.id}
             onClick={() => setActive(t.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+            className={`tab-item shrink-0 ${
               isActive
-                ? 'bg-brand-accent text-black shadow-sm'
-                : 'text-white/45 hover:text-white/75 hover:bg-white/5'
+                ? 'tab-item-active'
+                : ''
             }`}
           >
             <Icon size={13} />
@@ -185,13 +182,13 @@ function TabNav({ active, setActive, tr }: { active: TabId; setActive: (t: TabId
 
 // ── Profile Tab ────────────────────────────────────────────────────────────────
 
-const inputCls = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-brand-accent/40 transition-colors';
+const inputCls = 'control-base px-3 py-2.5 text-sm';
 
 function PersonInfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div>
-      <p className="text-[9px] uppercase tracking-wider text-white/25">{label}</p>
-      <p className="text-xs text-white/70 mt-0.5">{value || '—'}</p>
+    <div className="min-w-0">
+      <p className="text-[9px] uppercase tracking-wider text-subtle">{label}</p>
+      <p className="text-xs text-muted mt-0.5 break-words">{value || '—'}</p>
     </div>
   );
 }
@@ -202,15 +199,15 @@ function PersonCard({ person, tr }: { person: AccountPerson; tr: boolean }) {
     : tr ? 'Rezervasyon kişisi' : 'Reservation guest';
 
   return (
-    <div className="rounded-2xl border border-white/8 bg-white/3 p-4 space-y-4">
+    <div className="surface-card p-4 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="h-10 w-10 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center shrink-0">
             <User size={17} className="text-brand-accent" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{person.firstName} {person.lastName}</p>
-            <p className="text-[11px] text-white/35">{person.label || relationLabel}</p>
+            <p className="text-sm font-semibold text-main truncate">{person.firstName} {person.lastName}</p>
+            <p className="text-[11px] text-subtle">{person.label || relationLabel}</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
@@ -219,7 +216,7 @@ function PersonCard({ person, tr }: { person: AccountPerson; tr: boolean }) {
               {tr ? 'Varsayılan' : 'Default'}
             </span>
           )}
-          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] text-white/45">
+          <span className="rounded-full border border-m-border bg-m-surface2 px-2 py-0.5 text-[9px] text-muted">
             {relationLabel}
           </span>
         </div>
@@ -318,16 +315,16 @@ function ProfileTab({
   return (
     <div className="space-y-4">
       {!user.emailVerified && !verifyHidden && (
-        <div className="rounded-2xl border border-brand-accent/25 bg-brand-accent/8 p-5">
+        <div className="surface-card p-5 border-brand-accent/30 bg-brand-accent/8">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-brand-accent/12 border border-brand-accent/25 flex items-center justify-center shrink-0">
               <MailCheck size={18} className="text-brand-accent" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-bold text-white">
+              <h3 className="text-sm font-bold text-main">
                 {tr ? 'E-posta adresinizi doğrulayın' : 'Verify your email address'}
               </h3>
-              <p className="text-xs text-white/45 leading-relaxed mt-1">
+              <p className="text-xs text-muted leading-relaxed mt-1">
                 {tr
                   ? 'Profil ve güvenlik işlemlerinde hesabın size ait olduğundan emin olmak için e-postanızı doğrulamanızı öneririz.'
                   : 'We recommend verifying your email before profile and security changes so your account ownership is clear.'}
@@ -355,7 +352,7 @@ function ProfileTab({
                 <button
                   type="button"
                   onClick={() => setVerifyHidden(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs text-white/35 hover:text-white/60"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs text-subtle hover:text-main"
                 >
                   <X size={11} />
                   {tr ? 'Hayır teşekkürler' : 'No thanks'}
@@ -366,33 +363,33 @@ function ProfileTab({
         </div>
       )}
 
-      <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
+      <div className="surface-panel p-5">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-main flex items-center gap-2">
               <Users size={14} className="text-brand-accent" />
               {tr ? 'Hesaba Tanımlı Bireyler' : 'People on This Account'}
             </h3>
-            <p className="text-xs text-white/35 mt-1 leading-relaxed">
+            <p className="text-xs text-muted mt-1 leading-relaxed">
               {tr
                 ? 'Kendiniz, aile üyeleriniz ya da adına rezervasyon yaptığınız kişiler burada kart olarak tutulur. Rezervasyon sırasında doğru kişiyi seçmek daha hızlı olur.'
                 : 'You can keep yourself, family members, or guests you book for as cards here. It makes future reservations faster.'}
             </p>
           </div>
-          <span className="rounded-full bg-white/5 border border-white/8 px-2.5 py-1 text-[10px] text-white/45">
+          <span className="rounded-full bg-m-surface2 border border-m-border px-2.5 py-1 text-[10px] text-muted">
             {people.length} {tr ? 'kayıt' : 'saved'}
           </span>
         </div>
 
         {!hasDefaultOwner && (
-          <form onSubmit={saveOwnerProfile} className="rounded-xl border border-brand-accent/20 bg-brand-accent/7 p-4 mb-4 space-y-3">
+          <form onSubmit={saveOwnerProfile} className="rounded-xl border border-brand-accent/25 bg-brand-accent/8 p-4 mb-4 space-y-3">
             <div className="flex items-start gap-2">
               <IdCard size={15} className="text-brand-accent mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-white">
+                <p className="text-sm font-semibold text-main">
                   {tr ? 'Kendi bilgilerinizi tamamlayın' : 'Complete your own details'}
                 </p>
-                <p className="text-xs text-white/45 leading-relaxed mt-1">
+                <p className="text-xs text-muted leading-relaxed mt-1">
                   {tr
                     ? 'Rezervasyonu başka biri adına yaptıysanız onu zaten ekledik. Buraya kendi bilgilerinizi yazarsanız sonraki işlemlerde hesabın sahibi net görünür.'
                     : 'If you booked for someone else, we already saved that guest. Add your own details here so the account owner is clear next time.'}
@@ -436,17 +433,17 @@ function ProfileTab({
             <PersonCard key={person.id} person={person} tr={tr} />
           ))}
           {people.length === 0 && (
-            <div className="rounded-xl border border-dashed border-white/10 bg-white/3 p-5 text-center">
-              <Plus size={18} className="mx-auto text-white/25 mb-2" />
-              <p className="text-sm text-white/60">{tr ? 'Henüz kayıtlı birey yok.' : 'No saved people yet.'}</p>
-              <p className="text-xs text-white/30 mt-1">{tr ? 'İlk rezervasyon veya profil kaydıyla burası dolacak.' : 'This area fills after your first reservation or profile entry.'}</p>
+            <div className="surface-card border-dashed p-5 text-center">
+              <Plus size={18} className="mx-auto text-subtle mb-2" />
+              <p className="text-sm text-muted">{tr ? 'Henüz kayıtlı birey yok.' : 'No saved people yet.'}</p>
+              <p className="text-xs text-subtle mt-1">{tr ? 'İlk rezervasyon veya profil kaydıyla burası dolacak.' : 'This area fills after your first reservation or profile entry.'}</p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+      <div className="surface-panel p-5">
+        <h3 className="text-sm font-semibold text-main mb-4 flex items-center gap-2">
           <Shield size={14} className="text-brand-accent" />
           {tr ? 'Güvenlik' : 'Security'}
         </h3>
@@ -456,22 +453,22 @@ function ProfileTab({
             { label: tr ? 'Yeni Şifre' : 'New Password' },
             { label: tr ? 'Yeni Şifre (Tekrar)' : 'Confirm New Password' },
           ].map(f => (
-            <div key={f.label} className={f.label.includes('Tekrar') || f.label.includes('Confirm') ? 'sm:col-span-2 sm:max-w-[calc(50%-6px)]' : ''}>
-              <label className="block text-[10px] text-white/35 uppercase tracking-wider mb-1.5">{f.label}</label>
+            <div key={f.label}>
+              <label className="block text-[10px] text-subtle uppercase tracking-wider mb-1.5">{f.label}</label>
               <input type="password" className={inputCls} placeholder="••••••••" />
             </div>
           ))}
         </div>
         <div className="mt-4 flex justify-end">
-          <button className="px-5 py-2 rounded-lg bg-white/8 border border-white/10 text-white/50 text-xs font-medium cursor-not-allowed">
+          <button className="btn-secondary px-5 py-2 text-xs opacity-60 cursor-not-allowed">
             {tr ? 'Şifreyi Güncelle' : 'Update Password'}
           </button>
         </div>
       </div>
 
       {/* Notifications */}
-      <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+      <div className="surface-panel p-5">
+        <h3 className="text-sm font-semibold text-main mb-4 flex items-center gap-2">
           <Bell size={14} className="text-brand-accent" />
           {tr ? 'Bildirim Tercihleri' : 'Notification Preferences'}
         </h3>
@@ -483,9 +480,9 @@ function ProfileTab({
             { label: tr ? 'Yeni özellik duyuruları'        : 'New feature announcements',         on: false },
           ].map(n => (
             <div key={n.label} className="flex items-center justify-between">
-              <span className="text-sm text-white/60">{n.label}</span>
-              <div className={`w-9 h-5 rounded-full relative cursor-not-allowed transition-colors ${n.on ? 'bg-brand-accent/40' : 'bg-white/10'}`}>
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${n.on ? 'left-4 bg-brand-accent' : 'left-0.5 bg-white/30'}`} />
+              <span className="text-sm text-muted">{n.label}</span>
+              <div className={`w-9 h-5 rounded-full relative cursor-not-allowed transition-colors ${n.on ? 'bg-brand-accent/35' : 'bg-m-surface2'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${n.on ? 'left-4 bg-brand-accent' : 'left-0.5 bg-m-subtle'}`} />
               </div>
             </div>
           ))}
@@ -499,16 +496,16 @@ function ProfileTab({
 
 function Toggle({ on }: { on: boolean }) {
   return (
-    <div className={`w-9 h-5 rounded-full relative cursor-not-allowed flex-shrink-0 ${on ? 'bg-brand-accent/40' : 'bg-white/8'}`}>
-      <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${on ? 'left-4 bg-brand-accent' : 'left-0.5 bg-white/25'}`} />
+    <div className={`w-9 h-5 rounded-full relative cursor-not-allowed flex-shrink-0 ${on ? 'bg-brand-accent/35' : 'bg-m-surface2'}`}>
+      <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${on ? 'left-4 bg-brand-accent' : 'left-0.5 bg-m-subtle'}`} />
     </div>
   );
 }
 
 function PrefSection({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
-    <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
-      <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+    <div className="surface-panel p-5">
+      <h3 className="text-sm font-semibold text-main mb-4 flex items-center gap-2">
         <Icon size={14} className="text-brand-accent" />
         {title}
       </h3>
@@ -521,8 +518,8 @@ function PrefRow({ label, desc, children }: { label: string; desc?: string; chil
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
-        <p className="text-sm text-white/70">{label}</p>
-        {desc && <p className="text-[10px] text-white/30 mt-0.5">{desc}</p>}
+        <p className="text-sm text-muted">{label}</p>
+        {desc && <p className="text-[10px] text-subtle mt-0.5">{desc}</p>}
       </div>
       {children}
     </div>
@@ -536,7 +533,7 @@ function SelectPill({ options, active }: { options: string[]; active: string }) 
         <span
           key={o}
           className={`px-2.5 py-1 rounded-lg text-[10px] font-medium cursor-not-allowed transition-colors ${
-            o === active ? 'bg-brand-accent/20 text-brand-accent border border-brand-accent/30' : 'bg-white/5 text-white/35 border border-transparent'
+            o === active ? 'bg-brand-accent/20 text-brand-accent border border-brand-accent/30' : 'bg-m-surface2 text-subtle border border-transparent'
           }`}
         >
           {o}
@@ -549,6 +546,15 @@ function SelectPill({ options, active }: { options: string[]; active: string }) 
 function PreferencesTab({ tr }: { tr: boolean }) {
   return (
     <div className="space-y-4">
+      <div className="surface-card border-brand-accent/25 bg-brand-accent/8 p-4">
+        <p className="text-sm font-semibold text-main">{tr ? 'Tercihler hazırlanıyor' : 'Preferences are being prepared'}</p>
+        <p className="text-xs text-muted leading-relaxed mt-1">
+          {tr
+            ? 'Bu alan şu an profiliniz için ön ayarları gösterir. Kaydetme akışı aktif olduğunda seçimleriniz rezervasyon ve resepsiyon süreçlerine otomatik düşecek.'
+            : 'This area currently shows profile presets. Once saving is enabled, your choices will flow into booking and reception workflows.'}
+        </p>
+      </div>
+
       <PrefSection title={tr ? 'Oda Tercihleri' : 'Room Preferences'} icon={BedDouble}>
         <PrefRow label={tr ? 'Yatak Tipi' : 'Bed Type'}>
           <SelectPill options={tr ? ['Tek', 'Çift', 'Twin'] : ['Single', 'Double', 'Twin']} active={tr ? 'Çift' : 'Double'} />
@@ -618,7 +624,7 @@ function PreferencesTab({ tr }: { tr: boolean }) {
         </PrefRow>
       </PrefSection>
 
-      <p className="text-[10px] text-white/20 text-center pb-2">
+      <p className="text-[10px] text-subtle text-center pb-2">
         {tr
           ? 'Tercihler bilgi amaçlıdır. Kesin talepler için özel istekler bölümünü kullanın.'
           : 'Preferences are informational. Use special requests for guaranteed arrangements.'}
@@ -652,25 +658,25 @@ function SupportTab({ tr }: { tr: boolean }) {
   return (
     <div className="space-y-4">
       {/* Contact card */}
-      <div className="bg-brand-accent/5 border border-brand-accent/15 rounded-2xl p-5">
+      <div className="surface-panel p-5 border-brand-accent/20 bg-brand-accent/10">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-xl bg-white overflow-hidden shrink-0 shadow-sm">
             <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Garden Hotel</p>
-            <p className="text-[11px] text-white/35">{tr ? 'Resepsiyon — 7/24 hizmetinizde' : 'Reception — Available 24/7'}</p>
+            <p className="text-sm font-semibold text-main">Garden Hotel</p>
+            <p className="text-[11px] text-subtle">{tr ? 'Resepsiyon — 7/24 hizmetinizde' : 'Reception — Available 24/7'}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
           {[
             { icon: Globe,       label: tr ? 'Web Sitesi'    : 'Website',   value: 'gardenhotel.com',       cls: 'text-brand-accent' },
-            { icon: MessageSquare, label: tr ? 'E-posta'     : 'Email',     value: 'info@gardenhotel.com',  cls: 'text-white/60' },
-            { icon: Bell,        label: tr ? 'Telefon'       : 'Phone',     value: '+90 (212) 000 00 00',   cls: 'text-white/60' },
+            { icon: MessageSquare, label: tr ? 'E-posta'     : 'Email',     value: 'info@gardenhotel.com',  cls: 'text-muted' },
+            { icon: Bell,        label: tr ? 'Telefon'       : 'Phone',     value: '+90 (212) 000 00 00',   cls: 'text-muted' },
           ].map(c => (
-            <div key={c.label} className="bg-white/4 border border-white/8 rounded-xl p-3">
+            <div key={c.label} className="surface-card p-3">
               <c.icon size={13} className={`${c.cls} mb-1.5`} />
-              <p className="text-[9px] text-white/30 uppercase tracking-wider">{c.label}</p>
+              <p className="text-[9px] text-subtle uppercase tracking-wider">{c.label}</p>
               <p className={`text-xs font-medium mt-0.5 ${c.cls}`}>{c.value}</p>
             </div>
           ))}
@@ -678,14 +684,14 @@ function SupportTab({ tr }: { tr: boolean }) {
       </div>
 
       {/* Message form (static) */}
-      <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+      <div className="surface-panel p-5">
+        <h3 className="text-sm font-semibold text-main mb-4 flex items-center gap-2">
           <MessageSquare size={14} className="text-brand-accent" />
           {tr ? 'Mesaj Gönder' : 'Send a Message'}
         </h3>
         <div className="space-y-3">
           <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-wider mb-1.5">
+            <label className="block text-[10px] text-subtle uppercase tracking-wider mb-1.5">
               {tr ? 'Konu' : 'Subject'}
             </label>
             <select className={`${inputCls} appearance-none`} disabled>
@@ -693,7 +699,7 @@ function SupportTab({ tr }: { tr: boolean }) {
             </select>
           </div>
           <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-wider mb-1.5">
+            <label className="block text-[10px] text-subtle uppercase tracking-wider mb-1.5">
               {tr ? 'Mesajınız' : 'Your message'}
             </label>
             <textarea
@@ -711,19 +717,19 @@ function SupportTab({ tr }: { tr: boolean }) {
       </div>
 
       {/* FAQ */}
-      <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">{tr ? 'Sık Sorulan Sorular' : 'FAQ'}</h3>
+      <div className="surface-panel p-5">
+        <h3 className="text-sm font-semibold text-main mb-4">{tr ? 'Sık Sorulan Sorular' : 'FAQ'}</h3>
         <div className="space-y-2">
           {faqs.map((f, i) => (
-            <div key={i} className="border border-white/6 rounded-xl overflow-hidden">
+            <div key={i} className="border border-m-border rounded-xl overflow-hidden">
               <button
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left text-sm text-white/70 hover:text-white hover:bg-white/3 transition-colors"
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left text-sm text-muted hover:text-main hover:bg-m-hover transition-colors"
               >
                 <span>{f.q}</span>
                 <ChevronDown
                   size={14}
-                  className={`shrink-0 text-white/30 transition-transform duration-200 ${openFaq === i ? 'rotate-180' : ''}`}
+                  className={`shrink-0 text-subtle transition-transform duration-200 ${openFaq === i ? 'rotate-180' : ''}`}
                 />
               </button>
               <AnimatePresence>
@@ -735,7 +741,7 @@ function SupportTab({ tr }: { tr: boolean }) {
                     transition={{ duration: 0.18 }}
                     className="overflow-hidden"
                   >
-                    <p className="px-4 pb-3 text-sm text-white/40 leading-relaxed">{f.a}</p>
+                    <p className="px-4 pb-3 text-sm text-muted leading-relaxed">{f.a}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -760,28 +766,27 @@ function LoyaltyCard({ tr }: { tr: boolean }) {
   const perks    = tr ? perks_tr : perks_en;
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border p-5 ${tier.bg} ${tier.border}`}>
-      <div className="pointer-events-none absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-20 blur-2xl bg-brand-accent" />
+    <div className={`surface-panel overflow-hidden p-5 ${tier.border}`}>
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className={`inline-flex items-center gap-1.5 text-xs font-bold mb-1 ${tier.color}`}>
             <Star size={12} />
             {tr ? `Garden Hotel ${tier.labelTr} Üye` : `Garden Hotel ${tier.labelEn} Member`}
           </div>
-          <p className="text-2xl font-bold text-white">{pts.toLocaleString('tr-TR')}</p>
-          <p className="text-[11px] text-white/35">{tr ? 'kullanılabilir puan' : 'available points'}</p>
+          <p className="text-2xl font-bold text-main">{pts.toLocaleString('tr-TR')}</p>
+          <p className="text-[11px] text-subtle">{tr ? 'kullanılabilir puan' : 'available points'}</p>
         </div>
-        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
           <Building2 size={18} className="text-brand-accent/60" />
         </div>
       </div>
 
       {nextTier && (
         <div className="mb-3">
-          <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+          <div className="h-1.5 rounded-full bg-m-surface2 overflow-hidden">
             <div className={`h-full rounded-full bg-brand-accent`} style={{ width: `${progress}%` }} />
           </div>
-          <p className="text-[10px] text-white/30 mt-1">
+          <p className="text-[10px] text-subtle mt-1">
             {tr
               ? `${tier.labelTr} → ${nextTier.labelTr} için ${(nextTier.minPts - pts).toLocaleString()} puan kaldı`
               : `${(nextTier.minPts - pts).toLocaleString()} pts to ${nextTier.labelEn}`}
@@ -789,14 +794,14 @@ function LoyaltyCard({ tr }: { tr: boolean }) {
         </div>
       )}
 
-      <div className="border-t border-white/8 pt-3 space-y-1.5">
-        <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">
+      <div className="border-t border-m-border pt-3 space-y-1.5">
+        <p className="text-[10px] text-subtle uppercase tracking-wider mb-2">
           {tr ? 'Mevcut Ayrıcalıklar' : 'Current Perks'}
         </p>
         {perks.map(p => (
           <div key={p} className="flex items-center gap-2">
             <CheckCircle2 size={11} className={tier.color} />
-            <span className="text-xs text-white/55">{p}</span>
+            <span className="text-xs text-muted">{p}</span>
           </div>
         ))}
       </div>
@@ -809,18 +814,13 @@ function LoyaltyCard({ tr }: { tr: boolean }) {
 export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) {
   const router = useRouter();
   const { language, setLanguage } = useLanguage();
+  const { mode, setMode } = useTheme();
   const tr = language === 'tr';
   const [activeTab, setActiveTab] = useState<TabId>('reservations');
   const [loggingOut, setLoggingOut] = useState(false);
-  const [mode, setModeState] = useState<'dark' | 'light'>('light');
   const [people, setPeople] = useState<AccountPerson[]>([]);
   const [peopleLoaded, setPeopleLoaded] = useState(false);
   const [showProfileSetupPrompt, setShowProfileSetupPrompt] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('wn-customer-mode-v2');
-    if (saved === 'dark' || saved === 'light') setModeState(saved);
-  }, []);
 
   useEffect(() => {
     fetch('/api/account/people')
@@ -838,8 +838,7 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
 
   const toggleMode = () => {
     const next = mode === 'light' ? 'dark' : 'light';
-    setModeState(next);
-    localStorage.setItem('wn-customer-mode-v2', next);
+    setMode(next);
   };
 
   const handleLogout = async () => {
@@ -858,17 +857,17 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ duration: 0.22 }}
-              className="w-full max-w-md rounded-2xl border border-white/10 bg-[#15120f] p-5 shadow-2xl"
+              className="w-full max-w-md modal-shell p-5"
             >
               <div className="flex items-start gap-3">
                 <div className="h-10 w-10 rounded-xl bg-brand-accent/10 border border-brand-accent/25 flex items-center justify-center shrink-0">
                   <IdCard size={18} className="text-brand-accent" />
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-white">
+                  <h2 className="text-base font-semibold text-main">
                     {tr ? 'Hesabınızı tamamlayalım' : 'Let’s complete your account'}
                   </h2>
-                  <p className="text-sm text-white/50 leading-relaxed mt-2">
+                  <p className="text-sm text-muted leading-relaxed mt-2">
                     {tr
                       ? 'Rezervasyon kişisini kaydettik. Hesap sahibi olarak kendi bilgilerinizi de eklerseniz sonraki rezervasyonlarda kimin adına işlem yaptığınızı daha rahat seçersiniz.'
                       : 'We saved the reservation guest. Add your own details as the account owner so future bookings are easier to manage.'}
@@ -881,13 +880,13 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
                     setShowProfileSetupPrompt(false);
                     setActiveTab('profile');
                   }}
-                  className="flex-1 rounded-lg bg-brand-accent px-4 py-2.5 text-xs font-bold text-black hover:bg-brand-accent/90 transition-colors"
+                  className="btn-primary flex-1 rounded-lg px-4 py-2.5 text-xs"
                 >
                   {tr ? 'Bilgilerimi ekle' : 'Add my details'}
                 </button>
                 <button
                   onClick={() => setShowProfileSetupPrompt(false)}
-                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-xs text-white/55 hover:bg-white/10 hover:text-white transition-colors"
+                  className="btn-secondary flex-1 px-4 py-2.5 text-xs"
                 >
                   {tr ? 'Sonra yaparım' : 'I’ll do it later'}
                 </button>
@@ -898,39 +897,39 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
       </AnimatePresence>
 
       {/* Minimal top bar */}
-      <header className="sticky top-0 z-30 border-b border-white/6 backdrop-blur-md" style={{ background: 'var(--m-topbar)' }}>
-        <div className="max-w-4xl mx-auto px-4 h-12 flex items-center justify-between">
+      <header className="topbar-glass">
+        <div className="max-w-6xl mx-auto px-4 h-10 w-full flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-lg bg-white overflow-hidden shrink-0 shadow-sm">
               <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
             </div>
-            <span className="text-sm font-bold text-white/90">Garden Hotel</span>
+            <span className="text-sm font-bold text-main">Garden Hotel</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push('/')}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/8 border border-white/8 text-[10px] font-bold text-white/50 hover:text-white transition-colors"
+              className="btn-secondary h-8 px-2.5 text-[10px]"
             >
               <Home size={11} />
               <span className="hidden sm:inline">{tr ? 'Ana Sayfa' : 'Home'}</span>
             </button>
             <button
               onClick={toggleMode}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/8 border border-white/8 text-[10px] font-bold text-white/50 hover:text-white transition-colors"
+              className="btn-secondary h-8 px-2.5 text-[10px]"
             >
               {mode === 'dark' ? <Sun size={11} /> : <Moon size={11} />}
               {mode === 'dark' ? (tr ? 'Açık' : 'Light') : (tr ? 'Koyu' : 'Dark')}
             </button>
             <button
               onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
-              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/8 border border-white/8 text-[10px] font-bold text-white/50 hover:text-white transition-colors"
+              className="btn-secondary h-8 px-2.5 text-[10px]"
             >
               {language.toUpperCase()}
             </button>
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/8 border border-white/8 text-xs text-white/50 hover:text-white transition-colors"
+              className="btn-secondary h-8 px-3 text-xs"
             >
               <LogOut size={12} />
               {loggingOut ? '…' : (tr ? 'Çıkış' : 'Sign out')}
@@ -940,12 +939,12 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
       </header>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+      <main className="max-w-6xl mx-auto px-4 py-6 space-y-5">
         {/* Hero */}
         <ProfileHero user={user} tr={tr} />
 
         {/* Two-column layout: tabs+content left, loyalty right */}
-        <div className="flex flex-col lg:flex-row gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-5 items-start">
           {/* Left: tabs + content */}
           <div className="flex-1 min-w-0 space-y-4">
             <TabNav active={activeTab} setActive={setActiveTab} tr={tr} />
@@ -967,7 +966,7 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
           </div>
 
           {/* Right: loyalty card (sticky) */}
-          <div className="w-full lg:w-64 shrink-0 lg:sticky lg:top-20">
+          <div className="w-full lg:sticky lg:top-20">
             <LoyaltyCard tr={tr} />
           </div>
         </div>

@@ -168,21 +168,21 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
       ══════════════════════════════════════════════════════════ */}
       <aside className="
         w-full md:w-64 shrink-0 flex flex-col
-        panel-glass rounded-none
-        border-b md:border-b-0 md:border-r border-white/8
+        panel-sidebar rounded-none
+        border-b md:border-b-0 md:border-r
         md:sticky md:top-0 md:h-screen md:overflow-y-auto
         z-20
       ">
 
         {/* Hotel branding */}
-        <div className="px-4 pt-4 pb-3 border-b border-white/5">
+        <div className="px-4 pt-4 pb-3 border-b border-m-border">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white overflow-hidden shrink-0 shadow-sm">
               <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
             </div>
             <div>
-              <p className="font-bold text-white/95 text-sm leading-none">Garden Hotel</p>
-              <p className="text-[10px] text-white/30 mt-1">
+              <p className="font-bold text-main text-sm leading-none">Garden Hotel</p>
+              <p className="text-[10px] text-subtle mt-1">
                 {language === 'tr' ? 'Otel Yönetim Sistemi' : 'Hotel Management System'}
               </p>
             </div>
@@ -190,12 +190,12 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
         </div>
 
         {/* User card */}
-        <div className="px-4 py-3 border-b border-white/5">
-          <div className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-xl px-3 py-2.5">
+        <div className="px-4 py-3 border-b border-m-border">
+          <div className="flex items-center gap-3 surface-card px-3 py-2.5">
             <div className="avatar-init w-8 h-8 text-[11px]">{emailInitials(user.email)}</div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold text-white/80 leading-none">{user.roleName}</p>
-              <p className="text-[10px] text-white/35 mt-0.5 truncate">{user.email}</p>
+              <p className="text-[11px] font-semibold text-main leading-none">{user.roleName}</p>
+              <p className="text-[10px] text-subtle mt-0.5 truncate">{user.email}</p>
             </div>
             <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_6px_rgba(52,211,153,0.45)]" />
           </div>
@@ -220,7 +220,7 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
                     cursor-pointer group
                     ${isActive
                       ? 'bg-brand-accent/10 text-brand-accent border border-brand-accent/15'
-                      : 'text-white/45 hover:text-white/80 hover:bg-white/5 border border-transparent'}
+                      : 'text-muted hover:text-main hover:bg-m-hover border border-transparent'}
                   `}
                 >
                   {isActive && (
@@ -230,7 +230,7 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
                     size={16}
                     className={isActive
                       ? 'text-brand-accent'
-                      : 'text-white/30 group-hover:text-white/60 transition-colors'}
+                      : 'text-subtle group-hover:text-main transition-colors'}
                   />
                   <span className="flex-1 text-left">{menu.label}</span>
                   {isActive && <ChevronRight size={13} className="text-brand-accent/50" />}
@@ -250,8 +250,8 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
         {/* Topbar */}
         <div className="topbar-glass">
           <div className="min-w-0">
-            <h1 className="text-base font-bold text-white/95 leading-none">{activeTab.label}</h1>
-            <p className="text-[11px] text-white/30 mt-1.5 max-w-lg leading-relaxed hidden md:block">
+            <h1 className="text-base font-bold text-main leading-none">{activeTab.label}</h1>
+            <p className="text-[11px] text-subtle mt-1.5 max-w-lg leading-relaxed hidden md:block">
               {activeTab.description}
             </p>
           </div>
@@ -262,7 +262,7 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
             <button
               onClick={() => router.push('/')}
               title={language === 'tr' ? 'Ana Sayfaya Dön' : 'Back to Home'}
-              className="h-8 px-2.5 rounded-lg border border-white/8 hover:bg-white/6 text-white/35 hover:text-white/80 transition-colors flex items-center gap-1.5 text-xs"
+              className="btn-secondary h-8 px-2.5 text-xs"
             >
               <Home size={13} />
               <span className="hidden sm:inline">{language === 'tr' ? 'Ana Sayfa' : 'Home'}</span>
@@ -272,7 +272,7 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
             <button
               onClick={() => setLanguage(language === 'tr' ? 'en' : 'tr')}
               title={language === 'tr' ? 'Dil Değiştir' : 'Change Language'}
-              className="h-8 px-2.5 rounded-lg border border-white/8 hover:bg-white/6 text-white/35 hover:text-white/80 transition-colors flex items-center gap-1.5 text-xs font-bold"
+              className="btn-secondary h-8 px-2.5 text-xs font-bold"
             >
               <Globe size={13} />
               <span>{language.toUpperCase()}</span>
@@ -284,12 +284,12 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
               title={mode === 'dark'
                 ? (language === 'tr' ? 'Açık Tema' : 'Light Mode')
                 : (language === 'tr' ? 'Koyu Tema' : 'Dark Mode')}
-              className="h-8 w-8 rounded-lg border border-white/8 hover:bg-white/6 text-white/35 hover:text-white/80 transition-colors flex items-center justify-center"
+              className="btn-secondary h-8 w-8"
             >
               {mode === 'dark' ? <Moon size={13} /> : <Sun size={13} />}
             </button>
 
-            <div className="w-px h-5 bg-white/8 mx-0.5" />
+            <div className="w-px h-5 bg-m-border mx-0.5" />
 
             {/* Logout */}
             <button
@@ -383,21 +383,21 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
 
           /* ── Coming soon placeholder ── */
           ) : (
-            <div className="panel-glass-dashed">
+            <div className="surface-panel p-8">
               <div className="flex flex-col items-center justify-center py-24 text-center space-y-5">
                 <div className="relative">
-                  <div className="w-16 h-16 rounded-2xl bg-surface-glass border border-border-glass flex items-center justify-center">
-                    <ActiveIcon size={28} className="text-white/20" />
+                  <div className="w-16 h-16 rounded-xl surface-card-raised flex items-center justify-center">
+                    <ActiveIcon size={28} className="text-subtle" />
                   </div>
                   <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-brand-accent/20 border border-brand-accent/30 flex items-center justify-center">
                     <span className="text-[9px] text-brand-accent font-bold">!</span>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-white/50">
+                  <p className="text-sm font-semibold text-muted">
                     {language === 'tr' ? 'Yapım Aşamasında' : 'Coming Soon'}
                   </p>
-                  <p className="text-xs text-white/25 max-w-xs leading-relaxed">
+                  <p className="text-xs text-subtle max-w-xs leading-relaxed">
                     {language === 'tr'
                       ? `${activeTab.label} ekranı yakında aktif olacak.`
                       : `The ${activeTab.label} screen will be active soon.`}

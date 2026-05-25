@@ -93,18 +93,18 @@ export function BookingModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="w-full max-w-lg overflow-hidden panel-glass-dashed select-none text-white shadow-2xl"
+          className="w-full max-w-lg overflow-hidden modal-shell select-none"
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex justify-between items-center px-6 py-4 border-b border-white/10">
+          <div className="flex justify-between items-center px-6 py-4 border-b border-m-border">
             <div className="flex items-center gap-2">
               <ShieldCheck className="text-brand-accent h-5 w-5 animate-pulse" />
               <h3 className="text-lg font-medium tracking-tight">{t('booking.title')}</h3>
             </div>
             <button
               onClick={onClose}
-              className="btn-icon p-1 hover:bg-white/10"
+              className="btn-icon p-1 hover:bg-m-hover"
             >
               <X size={20} />
             </button>
@@ -132,7 +132,7 @@ export function BookingModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 panel-glass p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 surface-card p-4">
               <div className="flex items-center gap-3">
                 <Calendar className="text-white/50 h-5 w-5 shrink-0" />
                 <div>
@@ -147,7 +147,7 @@ export function BookingModal({
                   <p className="text-sm font-medium">May {checkOutDate}, 2026</p>
                 </div>
               </div>
-              <div className="col-span-2 border-t border-white/10 pt-3 mt-1 flex items-center gap-3">
+              <div className="sm:col-span-2 border-t border-m-border pt-3 mt-1 flex items-center gap-3">
                 <Users className="text-white/50 h-5 w-5 shrink-0" />
                 <div>
                   <p className="label-sm">{t('booking.partySize')}</p>
@@ -189,10 +189,10 @@ export function BookingModal({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 bg-white/5 border-t border-white/10 flex justify-between items-center">
+          <div className="px-6 py-4 bg-m-surface2 border-t border-m-border flex justify-between items-center gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-white/60 hover:text-white transition-colors"
+              className="px-4 py-2 text-sm text-muted hover:text-main transition-colors"
             >
               {t('booking.cancel')}
             </button>

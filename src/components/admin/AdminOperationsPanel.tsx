@@ -40,7 +40,7 @@ function personName(p: Person) {
 const LOST_STATUSES = [
   { id: 'found',     labelTr: 'Depoda',       labelEn: 'In Storage', cls: 'text-sky-400 border-sky-400/20 bg-sky-400/6'          },
   { id: 'claimed',   labelTr: 'Teslim Edildi', labelEn: 'Claimed',   cls: 'text-emerald-400 border-emerald-400/20 bg-emerald-400/8' },
-  { id: 'discarded', labelTr: 'İmha Edildi',   labelEn: 'Discarded', cls: 'text-white/25 border-white/10 bg-white/[0.02]'         },
+  { id: 'discarded', labelTr: 'İmha Edildi',   labelEn: 'Discarded', cls: 'text-muted border-m-border bg-m-surface2'         },
 ];
 
 // ── Status Dropdown for Lost Items ────────────────────────────────────────────
@@ -63,13 +63,13 @@ function LostStatusSelect({ item, tr, onUpdate }: {
         <ChevronDown size={9} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 w-36 rounded-xl border border-white/10 bg-[#0d0f13] shadow-xl overflow-hidden">
+        <div className="absolute right-0 top-full mt-1 z-20 w-36 modal-shell overflow-hidden">
           {LOST_STATUSES.map(s => (
             <button
               key={s.id}
               onClick={() => { onUpdate(item.id, s.id); setOpen(false); }}
-              className={`w-full text-left px-3 py-2 text-[11px] font-medium transition-colors hover:bg-white/5 ${
-                s.id === item.status ? 'text-white/80' : 'text-white/40'
+              className={`w-full text-left px-3 py-2 text-[11px] font-medium transition-colors hover:bg-m-hover ${
+                s.id === item.status ? 'text-main' : 'text-muted'
               }`}
             >
               {tr ? s.labelTr : s.labelEn}
@@ -157,7 +157,7 @@ export function AdminOperationsPanel({ tr }: Props) {
     <div className="space-y-4">
 
       {/* Sub-tab bar */}
-      <div className="flex gap-1 bg-white/3 border border-white/8 rounded-xl p-1 w-fit">
+      <div className="tab-list w-fit">
         {([
           { id: 'maintenance' as SubTab, labelTr: 'Hasar Bildirimleri', labelEn: 'Damage Reports', icon: AlertTriangle,
             count: openReports.length },
@@ -171,14 +171,14 @@ export function AdminOperationsPanel({ tr }: Props) {
               key={t.id}
               onClick={() => setActiveTab(t.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                isActive ? 'bg-brand-accent text-black shadow-sm' : 'text-white/45 hover:text-white/75 hover:bg-white/5'
+                isActive ? 'bg-brand-accent text-black shadow-sm' : 'text-muted hover:text-main hover:bg-m-hover'
               }`}
             >
               <Icon size={12} />
               {tr ? t.labelTr : t.labelEn}
               {t.count > 0 && (
                 <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-black/20 text-black' : 'bg-white/8 text-white/50'
+                  isActive ? 'bg-black/20 text-black' : 'bg-m-surface2 text-muted'
                 }`}>
                   {t.count}
                 </span>
@@ -202,15 +202,15 @@ export function AdminOperationsPanel({ tr }: Props) {
               { label: tr ? 'Acil'    : 'Urgent',   value: reports.filter(r => r.priority === 'urgent' && r.status === 'open').length, cls: 'text-red-400' },
               { label: tr ? 'Çözüldü' : 'Resolved', value: closedReports.length, cls: 'text-emerald-400' },
             ].map(s => (
-              <div key={s.label} className="rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2.5">
+              <div key={s.label} className="surface-card px-3 py-2.5">
                 <p className={`text-xl font-black tabular-nums leading-none ${s.cls}`}>{s.value}</p>
-                <p className="text-[10px] text-white/28 mt-1">{s.label}</p>
+                <p className="text-[10px] text-subtle mt-1">{s.label}</p>
               </div>
             ))}
           </div>
 
           {reports.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-white/20">
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-faint">
               <AlertTriangle size={32} />
               <p className="text-sm">{tr ? 'Hasar bildirimi yok.' : 'No damage reports.'}</p>
             </div>
@@ -221,9 +221,9 @@ export function AdminOperationsPanel({ tr }: Props) {
                 <div
                   key={r.id}
                   className={`rounded-2xl border px-4 py-3.5 transition-all ${
-                    r.status !== 'open'   ? 'opacity-40 border-white/5 bg-white/[0.01]' :
+                    r.status !== 'open'   ? 'opacity-60 border-m-border bg-m-surface' :
                     r.priority === 'urgent' ? 'border-red-500/20 bg-red-500/[0.04]'     :
-                    'border-white/[0.07] bg-white/[0.02]'
+                    'border-m-border bg-m-surface'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -232,9 +232,9 @@ export function AdminOperationsPanel({ tr }: Props) {
                         {r.priority === 'urgent' && r.status === 'open' && (
                           <AlertTriangle size={11} className="text-red-400 shrink-0" />
                         )}
-                        <span className="text-sm font-bold text-white/90">
+                        <span className="text-sm font-bold text-main">
                           {r.room.name}
-                          {r.room.floor != null && <span className="text-xs text-white/30 font-normal ml-1.5">· Kat {r.room.floor}</span>}
+                          {r.room.floor != null && <span className="text-xs text-subtle font-normal ml-1.5">· Kat {r.room.floor}</span>}
                         </span>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                           r.status === 'resolved'
@@ -250,13 +250,13 @@ export function AdminOperationsPanel({ tr }: Props) {
                               : (tr ? 'Açık'   : 'Open')}
                         </span>
                       </div>
-                      <p className="text-[11px] text-white/45 mt-1.5 leading-relaxed">{r.description}</p>
+                      <p className="text-[11px] text-muted mt-1.5 leading-relaxed">{r.description}</p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <p className="text-[10px] text-white/20 tabular-nums">
+                        <p className="text-[10px] text-subtle tabular-nums">
                           {new Date(r.createdAt).toLocaleDateString(tr ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short', year: '2-digit' })}
                         </p>
-                        <span className="text-white/10">·</span>
-                        <p className="text-[10px] text-white/20">{personName(r.reportedBy)}</p>
+                        <span className="text-faint">·</span>
+                        <p className="text-[10px] text-subtle">{personName(r.reportedBy)}</p>
                       </div>
                     </div>
 
@@ -286,17 +286,17 @@ export function AdminOperationsPanel({ tr }: Props) {
             {[
               { label: tr ? 'Depoda'       : 'In Storage', value: activeItems.length,                         cls: 'text-sky-400'     },
               { label: tr ? 'Teslim'       : 'Claimed',   value: items.filter(i => i.status === 'claimed').length,  cls: 'text-emerald-400' },
-              { label: tr ? 'İmha'         : 'Discarded', value: items.filter(i => i.status === 'discarded').length, cls: 'text-white/30'    },
+              { label: tr ? 'İmha'         : 'Discarded', value: items.filter(i => i.status === 'discarded').length, cls: 'text-muted'    },
             ].map(s => (
-              <div key={s.label} className="rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2.5">
+              <div key={s.label} className="surface-card px-3 py-2.5">
                 <p className={`text-xl font-black tabular-nums leading-none ${s.cls}`}>{s.value}</p>
-                <p className="text-[10px] text-white/28 mt-1">{s.label}</p>
+                <p className="text-[10px] text-subtle mt-1">{s.label}</p>
               </div>
             ))}
           </div>
 
           {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-white/20">
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-faint">
               <Package size={32} />
               <p className="text-sm">{tr ? 'Kayıp eşya kaydı yok.' : 'No lost items logged.'}</p>
             </div>
@@ -306,30 +306,30 @@ export function AdminOperationsPanel({ tr }: Props) {
                 <div
                   key={item.id}
                   className={`rounded-2xl border px-4 py-3.5 ${
-                    item.status !== 'found' ? 'opacity-40 border-white/5 bg-white/[0.01]' : 'border-white/[0.07] bg-white/[0.02]'
+                    item.status !== 'found' ? 'opacity-60 border-m-border bg-m-surface' : 'border-m-border bg-m-surface'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-white/90">
+                        <span className="text-sm font-bold text-main">
                           {item.room.name}
-                          {item.room.floor != null && <span className="text-xs text-white/30 font-normal ml-1.5">· Kat {item.room.floor}</span>}
+                          {item.room.floor != null && <span className="text-xs text-subtle font-normal ml-1.5">· Kat {item.room.floor}</span>}
                         </span>
                       </div>
-                      <p className="text-[11px] text-white/45 mt-1.5 leading-relaxed">{item.description}</p>
+                      <p className="text-[11px] text-muted mt-1.5 leading-relaxed">{item.description}</p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <p className="text-[10px] text-white/20 tabular-nums">
+                        <p className="text-[10px] text-subtle tabular-nums">
                           {new Date(item.foundAt).toLocaleDateString(tr ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short', year: '2-digit' })}
                         </p>
-                        <span className="text-white/10">·</span>
-                        <p className="text-[10px] text-white/20">{personName(item.foundBy)}</p>
+                        <span className="text-faint">·</span>
+                        <p className="text-[10px] text-subtle">{personName(item.foundBy)}</p>
                       </div>
                     </div>
 
                     <div className="relative">
                       {updatingId === item.id ? (
-                        <Loader2 size={14} className="animate-spin text-white/30" />
+                        <Loader2 size={14} className="animate-spin text-subtle" />
                       ) : (
                         <LostStatusSelect item={item} tr={tr} onUpdate={updateLostStatus} />
                       )}

@@ -19,7 +19,7 @@ interface Props { tr: boolean }
 const STATUS_STYLE: Record<string, { label: string; labelEn: string; cls: string }> = {
   found:     { label: 'Depoda',    labelEn: 'In Storage', cls: 'text-sky-400 border-sky-400/20 bg-sky-400/6'         },
   claimed:   { label: 'Teslim Edildi', labelEn: 'Claimed',   cls: 'text-emerald-400 border-emerald-400/20 bg-emerald-400/8' },
-  discarded: { label: 'İmha Edildi',   labelEn: 'Discarded', cls: 'text-white/25 border-white/10 bg-white/[0.02]'    },
+  discarded: { label: 'İmha Edildi',   labelEn: 'Discarded', cls: 'text-muted border-m-border bg-m-surface2'    },
 };
 
 export function LostItemsPanel({ tr }: Props) {
@@ -82,18 +82,18 @@ export function LostItemsPanel({ tr }: Props) {
     <div className="space-y-4">
 
       <div className="flex justify-end">
-        <button onClick={() => setShowForm(v => !v)} className="btn-primary flex items-center gap-2 text-sm">
+        <button onClick={() => setShowForm(v => !v)} className="btn-primary inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm">
           {showForm ? <X size={14} /> : <Plus size={14} />}
           {showForm ? (tr ? 'İptal' : 'Cancel') : (tr ? 'Eşya Kaydet' : 'Log Item')}
         </button>
       </div>
 
       {showForm && (
-        <div className="rounded-2xl border border-white/10 p-4 space-y-3" style={{ background: '#0d0f13' }}>
+        <div className="surface-panel p-4 space-y-3">
           <select
             value={form.roomId}
             onChange={e => setForm(f => ({ ...f, roomId: e.target.value }))}
-            className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 focus:outline-none focus:border-brand-accent/40 appearance-none"
+            className="control-base px-3 py-2 text-sm appearance-none"
           >
             <option value="">{tr ? '— Oda seçin —' : '— Select room —'}</option>
             {rooms.map(r => (
@@ -106,7 +106,7 @@ export function LostItemsPanel({ tr }: Props) {
             onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
             rows={3}
             placeholder={tr ? 'Eşyanın tanımı (renk, marka, tür...)' : 'Item description (color, brand, type...)'}
-            className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-brand-accent/40 resize-none"
+            className="control-base px-3 py-2 text-sm resize-none"
           />
 
           <button
@@ -121,7 +121,7 @@ export function LostItemsPanel({ tr }: Props) {
       )}
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-white/20">
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-faint">
           <Package size={32} />
           <p className="text-sm">{tr ? 'Kayıp eşya kaydı yok.' : 'No lost items logged.'}</p>
         </div>
@@ -132,21 +132,21 @@ export function LostItemsPanel({ tr }: Props) {
             return (
               <div
                 key={item.id}
-                className={`rounded-2xl border px-4 py-3.5 ${item.status !== 'found' ? 'opacity-50 border-white/5 bg-white/[0.01]' : 'border-white/[0.07] bg-white/[0.02]'}`}
+                className={`rounded-2xl border px-4 py-3.5 ${item.status !== 'found' ? 'opacity-60 border-m-border bg-m-surface' : 'border-m-border bg-m-surface'}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-bold text-white/90">
+                      <span className="text-sm font-bold text-main">
                         {item.room.name}
-                        {item.room.floor != null && <span className="text-xs text-white/30 font-normal ml-1.5">· Kat {item.room.floor}</span>}
+                        {item.room.floor != null && <span className="text-xs text-subtle font-normal ml-1.5">· Kat {item.room.floor}</span>}
                       </span>
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${st.cls}`}>
                         {tr ? st.label : st.labelEn}
                       </span>
                     </div>
-                    <p className="text-[11px] text-white/50 mt-1.5 leading-relaxed">{item.description}</p>
-                    <p className="text-[10px] text-white/20 mt-1 tabular-nums">
+                    <p className="text-[11px] text-muted mt-1.5 leading-relaxed">{item.description}</p>
+                    <p className="text-[10px] text-subtle mt-1 tabular-nums">
                       {new Date(item.foundAt).toLocaleDateString(tr ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short', year: '2-digit' })}
                     </p>
                   </div>

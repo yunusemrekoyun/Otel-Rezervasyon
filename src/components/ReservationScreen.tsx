@@ -281,7 +281,7 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomTypeId, roomNa
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ duration: 0.18 }}
         onClick={e => e.stopPropagation()}
-        className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5 w-full max-w-2xl shadow-2xl"
+        className="modal-shell p-5 w-full max-w-2xl"
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -289,24 +289,24 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomTypeId, roomNa
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
               <button
                 onClick={() => setSelecting('in')}
-                className={`pb-1 border-b-2 transition-colors ${selecting === 'in' ? 'border-brand-accent text-brand-accent' : 'border-transparent text-white/40 hover:text-white/70'}`}
+                className={`pb-1 border-b-2 transition-colors ${selecting === 'in' ? 'border-brand-accent text-brand-accent' : 'border-transparent text-muted hover:text-main'}`}
               >
                 {tr ? 'Giriş' : 'Check-in'}: <span className="font-semibold">{formatDate(checkIn)}</span>
               </button>
               <button
                 onClick={() => checkIn && setSelecting('out')}
-                className={`pb-1 border-b-2 transition-colors ${selecting === 'out' ? 'border-brand-accent text-brand-accent' : 'border-transparent text-white/40 hover:text-white/70'}`}
+                className={`pb-1 border-b-2 transition-colors ${selecting === 'out' ? 'border-brand-accent text-brand-accent' : 'border-transparent text-muted hover:text-main'}`}
               >
                 {tr ? 'Çıkış' : 'Check-out'}: <span className="font-semibold">{formatDate(checkOut)}</span>
               </button>
               {nightCount > 0 && (
-                <span className="text-white/30 text-xs self-end mb-0.5">
+                <span className="text-subtle text-xs self-end mb-0.5">
                   {nightCount} {tr ? 'gece' : 'night'}
                 </span>
               )}
             </div>
             {roomTypeId && (
-              <p className="mt-2 text-[11px] text-white/35">
+              <p className="mt-2 text-[11px] text-subtle">
                 {loadingAvailability
                   ? (tr ? 'Odanın müsait günleri kontrol ediliyor…' : 'Checking available dates for this room…')
                   : (tr
@@ -315,7 +315,7 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomTypeId, roomNa
               </p>
             )}
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white">
+          <button onClick={onClose} className="w-7 h-7 rounded-full bg-m-surface2 hover:bg-m-hover flex items-center justify-center text-muted hover:text-main">
             <X size={14} />
           </button>
         </div>
@@ -324,20 +324,20 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomTypeId, roomNa
         <div className="flex items-center justify-between mb-3">
           <button
             onClick={() => setLeftMonth(m => addMonths(m, -1))}
-            className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white"
+            className="w-8 h-8 rounded-lg bg-m-surface2 hover:bg-m-hover flex items-center justify-center text-muted hover:text-main"
           >
             <ChevronLeft size={16} />
           </button>
           <button
             onClick={() => setLeftMonth(m => addMonths(m, 1))}
-            className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white"
+            className="w-8 h-8 rounded-lg bg-m-surface2 hover:bg-m-hover flex items-center justify-center text-muted hover:text-main"
           >
             <ChevronRight size={16} />
           </button>
         </div>
 
         {/* Two months */}
-        <div className="flex gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-6">
           <CalendarMonth
             year={leftMonth.getFullYear()} month={leftMonth.getMonth()}
             checkIn={checkIn} checkOut={checkOut} hovered={hovered} today={today}
@@ -346,7 +346,7 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomTypeId, roomNa
             isDateUnavailable={isDateUnavailable}
             onSelect={handleSelect} onHover={setHovered} tr={tr}
           />
-          <div className="w-px bg-white/5" />
+          <div className="hidden md:block w-px bg-m-border" />
           <CalendarMonth
             year={rightMonth.getFullYear()} month={rightMonth.getMonth()}
             checkIn={checkIn} checkOut={checkOut} hovered={hovered} today={today}
@@ -409,7 +409,7 @@ interface FieldProps {
 function Field({ label, required, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] text-white/40 uppercase tracking-wider font-medium">
+      <label className="text-[10px] text-subtle uppercase tracking-wider font-medium">
         {label}{required && <span className="text-brand-accent ml-0.5">*</span>}
       </label>
       {children}
@@ -417,7 +417,7 @@ function Field({ label, required, children }: FieldProps) {
   );
 }
 
-const inputCls = 'bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-brand-accent/50 transition-colors w-full';
+const inputCls = 'control-base px-3 py-2 text-sm';
 const selectCls = `${inputCls} appearance-none`;
 
 // ── Main Component ─────────────────────────────────────────────────────────────

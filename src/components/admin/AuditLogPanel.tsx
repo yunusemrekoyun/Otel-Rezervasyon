@@ -54,15 +54,15 @@ export function AuditLogPanel({ tr }: { tr: boolean }) {
               <FileClock size={18} className="text-brand-accent" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white/90">{tr ? 'İşlem Logları' : 'Audit Logs'}</h2>
-              <p className="text-xs text-white/35">
+              <h2 className="text-base font-bold text-main">{tr ? 'İşlem Logları' : 'Audit Logs'}</h2>
+              <p className="text-xs text-subtle">
                 {tr ? 'Kritik sistem işlemleri ve yetkili kullanıcı hareketleri.' : 'Critical system and staff activity trail.'}
               </p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full md:w-auto">
             <label className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
               <input
                 value={actor}
                 onChange={(event) => setActor(event.target.value)}
@@ -71,7 +71,7 @@ export function AuditLogPanel({ tr }: { tr: boolean }) {
               />
             </label>
             <label className="relative">
-              <ShieldCheck size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
+              <ShieldCheck size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
               <input
                 value={action}
                 onChange={(event) => setAction(event.target.value)}
@@ -85,24 +85,24 @@ export function AuditLogPanel({ tr }: { tr: boolean }) {
 
       <div className="panel-glass-raised overflow-hidden">
         {loading ? (
-          <div className="py-16 flex items-center justify-center text-white/35">
+          <div className="py-16 flex items-center justify-center text-subtle">
             <Loader2 size={18} className="animate-spin" />
           </div>
         ) : logs.length === 0 ? (
-          <div className="py-16 text-center text-sm text-white/35">
+          <div className="py-16 text-center text-sm text-subtle">
             {tr ? 'Log kaydı bulunamadı.' : 'No audit logs found.'}
           </div>
         ) : (
-          <div className="divide-y divide-white/[0.06]">
+          <div className="divide-y divide-m-border">
             {logs.map((log) => (
-              <div key={log.id} className="px-4 py-3 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-2 hover:bg-white/[0.02]">
+              <div key={log.id} className="px-4 py-3 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-2 hover:bg-m-hover">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white/80 truncate">{log.summary}</p>
-                  <p className="text-[11px] text-white/35 mt-1">
+                  <p className="text-sm font-semibold text-main truncate">{log.summary}</p>
+                  <p className="text-[11px] text-subtle mt-1">
                     {log.action} · {log.entityType}{log.entityId ? `:${log.entityId.slice(0, 8)}` : ''}
                   </p>
                 </div>
-                <div className="lg:text-right text-[11px] text-white/35">
+                <div className="lg:text-right text-[11px] text-subtle">
                   <p>{log.actorEmail ?? (tr ? 'Sistem' : 'System')} {log.actorRole ? `· ${log.actorRole}` : ''}</p>
                   <p>{new Date(log.createdAt).toLocaleString(tr ? 'tr-TR' : 'en-GB')}</p>
                 </div>

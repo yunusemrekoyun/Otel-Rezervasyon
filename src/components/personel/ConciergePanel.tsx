@@ -61,10 +61,10 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
             <MessageSquare size={18} className="text-purple-400" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white/90 leading-none">
+            <h2 className="text-base font-bold text-main leading-none">
               {isTr ? 'Müşteri Talepleri' : 'Customer Requests'}
             </h2>
-            <p className="text-[11px] text-white/25 mt-0.5">
+            <p className="text-[11px] text-subtle mt-0.5">
               {loading
                 ? '…'
                 : `${visible.length} ${isTr ? 'aktif talep' : 'active requests'}`
@@ -76,14 +76,14 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
           {dismissedCount > 0 && (
             <button
               onClick={() => setDismissed(new Set())}
-              className="px-3 py-1.5 rounded-lg text-[11px] text-white/35 hover:text-white bg-white/3 hover:bg-white/8 border border-white/8 transition-colors"
+              className="px-3 py-1.5 rounded-lg text-[11px] text-muted hover:text-main bg-m-surface hover:bg-m-hover border border-m-border transition-colors"
             >
               {isTr ? 'Tümünü Göster' : 'Show All'}
             </button>
           )}
           <button
             onClick={fetchRequests}
-            className="w-9 h-9 rounded-xl border border-white/8 hover:bg-white/5 flex items-center justify-center text-white/25 hover:text-white transition-colors"
+            className="w-9 h-9 rounded-xl border border-m-border hover:bg-m-hover flex items-center justify-center text-subtle hover:text-main transition-colors"
             title={isTr ? 'Yenile' : 'Refresh'}
           >
             <RefreshCw size={13} className={loading ? 'animate-spin text-brand-accent' : ''} />
@@ -94,22 +94,22 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
       {/* ── Content ── */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3">
-          <RefreshCw size={20} className="animate-spin text-white/15" />
-          <span className="text-xs text-white/20">{isTr ? 'Yükleniyor…' : 'Loading…'}</span>
+          <RefreshCw size={20} className="animate-spin text-faint" />
+          <span className="text-xs text-subtle">{isTr ? 'Yükleniyor…' : 'Loading…'}</span>
         </div>
       ) : visible.length === 0 ? (
         <div className="panel-glass-dashed">
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-white/3 border border-white/6 flex items-center justify-center">
-              <MessageSquare size={22} className="text-white/12" />
+            <div className="w-14 h-14 rounded-2xl surface-soft flex items-center justify-center">
+              <MessageSquare size={22} className="text-faint" />
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-white/20">
+              <p className="text-sm font-semibold text-subtle">
                 {dismissedCount > 0
                   ? (isTr ? 'Tüm talepler kapatıldı' : 'All requests dismissed')
                   : (isTr ? 'Henüz müşteri talebi yok' : 'No customer requests yet')}
               </p>
-              <p className="text-xs text-white/12">
+              <p className="text-xs text-faint">
                 {isTr
                   ? 'Misafirlerden gelen talepler burada görünecek'
                   : 'Requests from guests will appear here'}
@@ -126,35 +126,35 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: 'hidden', transition: { duration: 0.2 } }}
-                className="bg-white/[0.025] border border-white/8 rounded-2xl p-4 hover:border-white/12 transition-colors"
+                className="surface-card p-4 hover:border-m-border2 transition-colors"
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0 space-y-2">
 
                     {/* Top row */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-bold text-white/85">{req.name}</p>
+                      <p className="text-sm font-bold text-main">{req.name}</p>
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-400/8 border border-purple-400/15 text-[10px] text-purple-400 font-medium">
                         <Tag size={8} />
                         {req.category}
                       </span>
-                      <span className="font-mono text-[10px] text-white/20 bg-white/4 px-1.5 py-0.5 rounded-md border border-white/6">
+                      <span className="font-mono text-[10px] text-subtle bg-m-surface2 px-1.5 py-0.5 rounded-md border border-m-border">
                         {req.ticketId}
                       </span>
                     </div>
 
                     {/* Message */}
-                    <p className="text-xs text-white/55 leading-relaxed">{req.message}</p>
+                    <p className="text-xs text-muted leading-relaxed">{req.message}</p>
 
                     {/* Timestamp */}
-                    <p className="text-[10px] text-white/20">{fmtDateTime(req.createdAt)}</p>
+                    <p className="text-[10px] text-subtle">{fmtDateTime(req.createdAt)}</p>
 
                   </div>
 
                   {/* Dismiss */}
                   <button
                     onClick={() => dismiss(req.id)}
-                    className="w-7 h-7 rounded-lg hover:bg-white/8 flex items-center justify-center text-white/20 hover:text-white/60 transition-colors shrink-0 mt-0.5"
+                    className="w-7 h-7 rounded-lg hover:bg-m-hover flex items-center justify-center text-subtle hover:text-main transition-colors shrink-0 mt-0.5"
                     title={isTr ? 'Kapat' : 'Dismiss'}
                   >
                     <X size={12} />

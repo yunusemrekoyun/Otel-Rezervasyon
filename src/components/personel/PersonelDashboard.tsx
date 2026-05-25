@@ -101,19 +101,19 @@ export function PersonelDashboard({ tr: isTr }: { tr: boolean }) {
       {/* ── Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-base font-bold text-white/90 leading-none">
+          <h2 className="text-base font-bold text-main leading-none">
             {isTr ? 'Günlük Özet' : 'Daily Summary'}
           </h2>
-          <p className="text-[11px] text-white/25 mt-0.5 capitalize">{dateStr}</p>
+          <p className="text-[11px] text-subtle mt-0.5 capitalize">{dateStr}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="font-mono text-xl font-black text-brand-accent leading-none tabular-nums">{timeStr}</p>
-            <p className="font-mono text-xs text-white/20 tabular-nums">:{secStr}</p>
+            <p className="font-mono text-xs text-subtle tabular-nums">:{secStr}</p>
           </div>
           <button
             onClick={fetchData}
-            className="w-9 h-9 rounded-xl border border-white/8 hover:bg-white/5 flex items-center justify-center text-white/25 hover:text-white transition-colors"
+            className="w-9 h-9 rounded-xl border border-m-border hover:bg-m-hover flex items-center justify-center text-subtle hover:text-main transition-colors"
             title={isTr ? 'Yenile' : 'Refresh'}
           >
             <RefreshCw size={13} className={loading ? 'animate-spin text-brand-accent' : ''} />
@@ -128,7 +128,7 @@ export function PersonelDashboard({ tr: isTr }: { tr: boolean }) {
             <p className={`text-2xl font-black tabular-nums leading-none ${s.cls}`}>
               {loading ? '—' : s.value}
             </p>
-            <p className="text-[10px] text-white/28 mt-1.5 leading-tight">{s.label}</p>
+            <p className="text-[10px] text-subtle mt-1.5 leading-tight">{s.label}</p>
           </div>
         ))}
       </div>
@@ -137,8 +137,8 @@ export function PersonelDashboard({ tr: isTr }: { tr: boolean }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
         {/* Shift info */}
-        <div className="bg-white/[0.02] border border-white/8 rounded-2xl p-4">
-          <p className="text-[10px] text-white/22 uppercase tracking-widest mb-4">
+        <div className="surface-card p-4">
+          <p className="text-[10px] text-subtle uppercase tracking-widest mb-4">
             {isTr ? 'Vardiya Bilgisi' : 'Shift Info'}
           </p>
           <div className="space-y-3">
@@ -148,19 +148,19 @@ export function PersonelDashboard({ tr: isTr }: { tr: boolean }) {
               { Icon: Clock,      label: isTr ? 'Bugünün tarihi'  : 'Today\'s date',    value: time.toLocaleDateString(isTr ? 'tr-TR' : 'en-US') },
             ].map(({ Icon, label, value }) => (
               <div key={label} className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-white/30">
+                <div className="flex items-center gap-2 text-subtle">
                   <Icon size={12} />
                   <span className="text-xs">{label}</span>
                 </div>
-                <span className="text-xs font-bold text-white/65 font-mono">{value}</span>
+                <span className="text-xs font-bold text-muted font-mono">{value}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Occupancy summary */}
-        <div className="bg-white/[0.02] border border-white/8 rounded-2xl p-4">
-          <p className="text-[10px] text-white/22 uppercase tracking-widest mb-4">
+        <div className="surface-card p-4">
+          <p className="text-[10px] text-subtle uppercase tracking-widest mb-4">
             {isTr ? 'Doluluk Durumu' : 'Occupancy Status'}
           </p>
           <div className="space-y-2.5">
@@ -173,8 +173,8 @@ export function PersonelDashboard({ tr: isTr }: { tr: boolean }) {
             ].map(({ dot, label, value }) => (
               <div key={label} className="flex items-center gap-2.5">
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
-                <span className="text-xs text-white/38 flex-1">{label}</span>
-                <span className="text-xs font-bold text-white/65 tabular-nums">{loading ? '—' : value}</span>
+                <span className="text-xs text-muted flex-1">{label}</span>
+                <span className="text-xs font-bold text-muted tabular-nums">{loading ? '—' : value}</span>
               </div>
             ))}
           </div>
@@ -182,8 +182,8 @@ export function PersonelDashboard({ tr: isTr }: { tr: boolean }) {
       </div>
 
       {/* ── Quick guide ── */}
-      <div className="bg-white/[0.015] border border-white/6 rounded-2xl p-5">
-        <p className="text-[10px] text-white/22 uppercase tracking-widest mb-4">
+      <div className="surface-card p-5">
+        <p className="text-[10px] text-subtle uppercase tracking-widest mb-4">
           {isTr ? 'Hızlı Kılavuz' : 'Quick Guide'}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -215,7 +215,7 @@ export function PersonelDashboard({ tr: isTr }: { tr: boolean }) {
                 <Icon size={13} className={cls} />
                 <p className={`text-xs font-bold ${cls}`}>{title}</p>
               </div>
-              <p className="text-[11px] text-white/30 leading-relaxed">{desc}</p>
+              <p className="text-[11px] text-muted leading-relaxed">{desc}</p>
             </div>
           ))}
         </div>

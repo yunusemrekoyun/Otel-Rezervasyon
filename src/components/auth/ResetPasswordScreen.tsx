@@ -48,21 +48,21 @@ export function ResetPasswordScreen() {
   }
 
   return (
-    <main className="min-h-screen bg-[#080705] text-white flex items-center justify-center px-4 py-12">
+    <main data-mode="dark" className="min-h-screen panel-root flex items-center justify-center px-4 py-12">
       <motion.form
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 18, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="w-full max-w-md panel-glass-dashed overflow-hidden shadow-2xl"
+        className="w-full max-w-md modal-shell overflow-hidden"
       >
-        <div className="px-6 py-5 border-b border-white/10 flex items-center gap-3">
+        <div className="px-6 py-5 border-b border-m-border flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
             <KeyRound size={20} className="text-brand-accent" />
           </div>
           <div>
             <h1 className="text-lg font-semibold tracking-tight">Şifrenizi yenileyin</h1>
-            <p className="text-xs text-white/40">WoodNest hesabınız için güvenli bağlantı</p>
+            <p className="text-xs text-subtle">Garden Hotel hesabınız için güvenli bağlantı</p>
           </div>
         </div>
 
@@ -93,7 +93,7 @@ export function ResetPasswordScreen() {
               <label className="block space-y-1.5">
                 <span className="label-sm">Yeni şifre</span>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" size={15} />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" size={15} />
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -110,7 +110,7 @@ export function ResetPasswordScreen() {
               <label className="block space-y-1.5">
                 <span className="label-sm">Yeni şifre tekrar</span>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" size={15} />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" size={15} />
                   <input
                     type="password"
                     autoComplete="new-password"

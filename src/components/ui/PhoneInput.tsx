@@ -153,17 +153,17 @@ export function PhoneInput({
   const ph = placeholder ?? (country.code === 'TR' ? '5XX XXX XX XX' : 'Numara');
 
   return (
-    <div className={`relative flex items-stretch rounded-xl border border-white/10 bg-white/[0.04] focus-within:border-brand-accent/35 transition-colors ${className}`} ref={dropdownRef}>
+    <div className={`relative flex items-stretch control-base p-0 ${className}`} ref={dropdownRef}>
       {/* Country selector */}
       <button
         type="button"
         disabled={disabled}
         onClick={() => setOpen(p => !p)}
-        className="flex items-center gap-1.5 pl-3 pr-2.5 py-2.5 shrink-0 border-r border-white/10 hover:bg-white/5 transition-colors rounded-l-xl disabled:opacity-50"
+        className="flex items-center gap-1.5 pl-3 pr-2.5 py-2.5 shrink-0 border-r border-m-border hover:bg-m-hover transition-colors rounded-l-xl disabled:opacity-50"
       >
         <span className="text-base leading-none">{country.flag}</span>
-        <span className="text-xs font-mono text-white/60">{country.dial}</span>
-        <ChevronDown size={11} className={`text-white/30 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+        <span className="text-xs font-mono text-muted">{country.dial}</span>
+        <ChevronDown size={11} className={`text-subtle transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Number input */}
@@ -174,24 +174,24 @@ export function PhoneInput({
         disabled={disabled}
         placeholder={ph}
         maxLength={15}
-        className={`flex-1 min-w-0 bg-transparent px-3 py-2.5 text-sm text-white/90 placeholder-white/20 focus:outline-none disabled:opacity-50 ${inputClassName}`}
+        className={`flex-1 min-w-0 bg-transparent px-3 py-2.5 text-sm text-main placeholder:text-faint focus:outline-none disabled:opacity-50 ${inputClassName}`}
       />
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute left-0 top-full mt-1.5 z-[200] w-64 rounded-xl border border-white/10 bg-[#1a1614] shadow-2xl overflow-hidden">
+        <div className="absolute left-0 top-full mt-1.5 z-[200] w-64 modal-shell overflow-hidden">
           {/* Search */}
-          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/8">
-            <Search size={12} className="text-white/30 shrink-0" />
+          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-m-border">
+            <Search size={12} className="text-subtle shrink-0" />
             <input
               ref={searchRef}
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Ara…"
-              className="flex-1 bg-transparent text-xs text-white/80 placeholder-white/25 focus:outline-none"
+              className="flex-1 bg-transparent text-xs text-main placeholder:text-faint focus:outline-none"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="text-white/30 hover:text-white/60">
+              <button onClick={() => setSearch('')} className="text-subtle hover:text-main">
                 <X size={11} />
               </button>
             )}
@@ -200,20 +200,20 @@ export function PhoneInput({
           {/* List */}
           <div className="overflow-y-auto max-h-52">
             {filtered.length === 0 ? (
-              <p className="text-xs text-white/25 text-center py-4">Bulunamadı</p>
+              <p className="text-xs text-subtle text-center py-4">Bulunamadı</p>
             ) : (
               filtered.map(c => (
                 <button
                   key={c.code}
                   type="button"
                   onClick={() => selectCountry(c)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-white/6 transition-colors ${
-                    c.code === country.code ? 'bg-brand-accent/8 text-brand-accent' : 'text-white/70'
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-m-hover transition-colors ${
+                    c.code === country.code ? 'bg-brand-accent/10 text-brand-accent' : 'text-muted'
                   }`}
                 >
                   <span className="text-base leading-none w-6 shrink-0">{c.flag}</span>
                   <span className="flex-1 text-xs truncate">{c.name}</span>
-                  <span className="text-[10px] font-mono text-white/35 shrink-0">{c.dial}</span>
+                  <span className="text-[10px] font-mono text-subtle shrink-0">{c.dial}</span>
                 </button>
               ))
             )}

@@ -75,7 +75,7 @@ function StatusBadge({ status, tr }: { status: string; tr: boolean }) {
   return (
     <div
       className={`flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${style.text} ${style.border}`}
-      style={{ background: `linear-gradient(135deg, ${style.glow} 0%, rgba(0,0,0,0.65) 100%)`, backdropFilter: 'blur(8px)' }}
+      style={{ background: `linear-gradient(135deg, ${style.glow} 0%, var(--m-surface) 100%)`, backdropFilter: 'blur(8px)' }}
     >
       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot}`} />
       {tr ? STATUS_LABEL[status]?.tr : STATUS_LABEL[status]?.en}
@@ -188,7 +188,7 @@ function QuickReservationModal({
     }
   }
 
-  const inputClass = 'w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-brand-accent/40';
+  const inputClass = 'control-base px-3 py-2 text-sm';
 
   return (
     <Modal
@@ -202,8 +202,8 @@ function QuickReservationModal({
         <div className="rounded-xl border border-brand-accent/15 bg-brand-accent/7 px-4 py-3">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-bold text-white">{room.name}</p>
-              <p className="text-[11px] text-white/40 mt-0.5">
+              <p className="text-sm font-bold text-main">{room.name}</p>
+              <p className="text-[11px] text-subtle mt-0.5">
                 {room.roomType.name}
                 {room.floor != null ? ` · ${room.floor}. ${tr ? 'Kat' : 'Floor'}` : ''}
               </p>
@@ -212,7 +212,7 @@ function QuickReservationModal({
               <p className="text-lg font-black text-brand-accent leading-none">
                 ₺{totalPrice.toLocaleString('tr-TR')}
               </p>
-              <p className="text-[10px] text-white/30 mt-1">
+              <p className="text-[10px] text-subtle mt-1">
                 {nights || 0} {tr ? 'gece' : 'night'}
               </p>
             </div>
@@ -259,7 +259,7 @@ function QuickReservationModal({
           onChange={e => update('specialRequests', e.target.value)}
         />
 
-        <label className={`flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${checkInIsToday ? 'border-white/8 bg-white/[0.03]' : 'border-white/5 bg-white/[0.015] opacity-55'}`}>
+        <label className={`flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${checkInIsToday ? 'border-m-border bg-m-surface' : 'border-m-border bg-m-surface opacity-60'}`}>
           <input
             type="checkbox"
             checked={form.checkInNow && checkInIsToday}
@@ -268,10 +268,10 @@ function QuickReservationModal({
             className="mt-1"
           />
           <span>
-            <span className="block text-sm font-semibold text-white/80">
+            <span className="block text-sm font-semibold text-main">
               {tr ? 'Misafir şimdi giriş yapacak' : 'Guest will check in now'}
             </span>
-            <span className="block text-[11px] text-white/35 mt-0.5 leading-relaxed">
+            <span className="block text-[11px] text-subtle mt-0.5 leading-relaxed">
               {tr
                 ? 'Seçiliyse rezervasyon onaylanır, check-in tamamlanır ve oda doğrudan dolu görünür.'
                 : 'When enabled, the reservation is confirmed, checked in, and the room becomes occupied.'}
@@ -343,24 +343,24 @@ function SendToCleaningModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="flex min-h-full items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl" style={{ background: '#0d0f13' }} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.06] rounded-t-2xl">
+      <div className="w-full max-w-sm modal-shell" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-m-border rounded-t-2xl">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
               <Sparkles size={14} className="text-amber-400" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white/90">{tr ? 'Temizliğe Gönder' : 'Send to Cleaning'}</p>
-              <p className="text-[11px] text-white/30">{room.name}</p>
+              <p className="text-sm font-bold text-main">{tr ? 'Temizliğe Gönder' : 'Send to Cleaning'}</p>
+              <p className="text-[11px] text-subtle">{room.name}</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-colors"><X size={14} /></button>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-subtle hover:text-main hover:bg-m-hover transition-colors"><X size={14} /></button>
         </div>
 
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Atanan Kişi (opsiyonel)' : 'Assign To (optional)'}</label>
-            <select value={assignedToId} onChange={e => setAssignedToId(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 focus:outline-none focus:border-brand-accent/40 appearance-none">
+            <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Atanan Kişi (opsiyonel)' : 'Assign To (optional)'}</label>
+            <select value={assignedToId} onChange={e => setAssignedToId(e.target.value)} className="control-base px-3 py-2 text-sm appearance-none">
               <option value="">{tr ? '— Atanmamış —' : '— Unassigned —'}</option>
               {staff.map(s => {
                 const name = [s.firstName, s.lastName].filter(Boolean).join(' ') || s.email;
@@ -370,10 +370,10 @@ function SendToCleaningModal({
           </div>
 
           <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Öncelik' : 'Priority'}</label>
+            <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Öncelik' : 'Priority'}</label>
             <div className="flex gap-2">
               {(['normal', 'urgent'] as const).map(p => (
-                <button key={p} type="button" onClick={() => setPriority(p)} className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${priority === p ? (p === 'urgent' ? 'text-red-400 border-red-500/20 bg-red-500/8' : 'text-white/70 border-white/15 bg-white/5') : 'text-white/25 border-white/6'}`}>
+                <button key={p} type="button" onClick={() => setPriority(p)} className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${priority === p ? (p === 'urgent' ? 'text-red-400 border-red-500/20 bg-red-500/8' : 'text-main border-m-border2 bg-m-surface2') : 'text-subtle border-m-border'}`}>
                   {p === 'urgent' ? (tr ? 'Acil' : 'Urgent') : (tr ? 'Normal' : 'Normal')}
                 </button>
               ))}
@@ -381,8 +381,8 @@ function SendToCleaningModal({
           </div>
 
           <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Not (opsiyonel)' : 'Note (optional)'}</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder={tr ? 'Özel talimatlar...' : 'Special instructions...'} className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-brand-accent/40 resize-none" />
+            <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Not (opsiyonel)' : 'Note (optional)'}</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder={tr ? 'Özel talimatlar...' : 'Special instructions...'} className="control-base px-3 py-2 text-sm resize-none" />
           </div>
         </div>
 
@@ -719,7 +719,7 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
       {/* ── Page header ──────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-white/60">
+          <p className="text-sm font-medium text-muted">
             {tr
               ? `${rooms.length} oda kayıtlı`
               : `${rooms.length} room${rooms.length !== 1 ? 's' : ''} registered`}
@@ -865,14 +865,14 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
       {rooms.length === 0 && (
         <div className="panel-glass-dashed">
           <div className="flex flex-col items-center justify-center py-24 text-center space-y-5">
-            <div className="w-16 h-16 rounded-2xl bg-surface-glass border border-border-glass flex items-center justify-center">
-              <DoorOpen size={28} className="text-white/20" />
+            <div className="w-16 h-16 rounded-2xl surface-soft flex items-center justify-center">
+              <DoorOpen size={28} className="text-faint" />
             </div>
             <div className="space-y-1.5">
-              <p className="text-sm font-semibold text-white/45">
+              <p className="text-sm font-semibold text-muted">
                 {tr ? 'Henüz oda eklenmedi' : 'No rooms added yet'}
               </p>
-              <p className="text-xs text-white/25 max-w-xs leading-relaxed">
+              <p className="text-xs text-subtle max-w-xs leading-relaxed">
                 {tr ? 'İlk odanızı eklemek için yukarıdaki butona tıklayın.' : 'Click the button above to add your first room.'}
               </p>
             </div>
@@ -895,8 +895,7 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
             return (
               <div
                 key={room.id}
-                className="rounded-xl overflow-hidden border border-white/8 group hover:border-brand-accent/25 transition-all duration-200 flex flex-col"
-                style={{ background: '#0d0f13' }}
+                className="surface-card-raised overflow-hidden group hover:border-brand-accent/25 transition-all duration-200 flex flex-col"
               >
                 {/* Cover */}
                 <div className="relative shrink-0" style={{ aspectRatio: '9/4' }}>
@@ -908,12 +907,9 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                       <img src={coverSrc} alt={room.name} className="w-full h-full object-cover" />
                     )
                   ) : (
-                    <div
-                      className="w-full h-full flex flex-col items-center justify-center gap-2"
-                      style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 12%, #0d0f13) 0%, #0d0f13 100%)' }}
-                    >
+                    <div className="w-full h-full media-placeholder flex flex-col items-center justify-center gap-2">
                       <BedDouble size={24} className="text-brand-accent/25" />
-                      <span className="font-mono font-black text-lg text-white/10 tracking-widest">{room.name}</span>
+                      <span className="font-mono font-black text-lg text-faint tracking-widest">{room.name}</span>
                     </div>
                   )}
 
@@ -927,20 +923,18 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                     <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => openEdit(room)}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white transition-colors"
-                        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}
+                        className="w-7 h-7 rounded-lg overlay-control flex items-center justify-center transition-colors"
                       >
                         <Pencil size={12} />
                       </button>
                       {deletingId === room.id ? (
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
-                          <Loader2 size={12} className="animate-spin text-white/40" />
+                        <div className="w-7 h-7 rounded-lg overlay-control flex items-center justify-center">
+                          <Loader2 size={12} className="animate-spin text-subtle" />
                         </div>
                       ) : (
                         <button
                           onClick={() => setDeleteTarget(room)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-red-400 transition-colors"
-                          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}
+                          className="w-7 h-7 rounded-lg overlay-control flex items-center justify-center hover:text-red-400 transition-colors"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -951,8 +945,7 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                   {/* Media count badge — bottom right */}
                   {room.media.length > 0 && (
                     <div
-                      className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-white/60"
-                      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)' }}
+                      className="absolute bottom-2 right-2 overlay-control flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]"
                     >
                       <ImagePlus size={9} />
                       {room.media.length}
@@ -961,11 +954,11 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 p-2.5 border-t border-white/[0.06]">
+                <div className="flex-1 p-2.5 border-t border-m-border">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <h3 className="font-bold text-white/95 text-sm leading-none truncate">{room.name}</h3>
-                      <p className="text-[11px] text-white/35 mt-1 truncate">
+                      <h3 className="font-bold text-main text-sm leading-none truncate">{room.name}</h3>
+                      <p className="text-[11px] text-subtle mt-1 truncate">
                         {room.roomType.name}
                         {room.floor != null ? ` · Kat ${room.floor}` : ''}
                       </p>
@@ -974,7 +967,7 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                       <p className="text-sm font-black text-brand-accent leading-none">
                         ₺{room.basePrice.toLocaleString('tr-TR')}
                       </p>
-                      <p className="text-[9px] text-white/25 mt-0.5">/{tr ? 'gece' : 'night'}</p>
+                      <p className="text-[9px] text-subtle mt-0.5">/{tr ? 'gece' : 'night'}</p>
                     </div>
                   </div>
 
@@ -990,7 +983,7 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
 
                   {/* Action buttons */}
                   {room.isActive && (
-                    <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2.5 border-t border-white/[0.05]">
+                    <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2.5 border-t border-m-border">
                       <button
                         onClick={() => setQuickReservationRoom(room)}
                         className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-bold text-black bg-brand-accent hover:brightness-105 transition-colors"
@@ -1009,14 +1002,14 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                       )}
                       {canManageRooms && (room.status === 'available' || room.status === 'maintenance') && (
                         maintenanceLoadingId === room.id ? (
-                          <div className="flex items-center px-2"><Loader2 size={11} className="animate-spin text-white/30" /></div>
+                          <div className="flex items-center px-2"><Loader2 size={11} className="animate-spin text-subtle" /></div>
                         ) : (
                           <button
                             onClick={() => handleToggleMaintenance(room)}
                             className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${
                               room.status === 'maintenance'
                                 ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/6 hover:bg-emerald-400/12'
-                                : 'text-white/35 border-white/8 bg-white/[0.02] hover:bg-white/[0.06] hover:text-white/60'
+                                : 'text-muted border-m-border bg-m-surface hover:bg-m-hover hover:text-main'
                             }`}
                           >
                             {room.status === 'maintenance' ? <RotateCcw size={10} /> : <Wrench size={10} />}
@@ -1048,8 +1041,8 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                     <BedDouble size={18} className="text-brand-accent" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-bold text-white/95 truncate">{room.name}</h3>
-                    <p className="text-[11px] text-white/35 mt-0.5">
+                    <h3 className="font-bold text-main truncate">{room.name}</h3>
+                    <p className="text-[11px] text-subtle mt-0.5">
                       {room.roomType.name}
                       {room.floor != null && ` · ${room.floor}. ${tr ? 'Kat' : 'Floor'}`}
                       {' · '}₺{room.basePrice.toLocaleString('tr-TR')}/{tr ? 'gece' : 'night'}
@@ -1084,14 +1077,14 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
 
                   {canManageRooms && (room.status === 'available' || room.status === 'maintenance') && (
                     maintenanceLoadingId === room.id ? (
-                      <Loader2 size={13} className="animate-spin text-white/30" />
+                      <Loader2 size={13} className="animate-spin text-subtle" />
                     ) : (
                       <button
                         onClick={() => handleToggleMaintenance(room)}
                         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors ${
                           room.status === 'maintenance'
                             ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/6 hover:bg-emerald-400/12'
-                            : 'text-white/35 border-white/8 bg-white/[0.02] hover:bg-white/[0.06] hover:text-white/60'
+                            : 'text-muted border-m-border bg-m-surface hover:bg-m-hover hover:text-main'
                         }`}
                       >
                         {room.status === 'maintenance' ? <RotateCcw size={11} /> : <Wrench size={11} />}
@@ -1108,11 +1101,11 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                       </button>
 
                       {deletingId === room.id ? (
-                        <Loader2 size={14} className="animate-spin text-white/30" />
+                        <Loader2 size={14} className="animate-spin text-subtle" />
                       ) : (
                         <button
                           onClick={() => setDeleteTarget(room)}
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-subtle hover:text-red-400 hover:bg-red-400/10 transition-all"
                         >
                           <Trash2 size={13} />
                         </button>
@@ -1123,20 +1116,20 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
               </div>
 
               {room.description && (
-                <div className="px-5 py-3 border-t border-white/[0.06]">
-                  <p className="text-[12px] text-white/40 leading-relaxed">{room.description}</p>
+                <div className="px-5 py-3 border-t border-m-border">
+                  <p className="text-[12px] text-muted leading-relaxed">{room.description}</p>
                 </div>
               )}
 
               {room.media.length > 0 && (
-                <div className="px-5 pb-5 pt-3 border-t border-white/[0.06]">
+                <div className="px-5 pb-5 pt-3 border-t border-m-border">
                   <p className="section-title mb-3">{tr ? 'Medya' : 'Media'}</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                     {room.media.map(m => {
                       const isVideo = m.mimeType.startsWith('video/');
                       const src = m.pathThumb ? `/uploads/${m.pathThumb}` : `/uploads/${m.pathOriginal}`;
                       return (
-                        <div key={m.id} className="relative group rounded-xl overflow-hidden border border-white/10 aspect-square bg-black/30">
+                        <div key={m.id} className="relative group rounded-xl overflow-hidden border border-m-border aspect-square media-placeholder">
                           {isVideo ? (
                             <video src={`/uploads/${m.pathOriginal}`} className="w-full h-full object-cover" muted playsInline preload="metadata" />
                           ) : (
@@ -1145,9 +1138,9 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
                           )}
                           <button
                             onClick={() => handleDeleteMedia(m.id, room.id)}
-                            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
+                            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full overlay-control flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400"
                           >
-                            <Trash2 size={11} className="text-white" />
+                            <Trash2 size={11} className="text-current" />
                           </button>
                         </div>
                       );
@@ -1214,12 +1207,12 @@ function RoomFormFields({
       <div className="space-y-2">
         <label className="label-sm">{tr ? 'Oda Çeşidi' : 'Room Type'}</label>
         {roomTypes.length === 0 ? (
-          <div className="input-base text-white/30 text-sm">{tr ? 'Önce bir oda çeşidi oluşturun.' : 'Create a room type first.'}</div>
+          <div className="input-base text-subtle text-sm">{tr ? 'Önce bir oda çeşidi oluşturun.' : 'Create a room type first.'}</div>
         ) : (
           <select value={roomTypeId} onChange={e => setRoomTypeId(e.target.value)} className="input-base">
-            <option value="" disabled style={{ background: '#0f1115' }}>{tr ? '— Bir çeşit seçin —' : '— Select a type —'}</option>
+            <option value="" disabled style={{ background: 'var(--m-modal)' }}>{tr ? '— Bir çeşit seçin —' : '— Select a type —'}</option>
             {roomTypes.map(rt => (
-              <option key={rt.id} value={rt.id} style={{ background: '#0f1115' }}>{rt.name}</option>
+              <option key={rt.id} value={rt.id} style={{ background: 'var(--m-modal)' }}>{rt.name}</option>
             ))}
           </select>
         )}
@@ -1251,12 +1244,12 @@ function RoomFormFields({
         <label className="label-sm">{tr ? 'Medya' : 'Media'}</label>
 
         {hasMedia && (
-          <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          <div className="surface-card flex flex-wrap gap-2 p-3">
             {existingMedia?.map(m => {
               const isVideo = m.mimeType.startsWith('video/');
               const src = m.pathThumb ? `/uploads/${m.pathThumb}` : `/uploads/${m.pathOriginal}`;
               return (
-                <div key={m.id} className="relative w-16 h-16 rounded-xl overflow-hidden border border-white/10 bg-black/30 shrink-0 group">
+                <div key={m.id} className="relative w-16 h-16 rounded-xl overflow-hidden border border-m-border media-placeholder shrink-0 group">
                   {isVideo ? (
                     <video src={`/uploads/${m.pathOriginal}`} className="w-full h-full object-cover" muted playsInline preload="metadata" />
                   ) : (
@@ -1267,9 +1260,9 @@ function RoomFormFields({
                     <button
                       type="button"
                       onClick={() => onDeleteExistingMedia(m.id)}
-                      className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-500/80 transition-all"
+                      className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full overlay-control flex items-center justify-center opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all"
                     >
-                      <X size={8} className="text-white" />
+                      <X size={8} className="text-current" />
                     </button>
                   )}
                 </div>
@@ -1279,7 +1272,7 @@ function RoomFormFields({
             {pendingItems.map((item, i) => {
               const isVideo = item.file.type.startsWith('video/');
               return (
-                <div key={i} className="relative w-16 h-16 rounded-xl overflow-hidden border border-white/10 bg-black/30 shrink-0 ring-1 ring-brand-accent/30">
+                <div key={i} className="relative w-16 h-16 rounded-xl overflow-hidden border border-m-border media-placeholder shrink-0 ring-1 ring-brand-accent/30">
                   {isVideo ? (
                     <video src={item.objectUrl} className="w-full h-full object-cover" muted playsInline preload="metadata" />
                   ) : (
@@ -1289,9 +1282,9 @@ function RoomFormFields({
                   <button
                     type="button"
                     onClick={() => onRemovePendingItem(i)}
-                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 flex items-center justify-center hover:bg-red-500/80 transition-colors"
+                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full overlay-control flex items-center justify-center hover:text-red-400 transition-colors"
                   >
-                    <X size={8} className="text-white" />
+                    <X size={8} className="text-current" />
                   </button>
                 </div>
               );
@@ -1299,14 +1292,14 @@ function RoomFormFields({
           </div>
         )}
 
-        <label className="btn-secondary w-full py-3 rounded-xl border-dashed gap-2 text-sm text-white/40 hover:text-white/60 cursor-pointer flex items-center justify-center">
+        <label className="btn-secondary w-full py-3 rounded-xl border-dashed gap-2 text-sm text-muted hover:text-main cursor-pointer flex items-center justify-center">
           <ImagePlus size={15} />
           {hasMedia ? (tr ? 'Daha fazla ekle' : 'Add more') : (tr ? 'Fotoğraf veya video seç' : 'Select photos or videos')}
           <input type="file" className="sr-only" accept="image/*,video/*" multiple onChange={onFileChange} />
         </label>
 
         {isNew && (
-          <p className="text-[10px] text-white/20">
+          <p className="text-[10px] text-subtle">
             {tr ? 'Oda oluşturulunca dosyalar otomatik yüklenir.' : 'Files upload automatically after creation.'}
           </p>
         )}

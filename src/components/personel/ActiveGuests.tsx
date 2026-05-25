@@ -95,17 +95,17 @@ export function ActiveGuests({ tr: isTr }: { tr: boolean }) {
             <Users size={18} className="text-sky-400" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white/90 leading-none">
+            <h2 className="text-base font-bold text-main leading-none">
               {isTr ? 'Aktif Misafirler' : 'Active Guests'}
             </h2>
-            <p className="text-[11px] text-white/25 mt-0.5">
+            <p className="text-[11px] text-subtle mt-0.5">
               {loading ? '…' : `${guests.length} ${isTr ? 'misafir konaklıyor' : 'guests staying'}`}
             </p>
           </div>
         </div>
         <button
           onClick={fetchGuests}
-          className="w-9 h-9 rounded-xl border border-white/8 hover:bg-white/5 flex items-center justify-center text-white/25 hover:text-white transition-colors"
+          className="w-9 h-9 rounded-xl border border-m-border hover:bg-m-hover flex items-center justify-center text-subtle hover:text-main transition-colors"
           title={isTr ? 'Yenile' : 'Refresh'}
         >
           <RefreshCw size={13} className={loading ? 'animate-spin text-brand-accent' : ''} />
@@ -115,20 +115,20 @@ export function ActiveGuests({ tr: isTr }: { tr: boolean }) {
       {/* ── List ── */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3">
-          <RefreshCw size={20} className="animate-spin text-white/15" />
-          <span className="text-xs text-white/20">{isTr ? 'Yükleniyor…' : 'Loading…'}</span>
+          <RefreshCw size={20} className="animate-spin text-faint" />
+          <span className="text-xs text-subtle">{isTr ? 'Yükleniyor…' : 'Loading…'}</span>
         </div>
       ) : guests.length === 0 ? (
         <div className="panel-glass-dashed">
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-white/3 border border-white/6 flex items-center justify-center">
-              <BedDouble size={22} className="text-white/12" />
+            <div className="w-14 h-14 rounded-2xl surface-soft flex items-center justify-center">
+              <BedDouble size={22} className="text-faint" />
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-white/20">
+              <p className="text-sm font-semibold text-subtle">
                 {isTr ? 'Şu an otelde misafir yok' : 'No guests currently staying'}
               </p>
-              <p className="text-xs text-white/12">
+              <p className="text-xs text-faint">
                 {isTr ? 'Check-in yapılan misafirler burada görünecek' : 'Checked-in guests will appear here'}
               </p>
             </div>
@@ -143,7 +143,7 @@ export function ActiveGuests({ tr: isTr }: { tr: boolean }) {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: 20, transition: { duration: 0.2 } }}
-                className="bg-white/[0.025] border border-white/8 rounded-2xl p-4 hover:border-white/12 transition-colors"
+                className="surface-card p-4 hover:border-m-border2 transition-colors"
               >
                 <div className="flex items-start gap-4">
 
@@ -156,10 +156,10 @@ export function ActiveGuests({ tr: isTr }: { tr: boolean }) {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-bold text-white/90">
+                      <p className="text-sm font-bold text-main">
                         {guest.firstName} {guest.lastName}
                       </p>
-                      <span className="font-mono text-[10px] text-white/22 bg-white/4 px-1.5 py-0.5 rounded-md border border-white/6">
+                      <span className="font-mono text-[10px] text-subtle bg-m-surface2 px-1.5 py-0.5 rounded-md border border-m-border">
                         {guest.confirmationId}
                       </span>
                       {guest.specialRequests && (
@@ -167,18 +167,18 @@ export function ActiveGuests({ tr: isTr }: { tr: boolean }) {
                       )}
                     </div>
 
-                    <p className="text-[11px] text-white/35 mt-0.5">
+                    <p className="text-[11px] text-subtle mt-0.5">
                       {guest.room.roomType.name}
                       {guest.room.floor ? ` · Kat ${guest.room.floor}` : ''}
                     </p>
 
-                    <div className="flex items-center gap-2 mt-2 flex-wrap text-[11px] text-white/30">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap text-[11px] text-subtle">
                       <span>{fmtDate(guest.checkInDate)}</span>
-                      <span className="text-white/15">→</span>
+                      <span className="text-faint">→</span>
                       <span>{fmtDate(guest.checkOutDate)}</span>
-                      <span className="text-white/15">·</span>
+                      <span className="text-faint">·</span>
                       <span>{guest.nights} {isTr ? 'gece' : 'nights'}</span>
-                      <span className="text-white/15">·</span>
+                      <span className="text-faint">·</span>
                       <span>
                         {guest.adultsCount}{isTr ? 'y' : 'a'}
                         {guest.childrenCount > 0 ? `+${guest.childrenCount}` : ''}

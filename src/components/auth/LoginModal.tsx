@@ -107,9 +107,9 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="w-full max-w-md overflow-hidden panel-glass-dashed select-none text-white shadow-2xl"
+            className="w-full max-w-md overflow-hidden modal-shell select-none"
           >
-            <div className="flex justify-between items-center px-6 py-4 border-b border-white/10">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-m-border">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="text-brand-accent h-5 w-5" />
                 <h3 className="text-lg font-medium tracking-tight">{t('login.title')}</h3>
@@ -117,7 +117,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
               <button
                 type="button"
                 onClick={handleClose}
-                className="btn-icon p-1 hover:bg-white/10"
+                className="btn-icon p-1 hover:bg-m-hover"
               >
                 <X size={20} />
               </button>
@@ -129,7 +129,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
                   <div className="space-y-1.5">
                     <span className="label-sm">{t('login.email')}</span>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" size={15} />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" size={15} />
                       <input
                         type="email"
                         required
@@ -154,7 +154,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
                       </button>
                     </div>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" size={15} />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" size={15} />
                       <input
                         type="password"
                         required
@@ -176,18 +176,18 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
                       setError('');
                       setResetSent(false);
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs text-white/45 hover:text-white transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-main transition-colors"
                   >
                     <ArrowLeft size={13} />
                     {tr ? 'Giriş ekranına dön' : 'Back to login'}
                   </button>
 
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-2">
-                    <div className="flex items-center gap-2 text-white">
+                  <div className="surface-card p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-main">
                       <KeyRound size={15} className="text-brand-accent" />
                       <p className="text-sm font-semibold">{tr ? 'Şifrenizi yenileyelim' : 'Reset your password'}</p>
                     </div>
-                    <p className="text-xs leading-relaxed text-white/45">
+                    <p className="text-xs leading-relaxed text-muted">
                       {tr
                         ? 'Kayıtlı e-posta adresinize tek kullanımlık güvenli bir bağlantı göndereceğiz.'
                         : 'We will send a one-time secure link to your registered email address.'}
@@ -197,7 +197,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
                   <div className="space-y-1.5">
                     <span className="label-sm">{t('login.email')}</span>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" size={15} />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle" size={15} />
                       <input
                         type="email"
                         required

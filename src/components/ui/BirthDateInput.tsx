@@ -55,13 +55,13 @@ export function BirthDateInput({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setOpen(true)}
-        className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-white/10 bg-white/[0.04] text-sm text-left focus:outline-none focus:border-brand-accent/35 transition-colors disabled:opacity-50 ${className}`}
+        className={`control-base flex items-center gap-2 px-3 py-2.5 text-sm text-left disabled:opacity-50 ${className}`}
       >
-        <Calendar size={13} className="text-white/30 shrink-0" />
+        <Calendar size={13} className="text-subtle shrink-0" />
         {value ? (
-          <span className="text-white/90">{formatBirthDate(value, tr)}</span>
+          <span className="text-main">{formatBirthDate(value, tr)}</span>
         ) : (
-          <span className="text-white/20">{tr ? 'Seçin…' : 'Select…'}</span>
+          <span className="text-faint">{tr ? 'Seçin…' : 'Select…'}</span>
         )}
       </button>
 

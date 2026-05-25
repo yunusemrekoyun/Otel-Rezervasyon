@@ -122,10 +122,10 @@ export function AdminOverview({ user }: { user: AuthUser }) {
 
       {/* ── Greeting ──────────────────────────────────────────── */}
       <div>
-        <h2 className="text-xl font-bold text-white/95">
+        <h2 className="text-xl font-bold text-main">
           {tr ? 'Hoş geldin 👋' : 'Welcome back 👋'}
         </h2>
-        <p className="text-sm text-white/35 mt-0.5 capitalize">{today}</p>
+        <p className="text-sm text-subtle mt-0.5 capitalize">{today}</p>
       </div>
 
       {/* ── Stats grid ─────────────────────────────────────────── */}
@@ -134,7 +134,7 @@ export function AdminOverview({ user }: { user: AuthUser }) {
           <div key={id} className="stat-card">
             <div className="flex items-start justify-between">
               {/* Icon */}
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+              <div className="surface-soft p-3 rounded-xl">
                 <Icon size={18} className="text-brand-accent" />
               </div>
               {/* Change pill */}
@@ -149,16 +149,16 @@ export function AdminOverview({ user }: { user: AuthUser }) {
             </div>
 
             <div className="space-y-1">
-              <p className="text-3xl font-black text-white tracking-tight tabular-nums leading-none">
+              <p className="text-3xl font-black text-main tracking-tight tabular-nums leading-none">
                 {value}
               </p>
-              <p className="text-xs font-medium text-white/50">
+              <p className="text-xs font-medium text-muted">
                 {tr ? trData.label : enData.label}
               </p>
             </div>
 
-            <div className="pt-2.5 border-t border-white/[0.06]">
-              <p className="text-[10px] text-white/30">
+            <div className="pt-2.5 border-t border-m-border">
+              <p className="text-[10px] text-subtle">
                 {tr ? trData.sub : enData.sub}
               </p>
             </div>
@@ -173,7 +173,7 @@ export function AdminOverview({ user }: { user: AuthUser }) {
         <div className="panel-glass p-5">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="font-bold text-white/95 text-sm">
+              <h3 className="font-bold text-main text-sm">
                 {tr ? 'Son Rezervasyonlar' : 'Recent Reservations'}
               </h3>
               <p className="section-title mt-0.5">
@@ -189,25 +189,25 @@ export function AdminOverview({ user }: { user: AuthUser }) {
             {RESERVATIONS.map(r => (
               <div
                 key={r.id}
-                className="group flex items-center gap-4 py-3.5 px-2 rounded-xl hover:bg-white/[0.03] transition-colors border-b border-white/[0.04] last:border-0"
+                className="group flex items-center gap-4 py-3.5 px-2 rounded-xl hover:bg-m-hover transition-colors border-b border-m-border last:border-0"
               >
                 <div className="avatar-init w-9 h-9 text-[11px] shrink-0">
                   {initials(r.guest)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white/90 truncate leading-none">
+                  <p className="text-sm font-semibold text-main truncate leading-none">
                     {r.guest}
                   </p>
-                  <p className="text-[11px] text-white/35 mt-1 flex items-center gap-1.5">
+                  <p className="text-[11px] text-subtle mt-1 flex items-center gap-1.5">
                     <span>{r.room}</span>
-                    <span className="text-white/15">·</span>
+                    <span className="text-faint">·</span>
                     <span>{r.dates}</span>
                   </p>
                 </div>
                 <span className={STATUS_STYLE[r.status]}>
                   {tr ? STATUS_LABEL[r.status].tr : STATUS_LABEL[r.status].en}
                 </span>
-                <span className="text-sm font-bold text-white/75 shrink-0 tabular-nums w-16 text-right">
+                <span className="text-sm font-bold text-muted shrink-0 tabular-nums w-16 text-right">
                   {r.price}
                 </span>
                 <button className="btn-icon w-7 h-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -221,7 +221,7 @@ export function AdminOverview({ user }: { user: AuthUser }) {
         {/* Activity Feed */}
         <div className="panel-glass p-5">
           <div className="mb-5">
-            <h3 className="font-bold text-white/95 text-sm">
+            <h3 className="font-bold text-main text-sm">
               {tr ? 'Son Aktivite' : 'Recent Activity'}
             </h3>
             <p className="section-title mt-0.5">
@@ -249,12 +249,12 @@ export function AdminOverview({ user }: { user: AuthUser }) {
                 </div>
                 {/* Content */}
                 <div className="min-w-0 pt-0.5">
-                  <p className="text-[12px] text-white/70 leading-relaxed">
-                    <span className="font-semibold text-white/90">{act.actor}</span>
+                  <p className="text-[12px] text-muted leading-relaxed">
+                    <span className="font-semibold text-main">{act.actor}</span>
                     {' '}{tr ? act.action.tr : act.action.en}{' '}
                     <span className="text-brand-accent font-medium">{act.target}</span>
                   </p>
-                  <p className="text-[10px] text-white/25 mt-1.5 flex items-center gap-1.5">
+                  <p className="text-[10px] text-subtle mt-1.5 flex items-center gap-1.5">
                     <Clock size={9} />
                     {tr ? act.time.tr : act.time.en}
                   </p>

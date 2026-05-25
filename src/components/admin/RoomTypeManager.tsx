@@ -381,7 +381,7 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
           <div className="space-y-2">
             <label className="label-sm">{tr ? 'İmkanlar' : 'Amenities'}</label>
             {amenities.length > 0 && (
-              <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="surface-card flex flex-wrap gap-2 p-3">
                 {amenities.map((a, i) => (
                   <span key={i} className="tag tag-accent inline-flex items-center gap-1.5">
                     {a}
@@ -406,17 +406,17 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
             <span className="label-sm">{tr ? 'Medya (opsiyonel)' : 'Media (optional)'}</span>
 
             {pendingItems.length > 0 && (
-              <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="surface-card flex flex-wrap gap-2 p-3">
                 {pendingItems.map(({ file, objectUrl }, i) => (
-                  <div key={i} className="relative w-16 h-16 rounded-xl overflow-hidden border border-white/10 bg-black/30 shrink-0">
+                  <div key={i} className="relative w-16 h-16 rounded-xl overflow-hidden border border-m-border media-placeholder shrink-0">
                     {file.type.startsWith('video/') ? (
                       <video src={objectUrl} className="w-full h-full object-cover" muted playsInline preload="metadata" />
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={objectUrl} alt={file.name} className="w-full h-full object-cover" />
                     )}
-                    <button type="button" onClick={() => removePendingItem(i)} className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 flex items-center justify-center hover:bg-red-500/80 transition-colors">
-                      <X size={8} className="text-white" />
+                    <button type="button" onClick={() => removePendingItem(i)} className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full overlay-control flex items-center justify-center hover:text-red-400 transition-colors">
+                      <X size={8} className="text-current" />
                     </button>
                   </div>
                 ))}
@@ -424,7 +424,7 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
             )}
 
             {/* label wraps the input directly — works reliably inside portals */}
-            <label className="btn-secondary w-full py-3 rounded-xl border-dashed gap-2 text-sm text-white/40 hover:text-white/60 cursor-pointer">
+            <label className="btn-secondary w-full py-3 rounded-xl border-dashed gap-2 text-sm text-muted hover:text-main cursor-pointer">
               <input
                 type="file"
                 accept="image/*,video/*"
@@ -435,7 +435,7 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
               <ImagePlus size={15} />
               {pendingItems.length > 0 ? (tr ? 'Daha fazla ekle' : 'Add more') : (tr ? 'Fotoğraf veya video seç' : 'Select photos or videos')}
             </label>
-            <p className="text-[10px] text-white/20">
+            <p className="text-[10px] text-subtle">
               {tr ? 'Oluşturunca dosyalar otomatik yüklenir.' : 'Files upload automatically after creation.'}
             </p>
           </div>
@@ -484,7 +484,7 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
           <div className="space-y-2">
             <label className="label-sm">{tr ? 'İmkanlar' : 'Amenities'}</label>
             {editAmenities.length > 0 && (
-              <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="surface-card flex flex-wrap gap-2 p-3">
                 {editAmenities.map((a, i) => (
                   <span key={i} className="tag tag-accent inline-flex items-center gap-1.5">
                     {a}
@@ -574,11 +574,11 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
 
             <div className="space-y-1">
               <p className="section-title">{tr ? 'Silinecek odalar' : 'Rooms that will be deleted'}</p>
-              <div className="rounded-xl border border-white/[0.08] overflow-hidden">
+              <div className="rounded-xl border border-m-border overflow-hidden">
                 {deleteTarget.rooms.map((room, i) => (
-                  <div key={room.id} className={`px-4 py-2.5 flex items-center gap-2 text-sm ${i < deleteTarget.rooms.length - 1 ? 'border-b border-white/[0.06]' : ''}`}>
-                    <BedDouble size={13} className="text-white/25 shrink-0" />
-                    <span className="text-white/70">{room.name}</span>
+                  <div key={room.id} className={`px-4 py-2.5 flex items-center gap-2 text-sm ${i < deleteTarget.rooms.length - 1 ? 'border-b border-m-border' : ''}`}>
+                    <BedDouble size={13} className="text-subtle shrink-0" />
+                    <span className="text-muted">{room.name}</span>
                   </div>
                 ))}
               </div>
@@ -605,14 +605,14 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
       {roomTypes.length === 0 && !showForm && (
         <div className="panel-glass-dashed">
           <div className="flex flex-col items-center justify-center py-24 text-center space-y-5">
-            <div className="w-16 h-16 rounded-2xl bg-surface-glass border border-border-glass flex items-center justify-center">
-              <BedDouble size={28} className="text-white/20" />
+            <div className="w-16 h-16 rounded-2xl surface-soft flex items-center justify-center">
+              <BedDouble size={28} className="text-faint" />
             </div>
             <div className="space-y-1.5">
-              <p className="text-sm font-semibold text-white/45">
+              <p className="text-sm font-semibold text-muted">
                 {tr ? 'Henüz oda çeşidi eklenmedi' : 'No room types added yet'}
               </p>
-              <p className="text-xs text-white/25 max-w-xs leading-relaxed">
+              <p className="text-xs text-subtle max-w-xs leading-relaxed">
                 {tr ? 'İlk oda çeşidinizi oluşturmak için yukarıdaki butona tıklayın.' : 'Click the button above to create your first room type.'}
               </p>
             </div>
@@ -635,8 +635,7 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
             return (
               <div
                 key={rt.id}
-                className="rounded-2xl overflow-hidden border border-white/8 group hover:border-brand-accent/25 transition-all duration-200 flex flex-col"
-                style={{ background: '#0d0f13' }}
+                className="surface-card-raised overflow-hidden group hover:border-brand-accent/25 transition-all duration-200 flex flex-col"
               >
                 {/* Cover */}
                 <div className="relative shrink-0" style={{ aspectRatio: '5/2' }}>
@@ -648,12 +647,9 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
                       <img src={coverSrc} alt={rt.name} className="w-full h-full object-cover" />
                     )
                   ) : (
-                    <div
-                      className="w-full h-full flex flex-col items-center justify-center gap-3"
-                      style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 12%, #0d0f13) 0%, #0d0f13 100%)' }}
-                    >
+                    <div className="w-full h-full media-placeholder flex flex-col items-center justify-center gap-3">
                       <BedDouble size={24} className="text-brand-accent/25" />
-                      <span className="text-[11px] text-white/10 font-semibold uppercase tracking-widest">{rt.name}</span>
+                      <span className="text-[11px] text-faint font-semibold uppercase tracking-widest">{rt.name}</span>
                     </div>
                   )}
 
@@ -661,7 +657,6 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
                   <div className="absolute top-2.5 left-2.5">
                     <span
                       className={`tag ${rt.isActive ? 'tag-success' : 'tag-muted'} text-[10px]`}
-                      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
                     >
                       {rt.isActive ? (tr ? 'Aktif' : 'Active') : (tr ? 'Pasif' : 'Inactive')}
                     </span>
@@ -671,20 +666,18 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
                   <div className="absolute top-2.5 right-2.5 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => openEdit(rt)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white transition-colors"
-                      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      className="w-7 h-7 rounded-lg overlay-control flex items-center justify-center transition-colors"
                     >
                       <Pencil size={12} />
                     </button>
                     {deletingId === rt.id ? (
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
-                        <Loader2 size={12} className="animate-spin text-white/40" />
+                      <div className="w-7 h-7 rounded-lg overlay-control flex items-center justify-center">
+                        <Loader2 size={12} className="animate-spin text-subtle" />
                       </div>
                     ) : (
                       <button
                         onClick={() => initiateDelete(rt)}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-red-400 transition-colors"
-                        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.1)' }}
+                        className="w-7 h-7 rounded-lg overlay-control flex items-center justify-center hover:text-red-400 transition-colors"
                       >
                         <Trash2 size={12} />
                       </button>
@@ -693,8 +686,7 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
 
                   {/* Add media — bottom right */}
                   <label
-                    className="absolute bottom-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center text-white/40 hover:text-white cursor-pointer transition-colors"
-                    style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    className="absolute bottom-2.5 right-2.5 w-7 h-7 rounded-lg overlay-control flex items-center justify-center cursor-pointer transition-colors"
                   >
                     <input type="file" accept="image/*,video/*" multiple className="sr-only" onChange={e => handleFileChange(e, rt.id)} />
                     <ImagePlus size={12} />
@@ -703,8 +695,7 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
                   {/* Media count — bottom left */}
                   {rt.media.length > 0 && (
                     <div
-                      className="absolute bottom-2.5 left-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-white/50"
-                      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)' }}
+                      className="absolute bottom-2.5 left-2.5 overlay-control flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]"
                     >
                       <Film size={9} />
                       {rt.media.length}
@@ -713,9 +704,9 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 p-3 border-t border-white/[0.06]">
-                  <h3 className="font-bold text-white/95 text-base leading-none truncate">{rt.name}</h3>
-                  <p className="text-[11px] text-white/35 mt-1">
+                <div className="flex-1 p-3 border-t border-m-border">
+                  <h3 className="font-bold text-main text-base leading-none truncate">{rt.name}</h3>
+                  <p className="text-[11px] text-subtle mt-1">
                     {rt.amenities.length} {tr ? 'imkan' : 'amenity'}
                     {' · '}
                     {rt.media.length} {tr ? 'medya' : 'media'}
@@ -726,7 +717,7 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
                         <span key={i} className="tag tag-muted text-[10px]">{a}</span>
                       ))}
                       {rt.amenities.length > 4 && (
-                        <span className="tag tag-muted text-[10px] text-white/30">+{rt.amenities.length - 4}</span>
+                        <span className="tag tag-muted text-[10px] text-subtle">+{rt.amenities.length - 4}</span>
                       )}
                     </div>
                   )}
@@ -752,8 +743,8 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
                     <BedDouble size={18} className="text-brand-accent" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-white/95">{rt.name}</h3>
-                    <p className="text-[11px] text-white/35 mt-0.5">
+                    <h3 className="font-bold text-main">{rt.name}</h3>
+                    <p className="text-[11px] text-subtle mt-0.5">
                       {rt.amenities.length} {tr ? 'imkan' : 'amenity'}
                       {' · '}
                       {rt.media.length} {tr ? 'medya dosyası' : 'media file'}
@@ -770,11 +761,11 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
                     {tr ? 'Düzenle' : 'Edit'}
                   </button>
                   {deletingId === rt.id ? (
-                    <Loader2 size={14} className="animate-spin text-white/30" />
+                    <Loader2 size={14} className="animate-spin text-subtle" />
                   ) : (
                     <button
                       onClick={() => initiateDelete(rt)}
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-subtle hover:text-red-400 hover:bg-red-400/10 transition-all"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -782,7 +773,7 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
                 </div>
               </div>
 
-              <div className="px-5 py-3 border-t border-white/[0.06]">
+              <div className="px-5 py-3 border-t border-m-border">
                 {rt.amenities.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {rt.amenities.map((a, i) => (
@@ -790,20 +781,20 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-white/25 italic">
+                  <p className="text-[11px] text-subtle italic">
                     {tr ? 'Henüz imkan eklenmemiş' : 'No amenities added yet'}
                   </p>
                 )}
               </div>
 
-              <div className="px-5 pb-5 pt-3 border-t border-white/[0.06]">
+              <div className="px-5 pb-5 pt-3 border-t border-m-border">
                 <p className="section-title mb-3">{tr ? 'Medya' : 'Media'}</p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                   {rt.media.map(m => {
                     const isVideo = m.mimeType.startsWith('video/');
                     const src = m.pathThumb ? `/uploads/${m.pathThumb}` : `/uploads/${m.pathOriginal}`;
                     return (
-                      <div key={m.id} className="relative group rounded-xl overflow-hidden border border-white/10 aspect-square bg-black/30">
+                      <div key={m.id} className="relative group rounded-xl overflow-hidden border border-m-border aspect-square media-placeholder">
                         {isVideo ? (
                           <video src={`/uploads/${m.pathOriginal}`} className="w-full h-full object-cover" muted playsInline preload="metadata" />
                         ) : (
@@ -812,17 +803,17 @@ export function RoomTypeManager({ viewMode = 'list' }: { viewMode?: 'card' | 'li
                         )}
                         <button
                           onClick={() => handleDeleteMedia(m.id, rt.id)}
-                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
+                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full overlay-control flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400"
                         >
-                          <Trash2 size={11} className="text-white" />
+                          <Trash2 size={11} className="text-current" />
                         </button>
                       </div>
                     );
                   })}
 
-                  <label className="aspect-square rounded-xl border border-dashed border-white/10 hover:border-brand-accent/40 flex items-center justify-center bg-white/[0.02] hover:bg-brand-accent/5 transition-all cursor-pointer group">
+                  <label className="aspect-square rounded-xl border border-dashed border-m-border hover:border-brand-accent/40 flex items-center justify-center bg-m-surface hover:bg-brand-accent/5 transition-all cursor-pointer group">
                     <input type="file" accept="image/*,video/*" multiple className="sr-only" onChange={e => handleFileChange(e, rt.id)} />
-                    <ImagePlus size={16} className="text-white/20 group-hover:text-brand-accent/60 transition-colors" />
+                    <ImagePlus size={16} className="text-subtle group-hover:text-brand-accent/60 transition-colors" />
                   </label>
                 </div>
               </div>

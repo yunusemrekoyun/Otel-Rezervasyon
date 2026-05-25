@@ -52,7 +52,7 @@ type RoleFilter = typeof ROLE_FILTER_SLUGS[number];
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function RoleBadge({ role }: { role: Role }) {
-  const s = ROLE_STYLE[role.slug] ?? { bg: 'bg-white/5', text: 'text-white/50', border: 'border-white/10' };
+  const s = ROLE_STYLE[role.slug] ?? { bg: 'bg-m-surface2', text: 'text-muted', border: 'border-m-border' };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${s.bg} ${s.text} ${s.border}`}>
       <ShieldCheck size={9} />
@@ -63,7 +63,7 @@ function RoleBadge({ role }: { role: Role }) {
 
 function Avatar({ user }: { user: UserRow }) {
   const initials = [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join('').toUpperCase() || user.email[0].toUpperCase();
-  const s = ROLE_STYLE[user.role.slug] ?? { bg: 'bg-white/5', text: 'text-white/50', border: 'border-white/10' };
+  const s = ROLE_STYLE[user.role.slug] ?? { bg: 'bg-m-surface2', text: 'text-muted', border: 'border-m-border' };
   return (
     <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 border ${s.bg} ${s.text} ${s.border}`}>
       {initials}
@@ -93,27 +93,26 @@ function RoleDropdown({
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-colors text-sm text-white/80 w-full"
+        className="control-base flex items-center gap-2 px-3 py-2 text-sm w-full"
       >
         {selected && <RoleBadge role={selected} />}
         <span className="flex-1 text-left">{selected?.name ?? '—'}</span>
-        <ChevronDown size={12} className="text-white/30 shrink-0" />
+        <ChevronDown size={12} className="text-subtle shrink-0" />
       </button>
 
       {open && (
         <div
-          className="absolute left-0 right-0 top-full mt-1.5 rounded-xl border border-white/10 overflow-y-auto z-[200] max-h-52"
-          style={{ background: 'rgba(13,15,19,0.96)', backdropFilter: 'blur(12px)' }}
+          className="absolute left-0 right-0 top-full mt-1.5 modal-shell overflow-y-auto z-[200] max-h-52"
         >
           {roles.map(r => {
-            const s = ROLE_STYLE[r.slug] ?? { bg: '', text: 'text-white/60', border: '' };
+            const s = ROLE_STYLE[r.slug] ?? { bg: '', text: 'text-muted', border: '' };
             const isActive = r.id === value;
             return (
               <button
                 key={r.id}
                 type="button"
                 onClick={() => { onChange(r.id); setOpen(false); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${isActive ? 'bg-white/5' : 'hover:bg-white/[0.04]'}`}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${isActive ? 'bg-m-surface2' : 'hover:bg-m-hover'}`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.bg.replace('/10', '')} ${s.bg.includes('brand') ? 'bg-brand-accent' : ''}`} />
                 <span className={`flex-1 text-left ${s.text}`}>{r.name}</span>
@@ -175,22 +174,21 @@ function EditModal({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="flex min-h-full items-center justify-center p-4">
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 shadow-2xl"
-        style={{ background: '#0d0f13' }}
+        className="w-full max-w-md modal-shell"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.06] rounded-t-2xl overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-m-border rounded-t-2xl overflow-hidden">
           <div className="flex items-center gap-2.5">
             <Avatar user={user} />
             <div>
-              <p className="text-sm font-bold text-white/90 leading-none">
+              <p className="text-sm font-bold text-main leading-none">
                 {user.firstName || user.lastName ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : user.email}
               </p>
-              <p className="text-[11px] text-white/30 mt-0.5">{user.email}</p>
+              <p className="text-[11px] text-subtle mt-0.5">{user.email}</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-colors">
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-subtle hover:text-main hover:bg-m-hover transition-colors">
             <X size={14} />
           </button>
         </div>
@@ -201,28 +199,28 @@ function EditModal({
           {/* Name row */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Ad' : 'First Name'}</label>
+              <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Ad' : 'First Name'}</label>
               <input
                 value={form.firstName}
                 onChange={e => set('firstName', e.target.value)}
                 placeholder={tr ? 'Ad' : 'First name'}
-                className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-brand-accent/40"
+                className="control-base px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Soyad' : 'Last Name'}</label>
+              <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Soyad' : 'Last Name'}</label>
               <input
                 value={form.lastName}
                 onChange={e => set('lastName', e.target.value)}
                 placeholder={tr ? 'Soyad' : 'Last name'}
-                className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-brand-accent/40"
+                className="control-base px-3 py-2 text-sm"
               />
             </div>
           </div>
 
           {/* Phone */}
           <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Telefon' : 'Phone'}</label>
+            <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Telefon' : 'Phone'}</label>
             <PhoneInput
               value={form.phone ?? ''}
               onChange={v => set('phone', v)}
@@ -231,7 +229,7 @@ function EditModal({
 
           {/* Role */}
           <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Rol' : 'Role'}</label>
+            <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Rol' : 'Role'}</label>
             <RoleDropdown roles={roles} value={form.roleId} onChange={id => set('roleId', id)} />
           </div>
 
@@ -291,8 +289,7 @@ function DeleteModal({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="flex min-h-full items-center justify-center p-4">
       <div
-        className="w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
-        style={{ background: '#0d0f13' }}
+        className="w-full max-w-sm modal-shell overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-5 space-y-4">
@@ -301,8 +298,8 @@ function DeleteModal({
               <AlertTriangle size={16} className="text-red-400" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white/90">{tr ? 'Kullanıcıyı Sil' : 'Delete User'}</p>
-              <p className="text-[11px] text-white/35 mt-1 leading-relaxed">
+              <p className="text-sm font-bold text-main">{tr ? 'Kullanıcıyı Sil' : 'Delete User'}</p>
+              <p className="text-[11px] text-subtle mt-1 leading-relaxed">
                 {tr
                   ? `"${displayName}" adlı kullanıcı kalıcı olarak silinecek. Bu işlem geri alınamaz.`
                   : `"${displayName}" will be permanently deleted. This action cannot be undone.`}
@@ -379,7 +376,7 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
 
   // Stats — staff only
   const stats = [
-    { label: tr ? 'Toplam Ekip'  : 'Total Staff',    value: staffUsers.length,                                             cls: 'text-white/70' },
+    { label: tr ? 'Toplam Ekip'  : 'Total Staff',    value: staffUsers.length,                                             cls: 'text-main' },
     { label: 'Admin',                                 value: staffUsers.filter(u => u.role.slug === 'admin').length,        cls: 'text-brand-accent' },
     { label: tr ? 'Personel'     : 'Staff',           value: staffUsers.filter(u => u.role.slug === 'personel').length,    cls: 'text-sky-400' },
     { label: tr ? 'Temizlikçi'   : 'Housekeeping',   value: staffUsers.filter(u => u.role.slug === 'temizlikci').length,   cls: 'text-amber-400' },
@@ -421,9 +418,9 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
       {/* ── Stats bar ── */}
       <div className="grid grid-cols-5 gap-2">
         {stats.map(s => (
-          <div key={s.label} className="rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2.5">
+          <div key={s.label} className="surface-card px-3 py-2.5">
             <p className={`text-xl font-black tabular-nums leading-none ${s.cls}`}>{loading ? '—' : s.value}</p>
-            <p className="text-[10px] text-white/28 mt-1 leading-tight">{s.label}</p>
+            <p className="text-[10px] text-subtle mt-1 leading-tight">{s.label}</p>
           </div>
         ))}
       </div>
@@ -432,17 +429,17 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
       <div className="flex flex-col sm:flex-row gap-2.5">
         {/* Search */}
         <div className="relative flex-1">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle pointer-events-none" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={tr ? 'Ad, soyad veya e-posta ara...' : 'Search name or email...'}
-            className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/[0.03] border border-white/8 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-brand-accent/40"
+            className="control-base pl-9 pr-3 py-2 text-sm"
           />
         </div>
 
         {/* Role filter */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-x-auto no-scrollbar">
+        <div className="tab-list">
           {ROLE_FILTER_SLUGS.map(slug => {
             const isActive = roleFilter === slug;
             return (
@@ -452,7 +449,7 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
                 className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
                   isActive
                     ? 'bg-brand-accent/15 text-brand-accent border border-brand-accent/20'
-                    : 'text-white/40 hover:text-white/70 border border-transparent hover:bg-white/5'
+                    : 'text-muted hover:text-main border border-transparent hover:bg-m-hover'
                 }`}
               >
                 {filterLabels[slug]}
@@ -468,14 +465,14 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
           <Loader2 size={20} className="animate-spin text-brand-accent/50" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-white/20">
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-faint">
           <Users size={32} />
           <p className="text-sm">{tr ? 'Kullanıcı bulunamadı.' : 'No users found.'}</p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: '#0b0d11' }}>
+        <div className="table-shell">
           {/* Table header */}
-          <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-3 px-4 py-2.5 border-b border-white/[0.05] text-[10px] text-white/25 uppercase tracking-widest font-semibold">
+          <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-3 px-4 py-2.5 border-b border-m-border text-[10px] text-subtle uppercase tracking-widest font-semibold">
             <span className="w-9" />
             <span>{tr ? 'Kullanıcı' : 'User'}</span>
             <span className="text-right hidden sm:block">{tr ? 'Rezervasyon' : 'Reservations'}</span>
@@ -484,7 +481,7 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
           </div>
 
           {/* Rows */}
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-m-border">
             {filtered.map(user => {
               const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || '—';
               const joinDate = new Date(user.createdAt).toLocaleDateString(tr ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short', year: '2-digit' });
@@ -493,7 +490,7 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
               return (
                 <div
                   key={user.id}
-                  className={`grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-3 items-center px-4 py-3 transition-colors hover:bg-white/[0.02] ${!user.isActive ? 'opacity-50' : ''}`}
+                  className={`grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-3 items-center px-4 py-3 transition-colors hover:bg-m-hover ${!user.isActive ? 'opacity-60' : ''}`}
                 >
                   {/* Avatar */}
                   <Avatar user={user} />
@@ -501,10 +498,10 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
                   {/* User info */}
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-white/85 leading-none truncate">{displayName}</span>
+                      <span className="text-sm font-semibold text-main leading-none truncate">{displayName}</span>
                       <RoleBadge role={user.role} />
                       {isMe && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-white/5 text-white/30 border border-white/8">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-m-surface2 text-subtle border border-m-border">
                           {tr ? 'Sen' : 'You'}
                         </span>
                       )}
@@ -515,9 +512,9 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[11px] text-white/30 truncate">{user.email}</span>
+                      <span className="text-[11px] text-muted truncate">{user.email}</span>
                       {user.phone && (
-                        <span className="hidden sm:flex items-center gap-1 text-[11px] text-white/20">
+                        <span className="hidden sm:flex items-center gap-1 text-[11px] text-subtle">
                           <Phone size={9} /> {user.phone}
                         </span>
                       )}
@@ -525,13 +522,13 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
                   </div>
 
                   {/* Reservation count */}
-                  <div className="hidden sm:flex items-center gap-1 text-[11px] text-white/30">
+                  <div className="hidden sm:flex items-center gap-1 text-[11px] text-subtle">
                     <BookOpen size={10} />
                     {user._count.reservations}
                   </div>
 
                   {/* Join date */}
-                  <div className="flex items-center gap-1 text-[11px] text-white/25">
+                  <div className="flex items-center gap-1 text-[11px] text-subtle">
                     <CalendarDays size={10} className="shrink-0 hidden sm:block" />
                     <span className="tabular-nums">{joinDate}</span>
                   </div>
@@ -540,13 +537,13 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
                   <div className="flex items-center gap-1.5 justify-end w-16">
                     <button
                       onClick={() => setEditTarget(user)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/80 hover:bg-white/5 border border-transparent hover:border-white/8 transition-all"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-subtle hover:text-main hover:bg-m-hover border border-transparent hover:border-m-border transition-all"
                     >
                       <Pencil size={12} />
                     </button>
                     {deletingId === user.id ? (
                       <div className="w-7 h-7 flex items-center justify-center">
-                        <Loader2 size={12} className="animate-spin text-white/30" />
+                        <Loader2 size={12} className="animate-spin text-subtle" />
                       </div>
                     ) : (
                       <button
@@ -554,8 +551,8 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
                         disabled={isMe}
                         className={`w-7 h-7 rounded-lg flex items-center justify-center border border-transparent transition-all ${
                           isMe
-                            ? 'text-white/10 cursor-not-allowed'
-                            : 'text-white/30 hover:text-red-400 hover:bg-red-500/8 hover:border-red-500/15'
+                            ? 'text-faint cursor-not-allowed'
+                            : 'text-subtle hover:text-red-400 hover:bg-red-500/8 hover:border-red-500/15'
                         }`}
                       >
                         <Trash2 size={12} />

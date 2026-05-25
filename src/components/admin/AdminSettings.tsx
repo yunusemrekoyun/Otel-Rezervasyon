@@ -54,20 +54,20 @@ function HotelHoursView({ isTr, onBack }: { isTr: boolean; onBack: () => void })
     }
   }
 
-  const inputCls = 'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-accent/40 transition-colors';
+  const inputCls = 'control-base px-4 py-3 text-sm';
 
   return (
     <div className="space-y-5 max-w-3xl">
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/70 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-subtle hover:text-main transition-colors"
         >
           <ChevronLeft size={14} />
           {isTr ? 'Sistem Ayarları' : 'Settings'}
         </button>
-        <span className="text-white/15">/</span>
-        <span className="text-xs text-white/55 font-medium">
+        <span className="text-faint">/</span>
+        <span className="text-xs text-muted font-medium">
           {isTr ? 'Otel Saatleri' : 'Hotel Hours'}
         </span>
       </div>
@@ -77,10 +77,10 @@ function HotelHoursView({ isTr, onBack }: { isTr: boolean; onBack: () => void })
           <Clock size={18} className="text-brand-accent" />
         </div>
         <div>
-          <h2 className="text-base font-bold text-white/90 leading-none">
+          <h2 className="text-base font-bold text-main leading-none">
             {isTr ? 'Check-in / Check-out Saatleri' : 'Check-in / Check-out Times'}
           </h2>
-          <p className="text-[11px] text-white/25 mt-0.5">
+          <p className="text-[11px] text-subtle mt-0.5">
             {isTr
               ? 'Bu saatler rezervasyon onayında, müşteri panelinde ve personel ekranında gösterilir.'
               : 'These times are shown in booking confirmations, customer portal, and staff screens.'}
@@ -93,10 +93,10 @@ function HotelHoursView({ isTr, onBack }: { isTr: boolean; onBack: () => void })
           <Loader2 size={18} className="animate-spin text-brand-accent/40" />
         </div>
       ) : (
-        <form onSubmit={handleSave} className="bg-white/[0.025] border border-white/8 rounded-2xl p-6 space-y-5">
+        <form onSubmit={handleSave} className="surface-panel p-6 space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="block text-[10px] text-white/35 uppercase tracking-wider">
+              <label className="block text-[10px] text-subtle uppercase tracking-wider">
                 {isTr ? 'Check-in Saati' : 'Check-in Time'}
               </label>
               <input
@@ -106,12 +106,12 @@ function HotelHoursView({ isTr, onBack }: { isTr: boolean; onBack: () => void })
                 className={inputCls}
                 required
               />
-              <p className="text-[10px] text-white/20">
+              <p className="text-[10px] text-subtle">
                 {isTr ? 'Standart odaya giriş saati' : 'Standard room entry time'}
               </p>
             </div>
             <div className="space-y-2">
-              <label className="block text-[10px] text-white/35 uppercase tracking-wider">
+              <label className="block text-[10px] text-subtle uppercase tracking-wider">
                 {isTr ? 'Check-out Saati' : 'Check-out Time'}
               </label>
               <input
@@ -121,19 +121,19 @@ function HotelHoursView({ isTr, onBack }: { isTr: boolean; onBack: () => void })
                 className={inputCls}
                 required
               />
-              <p className="text-[10px] text-white/20">
+              <p className="text-[10px] text-subtle">
                 {isTr ? 'Standart odadan çıkış saati' : 'Standard room departure time'}
               </p>
             </div>
           </div>
 
           {/* Preview */}
-          <div className="rounded-xl border border-white/6 bg-white/[0.02] px-4 py-3 flex gap-6 flex-wrap">
+          <div className="surface-card px-4 py-3 flex gap-6 flex-wrap">
             <div>
-              <p className="text-[9px] text-white/25 uppercase tracking-wider mb-1">{isTr ? 'Önizleme' : 'Preview'}</p>
-              <p className="text-xs text-white/60">
+              <p className="text-[9px] text-subtle uppercase tracking-wider mb-1">{isTr ? 'Önizleme' : 'Preview'}</p>
+              <p className="text-xs text-muted">
                 {isTr ? 'Giriş' : 'Check-in'}: <span className="text-brand-accent font-semibold">{checkInTime}</span>
-                <span className="mx-3 text-white/15">·</span>
+                <span className="mx-3 text-faint">·</span>
                 {isTr ? 'Çıkış' : 'Check-out'}: <span className="text-brand-accent font-semibold">{checkOutTime}</span>
               </p>
             </div>
@@ -163,7 +163,7 @@ function HotelHoursView({ isTr, onBack }: { isTr: boolean; onBack: () => void })
 
 export function AdminSettings({ tr: isTr }: { tr: boolean }) {
   const [view, setView] = useState<View>('main');
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, mode } = useTheme();
 
   // ── Appearance sub-view ────────────────────────────────────────────────────
   if (view === 'appearance') {
@@ -174,13 +174,13 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setView('main')}
-            className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/70 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-subtle hover:text-main transition-colors"
           >
             <ChevronLeft size={14} />
             {isTr ? 'Sistem Ayarları' : 'Settings'}
           </button>
-          <span className="text-white/15">/</span>
-          <span className="text-xs text-white/55 font-medium">
+          <span className="text-faint">/</span>
+          <span className="text-xs text-muted font-medium">
             {isTr ? 'Görünüm' : 'Appearance'}
           </span>
         </div>
@@ -190,10 +190,10 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
             <Palette size={18} className="text-brand-accent" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white/90 leading-none">
+            <h2 className="text-base font-bold text-main leading-none">
               {isTr ? 'Tema Seçimi' : 'Theme Selection'}
             </h2>
-            <p className="text-[11px] text-white/25 mt-0.5">
+            <p className="text-[11px] text-subtle mt-0.5">
               {isTr
                 ? 'Sitenin global renk paletini ve temasını değiştirin.'
                 : 'Change the global color palette and theme of the site.'}
@@ -205,25 +205,40 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {THEMES.map((t) => {
             const isActive = theme === t.id;
+            const activeBase = mode === 'light' ? t.lightBase : t.base;
+            const activeSurface = mode === 'light' ? t.lightSurface : t.surface;
+            const previewBase = mode === 'light' ? t.base : t.lightBase;
+            const previewSurface = mode === 'light' ? t.surface : t.lightSurface;
             return (
               <div
                 key={t.id}
                 onClick={() => setTheme(t.id as Parameters<typeof setTheme>[0])}
-                className={`relative p-4 rounded-2xl border cursor-pointer transition-all ${
+                className={`relative p-4 rounded-xl border cursor-pointer transition-all ${
                   isActive
-                    ? 'bg-surface-glass border-brand-accent shadow-lg shadow-brand-accent/10'
-                    : 'bg-surface-glass border-border-subtle hover:border-border-glass hover:bg-surface-glass-hover'
+                    ? 'bg-brand-accent/10 border-brand-accent shadow-lg shadow-brand-accent/10'
+                    : 'surface-card hover:border-m-border2 hover:bg-m-hover'
                 }`}
               >
-                <div className="flex justify-between items-start mb-3">
-                  <span className="text-xs font-semibold text-white/70">{t.name}</span>
+                <div className="flex justify-between items-start gap-2 mb-3">
+                  <div className="min-w-0">
+                    <span className="text-xs font-semibold text-main">{t.name}</span>
+                    <p className="text-[10px] text-subtle mt-0.5 leading-snug">{t.mood}</p>
+                  </div>
                   {isActive && (
                     <CheckCircle2 size={13} className="text-brand-accent shrink-0" />
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <div className="flex-1 h-7 rounded-lg" style={{ backgroundColor: t.base }} />
-                  <div className="w-7 h-7 rounded-lg" style={{ backgroundColor: t.accent }} />
+                <div className="space-y-1.5">
+                  <div className="grid grid-cols-[1fr_1fr_2rem] gap-1.5">
+                    <div className="h-8 rounded-lg border border-m-border" style={{ backgroundColor: activeBase }} />
+                    <div className="h-8 rounded-lg border border-m-border" style={{ backgroundColor: activeSurface }} />
+                    <div className="h-8 rounded-lg border border-m-border" style={{ backgroundColor: t.accent }} />
+                  </div>
+                  <div className="grid grid-cols-[1fr_1fr_2rem] gap-1.5 opacity-55">
+                    <div className="h-2 rounded-full border border-m-border" style={{ backgroundColor: previewBase }} />
+                    <div className="h-2 rounded-full border border-m-border" style={{ backgroundColor: previewSurface }} />
+                    <div className="h-2 rounded-full border border-m-border" style={{ backgroundColor: t.accent }} />
+                  </div>
                 </div>
                 {isActive && (
                   <div className="mt-2.5">
@@ -311,14 +326,14 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
 
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-          <Server size={18} className="text-white/40" />
+        <div className="w-10 h-10 rounded-xl bg-m-surface2 border border-m-border flex items-center justify-center">
+          <Server size={18} className="text-subtle" />
         </div>
         <div>
-          <h2 className="text-base font-bold text-white/90 leading-none">
+          <h2 className="text-base font-bold text-main leading-none">
             {isTr ? 'Sistem Ayarları' : 'System Settings'}
           </h2>
-          <p className="text-[11px] text-white/25 mt-0.5">
+          <p className="text-[11px] text-subtle mt-0.5">
             {isTr
               ? 'Site yapılandırması ve genel sistem ayarları.'
               : 'Site configuration and general system settings.'}
@@ -333,28 +348,28 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
             key={id}
             onClick={available ? onClick : undefined}
             className={`
-              relative p-5 rounded-2xl border transition-all
+              relative p-5 rounded-xl border transition-all
               ${available
-                ? 'bg-white/[0.025] border-white/8 hover:border-white/16 hover:bg-white/[0.04] cursor-pointer group'
-                : 'bg-white/[0.01] border-white/5 opacity-45 cursor-not-allowed'}
+                ? 'surface-card hover:border-m-border2 hover:bg-m-hover cursor-pointer group'
+                : 'surface-card opacity-45 cursor-not-allowed'}
             `}
           >
             <div className="flex items-start justify-between gap-3">
               <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 transition-colors ${
                 available
-                  ? 'bg-brand-accent/8 border-brand-accent/18 group-hover:bg-brand-accent/15'
-                  : 'bg-white/4 border-white/8'
+                  ? 'bg-brand-accent/10 border-brand-accent/20 group-hover:bg-brand-accent/15'
+                  : 'bg-m-surface2 border-m-border'
               }`}>
-                <Icon size={18} className={available ? 'text-brand-accent' : 'text-white/30'} />
+                <Icon size={18} className={available ? 'text-brand-accent' : 'text-subtle'} />
               </div>
 
               {available ? (
                 <ChevronRight
                   size={15}
-                  className="text-white/20 group-hover:text-brand-accent/50 transition-colors mt-0.5 shrink-0"
+                  className="text-subtle group-hover:text-brand-accent/70 transition-colors mt-0.5 shrink-0"
                 />
               ) : (
-                <span className="text-[9px] text-white/20 font-bold uppercase tracking-widest mt-1 shrink-0">
+                <span className="text-[9px] text-subtle font-bold uppercase tracking-widest mt-1 shrink-0">
                   {isTr ? 'Yakında' : 'Soon'}
                 </span>
               )}
@@ -362,14 +377,14 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
 
             <div className="mt-3">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-white/80">{title}</p>
+                <p className="text-sm font-bold text-main">{title}</p>
                 {badge && (
-                  <span className="inline-flex px-1.5 py-0.5 rounded-md bg-brand-accent/12 border border-brand-accent/20 text-[9px] text-brand-accent font-bold uppercase tracking-wide">
+                  <span className="inline-flex px-1.5 py-0.5 rounded-md bg-brand-accent/15 border border-brand-accent/20 text-[9px] text-brand-accent font-bold uppercase tracking-wide">
                     {badge}
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-white/35 mt-1 leading-relaxed">{desc}</p>
+              <p className="text-[11px] text-muted mt-1 leading-relaxed">{desc}</p>
             </div>
           </div>
         ))}

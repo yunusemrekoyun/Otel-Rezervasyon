@@ -11,6 +11,7 @@ import {
   MONTHS_TR, MONTHS_EN,
   startOfDay, addMonths, daysInMonth, firstDayOfMonth,
 } from '@/components/ui/CalendarPicker';
+import { useTheme } from '@/theme/ThemeContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,7 @@ interface TooltipState {
 }
 
 function OccupancyTooltip({ info, tr }: { info: TooltipState; tr: boolean }) {
+  const { mode } = useTheme();
   const label = new Date(info.day + 'T12:00:00').toLocaleDateString(tr ? 'tr-TR' : 'en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
@@ -81,6 +83,7 @@ function OccupancyTooltip({ info, tr }: { info: TooltipState; tr: boolean }) {
 
   return createPortal(
     <div
+      data-mode={mode}
       className="pointer-events-none fixed z-[9999]"
       style={{ top, left, transform: 'translate(-50%, -100%)' }}
     >
@@ -89,13 +92,13 @@ function OccupancyTooltip({ info, tr }: { info: TooltipState; tr: boolean }) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 4, scale: 0.97 }}
         transition={{ duration: 0.12 }}
-        className="bg-[#1c1c1c] border border-white/12 rounded-xl shadow-2xl p-3 min-w-[180px] max-w-[240px]"
+        className="modal-shell p-3 min-w-[180px] max-w-[240px]"
       >
-        <p className="text-[11px] font-semibold text-white mb-2.5 border-b border-white/8 pb-2">{label}</p>
+        <p className="text-[11px] font-semibold text-main mb-2.5 border-b border-m-border pb-2">{label}</p>
 
         {info.bookedRooms.length > 0 && (
           <div className="mb-2">
-            <p className="text-[9px] text-white/30 uppercase tracking-wider mb-1.5">
+            <p className="text-[9px] text-subtle uppercase tracking-wider mb-1.5">
               {tr ? `Dolu — ${info.bookedRooms.length} oda` : `Booked — ${info.bookedRooms.length} room${info.bookedRooms.length > 1 ? 's' : ''}`}
             </p>
             <div className="space-y-1">
@@ -111,14 +114,14 @@ function OccupancyTooltip({ info, tr }: { info: TooltipState; tr: boolean }) {
 
         {info.availRooms.length > 0 && (
           <div>
-            <p className="text-[9px] text-white/30 uppercase tracking-wider mb-1.5">
+            <p className="text-[9px] text-subtle uppercase tracking-wider mb-1.5">
               {tr ? `Müsait — ${info.availRooms.length} oda` : `Available — ${info.availRooms.length} room${info.availRooms.length > 1 ? 's' : ''}`}
             </p>
             <div className="space-y-1">
               {info.availRooms.map(r => (
                 <div key={r.id} className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                  <span className="text-[10px] text-emerald-300/70 font-medium">{r.name}</span>
+                  <span className="text-[10px] text-emerald-400 font-medium">{r.name}</span>
                 </div>
               ))}
             </div>
@@ -126,7 +129,7 @@ function OccupancyTooltip({ info, tr }: { info: TooltipState; tr: boolean }) {
         )}
 
         {/* Arrow */}
-        <div className="absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 rotate-45 bg-[#1c1c1c] border-r border-b border-white/12" />
+        <div className="absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 rotate-45 border-r border-b border-m-border" style={{ background: 'var(--m-modal)' }} />
       </motion.div>
     </div>,
     document.body,
@@ -139,8 +142,8 @@ function statusBadge(status: string, tr: boolean) {
     case 'pending':    return { label: tr ? 'Bekliyor'       : 'Pending',     icon: Clock,        cls: 'text-amber-400 bg-amber-400/10 border-amber-400/20' };
     case 'cancelled':  return { label: tr ? 'İptal'          : 'Cancelled',   icon: XCircle,      cls: 'text-red-400 bg-red-400/10 border-red-400/20' };
     case 'checked_in': return { label: tr ? 'Check-in'       : 'Checked In',  icon: MapPin,       cls: 'text-brand-accent bg-brand-accent/10 border-brand-accent/20' };
-    case 'checked_out':return { label: tr ? 'Ayrıldı'        : 'Checked Out', icon: CheckCircle2, cls: 'text-white/40 bg-white/5 border-white/10' };
-    default:           return { label: status,                                   icon: AlertCircle,  cls: 'text-white/40 bg-white/5 border-white/10' };
+    case 'checked_out':return { label: tr ? 'Ayrıldı'        : 'Checked Out', icon: CheckCircle2, cls: 'text-muted bg-m-surface2 border-m-border' };
+    default:           return { label: status,                                   icon: AlertCircle,  cls: 'text-muted bg-m-surface2 border-m-border' };
   }
 }
 
@@ -156,7 +159,7 @@ const DAY_LABELS_TR = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
 const DAY_LABELS_EN = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
 function cellStyle(booked: number, total: number): { bg: string; text: string; bar: string } {
-  if (total === 0 || booked === 0) return { bg: '', text: 'text-white/60', bar: '' };
+  if (total === 0 || booked === 0) return { bg: '', text: 'text-muted', bar: '' };
   const pct = booked / total;
   if (pct < 0.5)  return { bg: 'bg-amber-500/12',  text: 'text-amber-300',  bar: 'bg-amber-400' };
   if (pct < 1)    return { bg: 'bg-orange-500/20', text: 'text-orange-300', bar: 'bg-orange-500' };
@@ -214,14 +217,14 @@ function AvailabilityCalendar({ tr }: { tr: boolean }) {
   }
 
   return (
-    <div className="bg-white/3 border border-white/8 rounded-2xl p-5">
+    <div className="surface-card p-5">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-white">
+          <h3 className="text-sm font-semibold text-main">
             {tr ? 'Doluluk Takvimi' : 'Occupancy Calendar'}
           </h3>
-          <p className="text-[10px] text-white/30 mt-0.5">
+          <p className="text-[10px] text-subtle mt-0.5">
             {tr
               ? `Ortalama doluluk %${avgOccupancy} · ${daysFullyBooked} gün tam dolu · Toplam ${totalRooms} oda`
               : `Avg occupancy ${avgOccupancy}% · ${daysFullyBooked} fully booked days · ${totalRooms} rooms`}
@@ -230,16 +233,16 @@ function AvailabilityCalendar({ tr }: { tr: boolean }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => { setCurrent(m => addMonths(m, -1)); setTooltip(null); }}
-            className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors"
+            className="w-7 h-7 rounded-lg surface-soft hover:bg-m-hover flex items-center justify-center text-muted hover:text-main transition-colors"
           >
             <ChevronLeft size={14} />
           </button>
-          <span className="text-xs font-medium text-white/60 min-w-[110px] text-center">
+          <span className="text-xs font-medium text-muted min-w-[110px] text-center">
             {monthNames[month]} {year}
           </span>
           <button
             onClick={() => { setCurrent(m => addMonths(m, 1)); setTooltip(null); }}
-            className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors"
+            className="w-7 h-7 rounded-lg surface-soft hover:bg-m-hover flex items-center justify-center text-muted hover:text-main transition-colors"
           >
             <ChevronRight size={14} />
           </button>
@@ -247,14 +250,14 @@ function AvailabilityCalendar({ tr }: { tr: boolean }) {
       </div>
 
       {loading ? (
-        <div className="h-48 flex items-center justify-center text-white/30 text-xs">
+        <div className="h-48 flex items-center justify-center text-subtle text-xs">
           {tr ? 'Yükleniyor…' : 'Loading…'}
         </div>
       ) : (
         <div className="grid grid-cols-7 gap-1" onMouseLeave={() => setTooltip(null)}>
           {/* Day headers */}
           {dayLabels.map(d => (
-            <div key={d} className="text-[10px] text-white/25 font-medium text-center py-1">{d}</div>
+          <div key={d} className="text-[10px] text-subtle font-medium text-center py-1">{d}</div>
           ))}
 
           {/* Empty leading cells */}
@@ -278,12 +281,12 @@ function AvailabilityCalendar({ tr }: { tr: boolean }) {
                   relative flex flex-col items-center justify-center rounded-lg py-1.5 px-0.5
                   transition-colors select-none cursor-default
                   ${style.bg}
-                  ${isPast ? 'opacity-40' : booked > 0 ? 'hover:brightness-125' : 'hover:bg-white/5'}
+                  ${isPast ? 'opacity-45' : booked > 0 ? 'hover:brightness-110' : 'hover:bg-m-hover'}
                 `}
                 onMouseEnter={booked > 0 ? e => handleMouseEnter(e, s, bookedMap) : undefined}
               >
                 <span className={`text-xs font-medium leading-none ${
-                  isToday ? 'text-brand-accent font-bold' : booked > 0 ? style.text : 'text-white/55'
+                  isToday ? 'text-brand-accent font-bold' : booked > 0 ? style.text : 'text-muted'
                 }`}>
                   {day}
                 </span>
@@ -295,7 +298,7 @@ function AvailabilityCalendar({ tr }: { tr: boolean }) {
                 )}
 
                 {booked > 0 && totalRooms > 0 && (
-                  <div className="absolute bottom-0.5 left-1 right-1 h-[2px] rounded-full bg-white/5">
+                  <div className="absolute bottom-0.5 left-1 right-1 h-[2px] rounded-full bg-m-surface2">
                     <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${pct}%` }} />
                   </div>
                 )}
@@ -310,24 +313,24 @@ function AvailabilityCalendar({ tr }: { tr: boolean }) {
       )}
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/5 flex-wrap">
+      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-m-border flex-wrap">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-white/8 border border-white/10" />
-          <span className="text-[10px] text-white/35">{tr ? 'Müsait' : 'Available'}</span>
+          <div className="w-3 h-3 rounded-sm bg-m-surface2 border border-m-border" />
+          <span className="text-[10px] text-subtle">{tr ? 'Müsait' : 'Available'}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-amber-500/20 border border-amber-400/20" />
-          <span className="text-[10px] text-white/35">{tr ? 'Kısmen dolu (&lt;50%)' : 'Partial (&lt;50%)'}</span>
+          <span className="text-[10px] text-subtle">{tr ? 'Kısmen dolu (&lt;50%)' : 'Partial (&lt;50%)'}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-orange-500/25 border border-orange-500/20" />
-          <span className="text-[10px] text-white/35">{tr ? 'Yoğun (50–99%)' : 'Busy (50–99%)'}</span>
+          <span className="text-[10px] text-subtle">{tr ? 'Yoğun (50–99%)' : 'Busy (50–99%)'}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-red-500/30 border border-red-500/20" />
-          <span className="text-[10px] text-white/35">{tr ? 'Tam dolu' : 'Fully booked'}</span>
+          <span className="text-[10px] text-subtle">{tr ? 'Tam dolu' : 'Fully booked'}</span>
         </div>
-        <span className="text-[10px] text-white/20 ml-auto">{tr ? 'Dolu günlerin üzerine gelin' : 'Hover over busy days'}</span>
+        <span className="text-[10px] text-faint ml-auto">{tr ? 'Dolu günlerin üzerine gelin' : 'Hover over busy days'}</span>
       </div>
 
       {/* Tooltip portal */}
@@ -349,20 +352,20 @@ function ReservationRow({ res, tr }: { res: Reservation; tr: boolean }) {
       layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4 py-3 bg-white/2 hover:bg-white/4 border border-white/6 rounded-xl transition-colors"
+      className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4 py-3 surface-card hover:bg-m-hover transition-colors"
     >
       {/* Guest + room */}
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-white/85 truncate">
+          <p className="text-sm font-medium text-main truncate">
             {res.firstName} {res.lastName}
           </p>
-          <span className="text-[10px] text-white/25 truncate hidden sm:block">{res.email}</span>
+          <span className="text-[10px] text-subtle truncate hidden sm:block">{res.email}</span>
         </div>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <BedDouble size={10} className="text-white/25 shrink-0" />
-          <span className="text-[11px] text-white/40 truncate">{res.room.name} · {res.room.roomType.name}</span>
-          <span className="text-[11px] text-white/25 shrink-0">
+          <BedDouble size={10} className="text-subtle shrink-0" />
+          <span className="text-[11px] text-muted truncate">{res.room.name} · {res.room.roomType.name}</span>
+          <span className="text-[11px] text-subtle shrink-0">
             · {res.adultsCount}<Users size={9} className="inline ml-0.5" />
           </span>
         </div>
@@ -370,8 +373,8 @@ function ReservationRow({ res, tr }: { res: Reservation; tr: boolean }) {
 
       {/* Dates */}
       <div className="text-right shrink-0 hidden md:block">
-        <p className="text-[11px] text-white/55">{fmtDate(res.checkInDate, tr)}</p>
-        <p className="text-[10px] text-white/25">{res.nights} {tr ? 'gece' : 'night'}</p>
+        <p className="text-[11px] text-muted">{fmtDate(res.checkInDate, tr)}</p>
+        <p className="text-[10px] text-subtle">{res.nights} {tr ? 'gece' : 'night'}</p>
       </div>
 
       {/* Price */}
@@ -422,11 +425,11 @@ export function AdminReservations({ tr }: { tr: boolean }) {
       {/* All reservations table */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-white">
+          <h3 className="text-sm font-semibold text-main">
             {tr ? 'Tüm Rezervasyonlar' : 'All Reservations'}
-            <span className="ml-2 text-[10px] text-white/30 font-normal">({reservations.length})</span>
+            <span className="ml-2 text-[10px] text-subtle font-normal">({reservations.length})</span>
           </h3>
-          <div className="flex items-center gap-1 bg-white/3 border border-white/8 rounded-xl p-1">
+          <div className="tab-list">
             {filters.map(f => (
               <button
                 key={f.id}
@@ -434,7 +437,7 @@ export function AdminReservations({ tr }: { tr: boolean }) {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   filter === f.id
                     ? 'bg-brand-accent text-black'
-                    : 'text-white/40 hover:text-white/70'
+                    : 'text-muted hover:text-main'
                 }`}
               >
                 {f.label}
@@ -444,13 +447,13 @@ export function AdminReservations({ tr }: { tr: boolean }) {
         </div>
 
         {loading ? (
-          <div className="py-12 flex items-center justify-center text-white/30 text-sm">
+          <div className="py-12 flex items-center justify-center text-subtle text-sm">
             {tr ? 'Yükleniyor…' : 'Loading…'}
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-12 flex flex-col items-center justify-center gap-3 text-center">
-            <Calendar size={24} className="text-white/15" />
-            <p className="text-sm text-white/25">
+            <Calendar size={24} className="text-faint" />
+            <p className="text-sm text-subtle">
               {tr ? 'Rezervasyon bulunamadı.' : 'No reservations found.'}
             </p>
           </div>

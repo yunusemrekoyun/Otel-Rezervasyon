@@ -79,12 +79,12 @@ export function CalendarMonth({
 
   return (
     <div className="flex-1 min-w-0">
-      <p className="text-center text-sm font-semibold text-white mb-3">
+      <p className="text-center text-sm font-semibold text-main mb-3">
         {monthNames[month]} {year}
       </p>
       <div className="grid grid-cols-7 gap-0.5 text-center">
         {dayNames.map(d => (
-          <div key={d} className="text-[10px] text-white/30 font-medium py-1">{d}</div>
+          <div key={d} className="text-[10px] text-subtle font-medium py-1">{d}</div>
         ))}
         {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
         {Array.from({ length: days }).map((_, i) => {
@@ -92,12 +92,12 @@ export function CalendarMonth({
           const s = cellState(date);
 
           let cls = 'text-xs py-1.5 select-none ';
-          if (s.disabled && (s.isBooked || s.unavailable)) cls += 'bg-white/8 text-white/25 rounded-lg cursor-not-allowed';
-          else if (s.disabled)                    cls += 'text-white/15 cursor-not-allowed';
+          if (s.disabled && (s.isBooked || s.unavailable)) cls += 'bg-m-surface2 text-subtle rounded-lg cursor-not-allowed opacity-70';
+          else if (s.disabled)                    cls += 'text-faint cursor-not-allowed';
           else if (s.isSelected || s.isCheckIn || s.isCheckOut) cls += 'bg-brand-accent text-black font-bold rounded-lg cursor-pointer';
-          else if (s.inRange)                     cls += 'bg-brand-accent/20 text-white cursor-pointer';
-          else if (s.isToday)                     cls += 'text-brand-accent font-semibold hover:bg-white/10 rounded-lg cursor-pointer';
-          else                                    cls += 'text-white/70 hover:bg-white/10 hover:text-white rounded-lg cursor-pointer transition-all duration-150';
+          else if (s.inRange)                     cls += 'bg-brand-accent/20 text-main cursor-pointer';
+          else if (s.isToday)                     cls += 'text-brand-accent font-semibold hover:bg-m-hover rounded-lg cursor-pointer';
+          else                                    cls += 'text-muted hover:bg-m-hover hover:text-main rounded-lg cursor-pointer transition-all duration-150';
 
           return (
             <div
@@ -166,15 +166,15 @@ export function SingleDatePickerModal({
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ duration: 0.18 }}
         onClick={e => e.stopPropagation()}
-        className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5 w-full max-w-sm shadow-2xl"
+        className="modal-shell p-5 w-full max-w-sm"
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            {label && <p className="text-[10px] text-white/35 uppercase tracking-wider mb-0.5">{label}</p>}
-            <p className="text-sm font-semibold text-white">{formatSelected(selected)}</p>
+            {label && <p className="text-[10px] text-subtle uppercase tracking-wider mb-0.5">{label}</p>}
+            <p className="text-sm font-semibold text-main">{formatSelected(selected)}</p>
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white">
+          <button onClick={onClose} className="w-7 h-7 rounded-full bg-m-surface2 hover:bg-m-hover flex items-center justify-center text-muted hover:text-main">
             <X size={14} />
           </button>
         </div>
@@ -183,21 +183,21 @@ export function SingleDatePickerModal({
         <div className="flex items-center justify-between mb-3">
           <button
             onClick={() => setCurrent(m => addMonths(m, -1))}
-            className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white"
+            className="w-8 h-8 rounded-lg bg-m-surface2 hover:bg-m-hover flex items-center justify-center text-muted hover:text-main"
           >
             <ChevronLeft size={16} />
           </button>
 
           <button
             onClick={() => setShowYearPicker(p => !p)}
-            className="text-sm font-semibold text-white hover:text-brand-accent transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
+            className="text-sm font-semibold text-main hover:text-brand-accent transition-colors px-2 py-1 rounded-lg hover:bg-m-hover"
           >
             {monthNames[current.getMonth()]} {current.getFullYear()}
           </button>
 
           <button
             onClick={() => setCurrent(m => addMonths(m, 1))}
-            className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white"
+            className="w-8 h-8 rounded-lg bg-m-surface2 hover:bg-m-hover flex items-center justify-center text-muted hover:text-main"
           >
             <ChevronRight size={16} />
           </button>
@@ -211,7 +211,7 @@ export function SingleDatePickerModal({
               animate={{ height: 160, opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="overflow-y-auto mb-3 grid grid-cols-4 gap-1 rounded-xl bg-white/3 border border-white/5 p-2"
+              className="overflow-y-auto mb-3 grid grid-cols-4 gap-1 rounded-xl bg-m-surface border border-m-border p-2"
             >
               {years.map(y => (
                 <button
@@ -223,7 +223,7 @@ export function SingleDatePickerModal({
                   className={`text-xs py-1.5 rounded-lg transition-colors ${
                     y === current.getFullYear()
                       ? 'bg-brand-accent text-black font-bold'
-                      : 'text-white/50 hover:bg-white/10 hover:text-white'
+                      : 'text-muted hover:bg-m-hover hover:text-main'
                   }`}
                 >
                   {y}

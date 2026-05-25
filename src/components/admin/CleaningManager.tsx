@@ -38,7 +38,7 @@ const STATUS_STYLE: Record<string, { dot: string; label: string; labelEn: string
 };
 
 const PRIORITY_STYLE: Record<string, { cls: string; label: string; labelEn: string }> = {
-  normal: { cls: 'text-white/40 border-white/10 bg-white/[0.03]', label: 'Normal',  labelEn: 'Normal'  },
+  normal: { cls: 'text-muted border-m-border bg-m-surface2', label: 'Normal',  labelEn: 'Normal'  },
   urgent: { cls: 'text-red-400  border-red-500/20 bg-red-500/8',   label: 'Acil',    labelEn: 'Urgent'  },
 };
 
@@ -95,18 +95,17 @@ function CreateModal({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div className="flex min-h-full items-center justify-center p-4">
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 shadow-2xl"
-        style={{ background: '#0d0f13' }}
+        className="w-full max-w-md modal-shell"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.06] rounded-t-2xl">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-m-border rounded-t-2xl">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
               <Sparkles size={14} className="text-amber-400" />
             </div>
-            <p className="text-sm font-bold text-white/90">{tr ? 'Temizlik Görevi Oluştur' : 'Create Cleaning Task'}</p>
+            <p className="text-sm font-bold text-main">{tr ? 'Temizlik Görevi Oluştur' : 'Create Cleaning Task'}</p>
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-colors">
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-subtle hover:text-main hover:bg-m-hover transition-colors">
             <X size={14} />
           </button>
         </div>
@@ -114,11 +113,11 @@ function CreateModal({
         <div className="p-5 space-y-4">
           {/* Room */}
           <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Oda *' : 'Room *'}</label>
+            <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Oda *' : 'Room *'}</label>
             <select
               value={form.roomId}
               onChange={e => set('roomId', e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 focus:outline-none focus:border-brand-accent/40 appearance-none"
+              className="control-base px-3 py-2 text-sm appearance-none"
             >
               <option value="">{tr ? '— Oda seçin —' : '— Select room —'}</option>
               {rooms.map(r => (
@@ -131,11 +130,11 @@ function CreateModal({
 
           {/* Assign */}
           <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Atanan Kişi' : 'Assigned To'}</label>
+            <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Atanan Kişi' : 'Assigned To'}</label>
             <select
               value={form.assignedToId}
               onChange={e => set('assignedToId', e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 focus:outline-none focus:border-brand-accent/40 appearance-none"
+              className="control-base px-3 py-2 text-sm appearance-none"
             >
               <option value="">{tr ? '— Atanmamış —' : '— Unassigned —'}</option>
               {staff.map(s => (
@@ -146,7 +145,7 @@ function CreateModal({
 
           {/* Priority */}
           <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Öncelik' : 'Priority'}</label>
+            <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Öncelik' : 'Priority'}</label>
             <div className="flex gap-2">
               {(['normal', 'urgent'] as const).map(p => {
                 const s = PRIORITY_STYLE[p];
@@ -155,7 +154,7 @@ function CreateModal({
                     key={p}
                     type="button"
                     onClick={() => set('priority', p)}
-                    className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${form.priority === p ? s.cls : 'text-white/25 border-white/6 bg-transparent'}`}
+                    className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${form.priority === p ? s.cls : 'text-subtle border-m-border bg-transparent'}`}
                   >
                     {tr ? s.label : s.labelEn}
                   </button>
@@ -166,13 +165,13 @@ function CreateModal({
 
           {/* Notes */}
           <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1.5">{tr ? 'Not' : 'Notes'}</label>
+            <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Not' : 'Notes'}</label>
             <textarea
               value={form.notes}
               onChange={e => set('notes', e.target.value)}
               rows={2}
               placeholder={tr ? 'İsteğe bağlı açıklama...' : 'Optional note...'}
-              className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/8 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-brand-accent/40 resize-none"
+              className="control-base px-3 py-2 text-sm resize-none"
             />
           </div>
         </div>
@@ -283,16 +282,16 @@ export function CleaningManager({ tr }: Props) {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-2">
         {stats.map(s => (
-          <div key={s.label} className="rounded-xl border border-white/6 bg-white/[0.02] px-3 py-2.5">
+          <div key={s.label} className="surface-card px-3 py-2.5">
             <p className={`text-xl font-black tabular-nums leading-none ${s.cls}`}>{loading ? '—' : s.value}</p>
-            <p className="text-[10px] text-white/28 mt-1">{s.label}</p>
+            <p className="text-[10px] text-subtle mt-1">{s.label}</p>
           </div>
         ))}
       </div>
 
       {/* Controls */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+        <div className="tab-list">
           {filterTabs.map(tab => (
             <button
               key={tab.id}
@@ -300,7 +299,7 @@ export function CleaningManager({ tr }: Props) {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                 filter === tab.id
                   ? 'bg-brand-accent/15 text-brand-accent border border-brand-accent/20'
-                  : 'text-white/40 hover:text-white/70 border border-transparent hover:bg-white/5'
+                  : 'text-muted hover:text-main border border-transparent hover:bg-m-hover'
               }`}
             >
               {tab.label}
@@ -310,7 +309,7 @@ export function CleaningManager({ tr }: Props) {
 
         <button
           onClick={() => setShowCreate(true)}
-          className="btn-primary flex items-center gap-2 text-sm"
+          className="btn-primary inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm"
         >
           <Plus size={14} />
           {tr ? 'Görev Ata' : 'Assign Task'}
@@ -323,7 +322,7 @@ export function CleaningManager({ tr }: Props) {
           <Loader2 size={20} className="animate-spin text-brand-accent/50" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-white/20">
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-faint">
           <Sparkles size={32} />
           <p className="text-sm">{tr ? 'Görev bulunamadı.' : 'No tasks found.'}</p>
         </div>
@@ -338,32 +337,31 @@ export function CleaningManager({ tr }: Props) {
             return (
               <div
                 key={task.id}
-                className={`rounded-2xl border border-white/[0.07] px-4 py-3.5 flex items-start gap-4 transition-all hover:border-white/[0.12] ${task.status === 'done' ? 'opacity-60' : ''}`}
-                style={{ background: '#0b0d11' }}
+                className={`surface-card px-4 py-3.5 flex items-start gap-4 transition-all hover:border-m-border2 ${task.status === 'done' ? 'opacity-60' : ''}`}
               >
                 {/* Status dot + room */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${st.dot}`} />
-                    <span className="text-sm font-bold text-white/90">
+                    <span className="text-sm font-bold text-main">
                       {task.room.name}
-                      {task.room.floor != null && <span className="text-white/30 font-normal text-xs ml-1.5">· Kat {task.room.floor}</span>}
+                      {task.room.floor != null && <span className="text-subtle font-normal text-xs ml-1.5">· Kat {task.room.floor}</span>}
                     </span>
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${pr.cls}`}>
                       {tr ? pr.label : pr.labelEn}
                     </span>
-                    <span className="text-[10px] text-white/30">{tr ? st.label : task.status.replace('_', ' ')}</span>
+                    <span className="text-[10px] text-subtle">{tr ? st.label : task.status.replace('_', ' ')}</span>
                   </div>
 
                   <div className="flex items-center gap-4 mt-1.5 flex-wrap">
-                    <span className="flex items-center gap-1.5 text-[11px] text-white/35">
+                    <span className="flex items-center gap-1.5 text-[11px] text-muted">
                       <User size={10} />
                       {displayName(task.assignedTo) ?? (tr ? 'Atanmamış' : 'Unassigned')}
                     </span>
                     {task.notes && (
-                      <span className="text-[11px] text-white/25 italic truncate max-w-[200px]">"{task.notes}"</span>
+                      <span className="text-[11px] text-subtle italic truncate max-w-[200px]">"{task.notes}"</span>
                     )}
-                    <span className="text-[10px] text-white/20 tabular-nums ml-auto">
+                    <span className="text-[10px] text-subtle tabular-nums ml-auto">
                       {new Date(task.createdAt).toLocaleDateString(tr ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short' })}
                     </span>
                   </div>
@@ -372,7 +370,7 @@ export function CleaningManager({ tr }: Props) {
                 {/* Actions */}
                 <div className="flex items-center gap-1.5 shrink-0">
                   {isUpdating ? (
-                    <Loader2 size={14} className="animate-spin text-white/30" />
+                    <Loader2 size={14} className="animate-spin text-subtle" />
                   ) : task.status !== 'done' ? (
                     <>
                       {task.status === 'pending' && (
@@ -395,12 +393,12 @@ export function CleaningManager({ tr }: Props) {
                   ) : null}
 
                   {isDeleting ? (
-                    <Loader2 size={12} className="animate-spin text-white/20" />
+                    <Loader2 size={12} className="animate-spin text-subtle" />
                   ) : (
                     <button
                       onClick={() => deleteTask(task.id)}
                       title={tr ? 'Sil' : 'Delete'}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white/20 hover:text-red-400 hover:bg-red-500/8 border border-transparent hover:border-red-500/15 transition-all"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-subtle hover:text-red-400 hover:bg-red-500/8 border border-transparent hover:border-red-500/15 transition-all"
                     >
                       <Trash2 size={12} />
                     </button>

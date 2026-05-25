@@ -24,7 +24,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: ReactNode;
 }>) {
-  let initialTheme = 'woodnest';
+  let initialTheme = 'sunset';
   try {
     const themeSetting = await prisma.systemSetting.findUnique({ where: { key: 'theme' } });
     if (themeSetting?.value) {
