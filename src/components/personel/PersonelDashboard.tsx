@@ -19,6 +19,8 @@ export function PersonelDashboard({ tr: isTr }: { tr: boolean }) {
   const [checkedInCount, setCheckedInCount] = useState(0);
   const [contactCount, setContactCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [ciTime, setCiTime] = useState('14:00');
+  const [coTime, setCoTime] = useState('12:00');
 
   const [time, setTime] = useState(() => new Date());
   useEffect(() => {
@@ -29,10 +31,11 @@ export function PersonelDashboard({ tr: isTr }: { tr: boolean }) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [todayRes, allRes, contactRes] = await Promise.all([
+      const [todayRes, allRes, contactRes, timesRes] = await Promise.all([
         fetch('/api/checkin?today=true').then(r => r.json()),
         fetch('/api/reservations').then(r => r.json()),
         fetch('/api/contact').then(r => r.json()),
+        fetch('/api/settings/checkin-times').then(r => r.json()),
       ]);
 
       if (todayRes.ok) {
@@ -48,6 +51,10 @@ export function PersonelDashboard({ tr: isTr }: { tr: boolean }) {
       }
       if (contactRes.ok) {
         setContactCount((contactRes.requests as unknown[]).length);
+      }
+      if (timesRes.ok) {
+        setCiTime(timesRes.checkInTime);
+        setCoTime(timesRes.checkOutTime);
       }
     } finally {
       setLoading(false);
@@ -143,8 +150,8 @@ export function PersonelDashboard({ tr: isTr }: { tr: boolean }) {
           </p>
           <div className="space-y-3">
             {[
-              { Icon: LogIn,       label: isTr ? 'Check-in saati'  : 'Check-in time',   value: '14:00' },
-              { Icon: LogOutIcon, label: isTr ? 'Check-out saati' : 'Check-out time',  value: '12:00' },
+              { Icon: LogIn,       label: isTr ? 'Check-in saati'  : 'Check-in time',   value: ciTime },
+              { Icon: LogOutIcon, label: isTr ? 'Check-out saati' : 'Check-out time',  value: coTime },
               { Icon: Clock,      label: isTr ? 'Bugünün tarihi'  : 'Today\'s date',    value: time.toLocaleDateString(isTr ? 'tr-TR' : 'en-US') },
             ].map(({ Icon, label, value }) => (
               <div key={label} className="flex items-center justify-between gap-3">

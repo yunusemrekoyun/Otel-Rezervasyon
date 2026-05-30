@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { RefreshCw, MessageSquare, X, Tag } from 'lucide-react';
+import { RefreshCw, MessageSquare, X, Tag, CheckCircle2, Send } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -13,6 +13,9 @@ interface ContactReq {
   message: string;
   ticketId: string;
   createdAt: string;
+  adminReply?: string | null;
+  repliedAt?: string | null;
+  email?: string | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -31,6 +34,10 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
+  const [replyingId, setReplyingId]     = useState<string | null>(null);
+  const [replyDraft, setReplyDraft]     = useState('');
+  const [replyLoading, setReplyLoading] = useState(false);
+
   const fetchRequests = useCallback(async () => {
     setLoading(true);
     try {
@@ -47,6 +54,35 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
   const dismiss = useCallback((id: string) => {
     setDismissed(prev => new Set([...prev, id]));
   }, []);
+
+  const startReply = useCallback((id: string) => {
+    setReplyingId(id);
+    setReplyDraft('');
+  }, []);
+
+  const submitReply = useCallback(async () => {
+    if (!replyingId || !replyDraft.trim()) return;
+    setReplyLoading(true);
+    try {
+      const res = await fetch(`/api/contact/${replyingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminReply: replyDraft }),
+      });
+      if (res.ok) {
+        const now = new Date().toISOString();
+        setRequests(prev => prev.map(r =>
+          r.id === replyingId
+            ? { ...r, adminReply: replyDraft, repliedAt: now }
+            : r,
+        ));
+        setReplyingId(null);
+        setReplyDraft('');
+      }
+    } finally {
+      setReplyLoading(false);
+    }
+  }, [replyingId, replyDraft]);
 
   const visible = requests.filter(r => !dismissed.has(r.id));
   const dismissedCount = dismissed.size;
@@ -141,10 +177,66 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
                       <span className="font-mono text-[10px] text-subtle bg-m-surface2 px-1.5 py-0.5 rounded-md border border-m-border">
                         {req.ticketId}
                       </span>
+                      {req.adminReply && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-medium">
+                          <CheckCircle2 size={8} />
+                          {isTr ? 'Yanıtlandı' : 'Replied'}
+                        </span>
+                      )}
                     </div>
 
                     {/* Message */}
                     <p className="text-xs text-muted leading-relaxed">{req.message}</p>
+
+                    {/* Existing reply */}
+                    {req.adminReply && (
+                      <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-lg p-2.5">
+                        <p className="text-[9px] text-emerald-400 uppercase tracking-wider mb-1">
+                          {isTr ? 'Yanıtınız' : 'Your reply'}
+                          {req.repliedAt && ` · ${fmtDateTime(req.repliedAt)}`}
+                        </p>
+                        <p className="text-xs text-muted leading-relaxed">{req.adminReply}</p>
+                      </div>
+                    )}
+
+                    {/* Reply form */}
+                    {replyingId === req.id ? (
+                      <div className="space-y-2 mt-1">
+                        <textarea
+                          autoFocus
+                          rows={3}
+                          className="w-full control-base px-3 py-2 text-xs resize-none"
+                          placeholder={isTr ? 'Yanıtınızı buraya yazın…' : 'Type your reply here…'}
+                          value={replyDraft}
+                          onChange={e => setReplyDraft(e.target.value)}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={submitReply}
+                            disabled={replyLoading || !replyDraft.trim()}
+                            className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg disabled:opacity-60"
+                          >
+                            <Send size={11} />
+                            {replyLoading ? '…' : (isTr ? 'Yanıtla' : 'Reply')}
+                          </button>
+                          <button
+                            onClick={() => setReplyingId(null)}
+                            className="px-3 py-1.5 text-xs text-subtle hover:text-main transition-colors"
+                          >
+                            {isTr ? 'İptal' : 'Cancel'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startReply(req.id)}
+                        className="text-[11px] text-brand-accent hover:underline"
+                      >
+                        {req.adminReply
+                          ? (isTr ? 'Yanıtı güncelle' : 'Update reply')
+                          : (isTr ? 'Yanıtla' : 'Reply')}
+                      </button>
+                    )}
 
                     {/* Timestamp */}
                     <p className="text-[10px] text-subtle">{fmtDateTime(req.createdAt)}</p>

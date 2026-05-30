@@ -163,20 +163,31 @@ export async function PATCH(request: NextRequest) {
 
       // Send check-in welcome email (fire-and-forget)
       try {
-        const coSetting = await prisma.systemSetting.findUnique({ where: { key: 'check_out_time' } });
-        const { html, text } = renderCheckinEmail({
-          firstName:    updated.firstName,
-          roomName:     updated.room.name,
-          checkOutDate: updated.checkOutDate.toISOString().split('T')[0],
-          checkOutTime: coSetting?.value ?? '12:00',
-          confirmationId: updated.confirmationId,
-        });
-        sendMail({
-          to: updated.email,
-          subject: `Hoş Geldiniz — ${updated.room.name}`,
-          html,
-          text,
-        }).catch(console.error);
+        let sendCheckinEmail = true;
+        if (updated.userId) {
+          const userPrefs = await prisma.user.findUnique({
+            where: { id: updated.userId },
+            select: { notifyCheckinEmail: true },
+          });
+          sendCheckinEmail = userPrefs?.notifyCheckinEmail !== false;
+        }
+
+        if (sendCheckinEmail) {
+          const coSetting = await prisma.systemSetting.findUnique({ where: { key: 'check_out_time' } });
+          const { html, text } = renderCheckinEmail({
+            firstName:    updated.firstName,
+            roomName:     updated.room.name,
+            checkOutDate: updated.checkOutDate.toISOString().split('T')[0],
+            checkOutTime: coSetting?.value ?? '12:00',
+            confirmationId: updated.confirmationId,
+          });
+          sendMail({
+            to: updated.email,
+            subject: `Hoş Geldiniz — ${updated.room.name}`,
+            html,
+            text,
+          }).catch(console.error);
+        }
       } catch (mailError) {
         console.error('Check-in email send failed.', mailError);
       }

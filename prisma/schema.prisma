@@ -35,6 +35,7 @@ model User {
   experienceBookings      ExperienceBooking[]
   assignedTasks           CleaningTask[]           @relation("assigned_tasks")
   reportedTasks           CleaningTask[]           @relation("reported_tasks")
+  contactReplies          ContactRequest[]         @relation("contact_replies")
   maintenanceReports      MaintenanceReport[]
   lostItems               LostItem[]
   // Profile
@@ -51,6 +52,8 @@ model User {
   taxNumber               String?                  @map("tax_number")
   taxOffice               String?                  @map("tax_office")
   emailVerified           Boolean                  @default(false) @map("email_verified")
+  notifyReservationEmail  Boolean                  @default(true) @map("notify_reservation_email")
+  notifyCheckinEmail      Boolean                  @default(true) @map("notify_checkin_email")
   createdAt               DateTime                 @default(now()) @map("created_at")
   updatedAt               DateTime                 @updatedAt @map("updated_at")
 
@@ -187,14 +190,19 @@ model Reservation {
 }
 
 model ContactRequest {
-  id        String   @id @default(cuid())
-  userId    String?  @map("user_id")
-  name      String
-  category  String
-  message   String
-  ticketId  String   @unique @map("ticket_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id          String    @id @default(cuid())
+  userId      String?   @map("user_id")
+  name        String
+  email       String?
+  category    String
+  message     String
+  ticketId    String    @unique @map("ticket_id")
+  adminReply  String?   @map("admin_reply")
+  repliedAt   DateTime? @map("replied_at")
+  repliedById String?   @map("replied_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  repliedBy   User?     @relation("contact_replies", fields: [repliedById], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@map("contact_requests")

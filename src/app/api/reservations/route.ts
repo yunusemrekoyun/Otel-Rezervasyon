@@ -144,6 +144,16 @@ export async function POST(request: NextRequest) {
 
     // Send reservation confirmation email (fire-and-forget)
     try {
+      let sendReservationEmail = true;
+      if (auth?.user.id) {
+        const userPrefs = await prisma.user.findUnique({
+          where: { id: auth.user.id },
+          select: { notifyReservationEmail: true },
+        });
+        sendReservationEmail = userPrefs?.notifyReservationEmail !== false;
+      }
+
+      if (sendReservationEmail) {
       const [ciSetting, coSetting] = await Promise.all([
         prisma.systemSetting.findUnique({ where: { key: 'check_in_time' } }),
         prisma.systemSetting.findUnique({ where: { key: 'check_out_time' } }),
@@ -172,6 +182,7 @@ export async function POST(request: NextRequest) {
         text,
         attachments,
       }).catch(console.error);
+      } // end sendReservationEmail
     } catch (mailError) {
       console.error('Reservation email send failed.', mailError);
     }

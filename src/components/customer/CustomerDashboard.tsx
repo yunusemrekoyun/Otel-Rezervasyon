@@ -4,12 +4,11 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  LogOut, Calendar, User, Settings, MessageSquare,
+  LogOut, Calendar, User, Users, MessageSquare,
   BedDouble, Moon, Sun, Star, ChevronRight, Bell,
-  Wifi, Coffee, Car, UtensilsCrossed, Baby,
-  Cigarette, ArrowUpDown, Pilcrow, Globe, Shield,
+  Globe, Shield,
   ChevronDown, CheckCircle2, Building2, Home,
-  Plus, IdCard, Save, Users, MailCheck, X,
+  Plus, IdCard, Save, MailCheck, X,
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useTheme } from '@/theme/ThemeContext';
@@ -26,7 +25,7 @@ interface CustomerDashboardProps {
   authSource: 'access' | 'refresh';
 }
 
-type TabId = 'reservations' | 'profile' | 'preferences' | 'support';
+type TabId = 'reservations' | 'profile' | 'support';
 
 interface AccountPerson {
   id: string;
@@ -151,7 +150,6 @@ function ProfileHero({ user, tr }: { user: AuthUser; tr: boolean }) {
 const TABS: { id: TabId; labelTr: string; labelEn: string; icon: React.ElementType }[] = [
   { id: 'reservations', labelTr: 'Rezervasyonlarım', labelEn: 'My Stays',    icon: Calendar     },
   { id: 'profile',      labelTr: 'Profilim',         labelEn: 'Profile',     icon: User         },
-  { id: 'preferences',  labelTr: 'Tercihlerim',      labelEn: 'Preferences', icon: Settings     },
   { id: 'support',      labelTr: 'Destek',           labelEn: 'Support',     icon: MessageSquare},
 ];
 
@@ -262,6 +260,53 @@ function ProfileTab({
   const [verifyHidden, setVerifyHidden] = useState(false);
   const [verifyState, setVerifyState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const hasDefaultOwner = people.some((person) => person.isDefault && person.relation === 'self');
+
+  // Password change
+  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [pwStatus, setPwStatus] = useState<'idle' | 'saving' | 'ok' | 'err'>('idle');
+  const [pwError, setPwError] = useState('');
+
+  async function handlePasswordChange(e: FormEvent) {
+    e.preventDefault();
+    setPwError('');
+    if (pwForm.newPw !== pwForm.confirm) {
+      setPwError(tr ? 'Yeni şifreler eşleşmiyor.' : 'New passwords do not match.');
+      return;
+    }
+    setPwStatus('saving');
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.newPw, confirmPassword: pwForm.confirm }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { setPwError(data?.message ?? (tr ? 'Hata.' : 'Error.')); setPwStatus('err'); return; }
+      setPwStatus('ok');
+      setPwForm({ current: '', newPw: '', confirm: '' });
+      setTimeout(() => setPwStatus('idle'), 3000);
+    } catch { setPwStatus('err'); setPwError(tr ? 'Bağlantı hatası.' : 'Network error.'); }
+  }
+
+  // Notification preferences
+  const [prefs, setPrefs] = useState({ notifyReservationEmail: true, notifyCheckinEmail: true });
+
+  useEffect(() => {
+    fetch('/api/account/notification-preferences')
+      .then(r => r.json())
+      .then(d => { if (d.ok && d.prefs) setPrefs(d.prefs); })
+      .catch(() => undefined);
+  }, []);
+
+  async function togglePref(key: 'notifyReservationEmail' | 'notifyCheckinEmail') {
+    const next = { ...prefs, [key]: !prefs[key] };
+    setPrefs(next);
+    await fetch('/api/account/notification-preferences', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: next[key] }),
+    }).catch(() => setPrefs(prefs));
+  }
 
   async function resendVerification() {
     setVerifyState('sending');
@@ -442,29 +487,70 @@ function ProfileTab({
         </div>
       </div>
 
-      <div className="surface-panel p-5">
+      <form onSubmit={handlePasswordChange} className="surface-panel p-5">
         <h3 className="text-sm font-semibold text-main mb-4 flex items-center gap-2">
           <Shield size={14} className="text-brand-accent" />
           {tr ? 'Güvenlik' : 'Security'}
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[
-            { label: tr ? 'Mevcut Şifre' : 'Current Password' },
-            { label: tr ? 'Yeni Şifre' : 'New Password' },
-            { label: tr ? 'Yeni Şifre (Tekrar)' : 'Confirm New Password' },
-          ].map(f => (
-            <div key={f.label}>
-              <label className="block text-[10px] text-subtle uppercase tracking-wider mb-1.5">{f.label}</label>
-              <input type="password" className={inputCls} placeholder="••••••••" />
-            </div>
-          ))}
+          <div>
+            <label className="block text-[10px] text-subtle uppercase tracking-wider mb-1.5">
+              {tr ? 'Mevcut Şifre' : 'Current Password'}
+            </label>
+            <input
+              type="password"
+              className={inputCls}
+              placeholder="••••••••"
+              value={pwForm.current}
+              onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] text-subtle uppercase tracking-wider mb-1.5">
+              {tr ? 'Yeni Şifre' : 'New Password'}
+            </label>
+            <input
+              type="password"
+              className={inputCls}
+              placeholder="••••••••"
+              value={pwForm.newPw}
+              onChange={e => setPwForm(p => ({ ...p, newPw: e.target.value }))}
+              minLength={8}
+              required
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-[10px] text-subtle uppercase tracking-wider mb-1.5">
+              {tr ? 'Yeni Şifre (Tekrar)' : 'Confirm New Password'}
+            </label>
+            <input
+              type="password"
+              className={inputCls}
+              placeholder="••••••••"
+              value={pwForm.confirm}
+              onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
+              minLength={8}
+              required
+            />
+          </div>
         </div>
+        {pwError && <p className="text-xs text-red-400 mt-2">{pwError}</p>}
+        {pwStatus === 'ok' && (
+          <p className="text-xs text-emerald-400 mt-2">
+            {tr ? 'Şifreniz güncellendi.' : 'Password updated.'}
+          </p>
+        )}
         <div className="mt-4 flex justify-end">
-          <button className="btn-secondary px-5 py-2 text-xs opacity-60 cursor-not-allowed">
-            {tr ? 'Şifreyi Güncelle' : 'Update Password'}
+          <button
+            type="submit"
+            disabled={pwStatus === 'saving'}
+            className="btn-secondary px-5 py-2 text-xs disabled:opacity-60"
+          >
+            {pwStatus === 'saving' ? '…' : (tr ? 'Şifreyi Güncelle' : 'Update Password')}
           </button>
         </div>
-      </div>
+      </form>
 
       {/* Notifications */}
       <div className="surface-panel p-5">
@@ -473,162 +559,40 @@ function ProfileTab({
           {tr ? 'Bildirim Tercihleri' : 'Notification Preferences'}
         </h3>
         <div className="space-y-3">
-          {[
-            { label: tr ? 'Rezervasyon onayları (e-posta)' : 'Reservation confirmations (email)', on: true  },
-            { label: tr ? 'Check-in hatırlatıcısı'         : 'Check-in reminders',                on: true  },
-            { label: tr ? 'Kampanya ve fırsatlar'          : 'Campaigns & offers',                on: false },
-            { label: tr ? 'Yeni özellik duyuruları'        : 'New feature announcements',         on: false },
-          ].map(n => (
-            <div key={n.label} className="flex items-center justify-between">
-              <span className="text-sm text-muted">{n.label}</span>
-              <div className={`w-9 h-5 rounded-full relative cursor-not-allowed transition-colors ${n.on ? 'bg-brand-accent/35' : 'bg-m-surface2'}`}>
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${n.on ? 'left-4 bg-brand-accent' : 'left-0.5 bg-m-subtle'}`} />
-              </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted">{tr ? 'Rezervasyon onayları (e-posta)' : 'Reservation confirmations (email)'}</span>
+            <button
+              type="button"
+              onClick={() => togglePref('notifyReservationEmail')}
+              className={`w-9 h-5 rounded-full relative transition-colors ${prefs.notifyReservationEmail ? 'bg-brand-accent' : 'bg-m-surface2'}`}
+            >
+              <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${prefs.notifyReservationEmail ? 'left-4 bg-white' : 'left-0.5 bg-m-subtle'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted">{tr ? 'Check-in hatırlatıcısı' : 'Check-in reminders'}</span>
+            <button
+              type="button"
+              onClick={() => togglePref('notifyCheckinEmail')}
+              className={`w-9 h-5 rounded-full relative transition-colors ${prefs.notifyCheckinEmail ? 'bg-brand-accent' : 'bg-m-surface2'}`}
+            >
+              <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${prefs.notifyCheckinEmail ? 'left-4 bg-white' : 'left-0.5 bg-m-subtle'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between opacity-50">
+            <span className="text-sm text-muted">{tr ? 'Kampanya ve fırsatlar' : 'Campaigns & offers'}</span>
+            <div className="w-9 h-5 rounded-full relative cursor-not-allowed bg-m-surface2">
+              <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-m-subtle" />
             </div>
-          ))}
+          </div>
+          <div className="flex items-center justify-between opacity-50">
+            <span className="text-sm text-muted">{tr ? 'Yeni özellik duyuruları' : 'New feature announcements'}</span>
+            <div className="w-9 h-5 rounded-full relative cursor-not-allowed bg-m-surface2">
+              <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-m-subtle" />
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ── Preferences Tab ────────────────────────────────────────────────────────────
-
-function Toggle({ on }: { on: boolean }) {
-  return (
-    <div className={`w-9 h-5 rounded-full relative cursor-not-allowed flex-shrink-0 ${on ? 'bg-brand-accent/35' : 'bg-m-surface2'}`}>
-      <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${on ? 'left-4 bg-brand-accent' : 'left-0.5 bg-m-subtle'}`} />
-    </div>
-  );
-}
-
-function PrefSection({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
-  return (
-    <div className="surface-panel p-5">
-      <h3 className="text-sm font-semibold text-main mb-4 flex items-center gap-2">
-        <Icon size={14} className="text-brand-accent" />
-        {title}
-      </h3>
-      <div className="space-y-3">{children}</div>
-    </div>
-  );
-}
-
-function PrefRow({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="min-w-0">
-        <p className="text-sm text-muted">{label}</p>
-        {desc && <p className="text-[10px] text-subtle mt-0.5">{desc}</p>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function SelectPill({ options, active }: { options: string[]; active: string }) {
-  return (
-    <div className="flex gap-1 shrink-0">
-      {options.map(o => (
-        <span
-          key={o}
-          className={`px-2.5 py-1 rounded-lg text-[10px] font-medium cursor-not-allowed transition-colors ${
-            o === active ? 'bg-brand-accent/20 text-brand-accent border border-brand-accent/30' : 'bg-m-surface2 text-subtle border border-transparent'
-          }`}
-        >
-          {o}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function PreferencesTab({ tr }: { tr: boolean }) {
-  return (
-    <div className="space-y-4">
-      <div className="surface-card border-brand-accent/25 bg-brand-accent/8 p-4">
-        <p className="text-sm font-semibold text-main">{tr ? 'Tercihler hazırlanıyor' : 'Preferences are being prepared'}</p>
-        <p className="text-xs text-muted leading-relaxed mt-1">
-          {tr
-            ? 'Bu alan şu an profiliniz için ön ayarları gösterir. Kaydetme akışı aktif olduğunda seçimleriniz rezervasyon ve resepsiyon süreçlerine otomatik düşecek.'
-            : 'This area currently shows profile presets. Once saving is enabled, your choices will flow into booking and reception workflows.'}
-        </p>
-      </div>
-
-      <PrefSection title={tr ? 'Oda Tercihleri' : 'Room Preferences'} icon={BedDouble}>
-        <PrefRow label={tr ? 'Yatak Tipi' : 'Bed Type'}>
-          <SelectPill options={tr ? ['Tek', 'Çift', 'Twin'] : ['Single', 'Double', 'Twin']} active={tr ? 'Çift' : 'Double'} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Kat Tercihi' : 'Floor Preference'}>
-          <SelectPill options={tr ? ['Alçak', 'Orta', 'Yüksek'] : ['Low', 'Mid', 'High']} active={tr ? 'Yüksek' : 'High'} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Manzara' : 'View'}>
-          <SelectPill options={tr ? ['Bahçe', 'Havuz', 'Şehir'] : ['Garden', 'Pool', 'City']} active={tr ? 'Bahçe' : 'Garden'} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Sigara İçilmeyen Oda' : 'Non-smoking Room'}>
-          <Toggle on={true} />
-        </PrefRow>
-      </PrefSection>
-
-      <PrefSection title={tr ? 'Konaklama & Servis' : 'Stay & Service'} icon={Coffee}>
-        <PrefRow label={tr ? 'Kahvaltı Dahil' : 'Breakfast Included'} desc={tr ? 'Oda fiyatına ekle' : 'Add to room rate'}>
-          <Toggle on={true} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Erken Check-in' : 'Early Check-in'} desc={tr ? 'Müsaitse otomatik talep et' : 'Auto-request if available'}>
-          <Toggle on={false} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Geç Check-out' : 'Late Check-out'} desc={tr ? 'Müsaitse otomatik talep et' : 'Auto-request if available'}>
-          <Toggle on={false} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Oda Servisi' : 'Room Service'} desc={tr ? 'Check-in\'de hatırlat' : 'Remind at check-in'}>
-          <Toggle on={true} />
-        </PrefRow>
-      </PrefSection>
-
-      <PrefSection title={tr ? 'Yastık & Yatak' : 'Pillow & Bedding'} icon={Pilcrow}>
-        <PrefRow label={tr ? 'Yastık Sertliği' : 'Pillow Firmness'}>
-          <SelectPill options={tr ? ['Yumuşak', 'Orta', 'Sert'] : ['Soft', 'Medium', 'Firm']} active={tr ? 'Orta' : 'Medium'} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Ekstra Yorgan' : 'Extra Blanket'}>
-          <Toggle on={false} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Hipo-Alerjenik Ürünler' : 'Hypoallergenic Products'}>
-          <Toggle on={true} />
-        </PrefRow>
-      </PrefSection>
-
-      <PrefSection title={tr ? 'Yiyecek & İçecek' : 'Food & Beverage'} icon={UtensilsCrossed}>
-        <PrefRow label={tr ? 'Diyet Tercihi' : 'Dietary Preference'}>
-          <SelectPill options={tr ? ['Yok', 'Vejetaryen', 'Vegan', 'Helal'] : ['None', 'Vegetarian', 'Vegan', 'Halal']} active={tr ? 'Yok' : 'None'} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Gluten İçermez' : 'Gluten-Free'}>
-          <Toggle on={false} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Minibar Stoğu' : 'Minibar Stock'} desc={tr ? 'Check-in\'de hazır olsun' : 'Ready at check-in'}>
-          <Toggle on={true} />
-        </PrefRow>
-      </PrefSection>
-
-      <PrefSection title={tr ? 'Diğer' : 'Other'} icon={Settings}>
-        <PrefRow label={tr ? 'Bebek Karyolası' : 'Baby Cot'}>
-          <Toggle on={false} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Vale Park Hizmeti' : 'Valet Parking'}>
-          <Toggle on={false} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Evcil Hayvan Dostu Oda' : 'Pet-Friendly Room'}>
-          <Toggle on={false} />
-        </PrefRow>
-        <PrefRow label={tr ? 'Dil Tercihi' : 'Language'}>
-          <SelectPill options={['TR', 'EN']} active={tr ? 'TR' : 'EN'} />
-        </PrefRow>
-      </PrefSection>
-
-      <p className="text-[10px] text-subtle text-center pb-2">
-        {tr
-          ? 'Tercihler bilgi amaçlıdır. Kesin talepler için özel istekler bölümünü kullanın.'
-          : 'Preferences are informational. Use special requests for guaranteed arrangements.'}
-      </p>
     </div>
   );
 }
@@ -651,9 +615,67 @@ const FAQ_EN = [
   { q: 'Is Wi-Fi free?',                   a: 'Yes, complimentary high-speed Wi-Fi is available in all rooms and common areas.' },
 ];
 
-function SupportTab({ tr }: { tr: boolean }) {
+interface TicketItem {
+  id: string;
+  ticketId: string;
+  category: string;
+  message: string;
+  createdAt: string;
+  adminReply?: string | null;
+  repliedAt?: string | null;
+}
+
+const CATEGORIES_TR = ['Rezervasyon hakkında', 'Check-in / Check-out', 'Oda sorunu', 'Yemek ve servis', 'Diğer'];
+const CATEGORIES_EN = ['About a reservation', 'Check-in / Check-out', 'Room issue', 'Food and service', 'Other'];
+
+function SupportTab({ tr, user }: { tr: boolean; user: AuthUser }) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const faqs = tr ? FAQ_TR : FAQ_EN;
+  const categories = tr ? CATEGORIES_TR : CATEGORIES_EN;
+
+  const [category, setCategory] = useState(categories[0]);
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [lastTicket, setLastTicket] = useState<string | null>(null);
+  const [tickets, setTickets] = useState<TicketItem[]>([]);
+  const [ticketsLoaded, setTicketsLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/contact')
+      .then(r => r.json())
+      .then(d => { if (d.ok) setTickets(d.requests); })
+      .catch(() => undefined)
+      .finally(() => setTicketsLoaded(true));
+  }, []);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!message.trim()) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: user.email.split('@')[0], category, message }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) {
+        setLastTicket(data.ticketId);
+        const newTicket: TicketItem = {
+          id: data.ticketId,
+          ticketId: data.ticketId,
+          category,
+          message,
+          createdAt: new Date().toISOString(),
+        };
+        setTickets(prev => [newTicket, ...prev]);
+        setMessage('');
+        setCategory(categories[0]);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -670,9 +692,9 @@ function SupportTab({ tr }: { tr: boolean }) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
           {[
-            { icon: Globe,       label: tr ? 'Web Sitesi'    : 'Website',   value: 'gardenhotel.com',       cls: 'text-brand-accent' },
-            { icon: MessageSquare, label: tr ? 'E-posta'     : 'Email',     value: 'info@gardenhotel.com',  cls: 'text-muted' },
-            { icon: Bell,        label: tr ? 'Telefon'       : 'Phone',     value: '+90 (212) 000 00 00',   cls: 'text-muted' },
+            { icon: Globe,         label: tr ? 'Web Sitesi' : 'Website', value: 'gardenhotel.com',      cls: 'text-brand-accent' },
+            { icon: MessageSquare, label: tr ? 'E-posta'    : 'Email',   value: 'info@gardenhotel.com', cls: 'text-muted' },
+            { icon: Bell,          label: tr ? 'Telefon'    : 'Phone',   value: '+90 (212) 000 00 00',  cls: 'text-muted' },
           ].map(c => (
             <div key={c.label} className="surface-card p-3">
               <c.icon size={13} className={`${c.cls} mb-1.5`} />
@@ -683,8 +705,27 @@ function SupportTab({ tr }: { tr: boolean }) {
         </div>
       </div>
 
-      {/* Message form (static) */}
-      <div className="surface-panel p-5">
+      {/* Success banner */}
+      {lastTicket && (
+        <div className="surface-panel p-4 border-emerald-500/20 bg-emerald-500/5 flex items-start gap-3">
+          <MailCheck size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-emerald-300">
+              {tr ? 'Talebiniz alındı' : 'Request received'}
+            </p>
+            <p className="text-xs text-muted mt-0.5">
+              {tr ? `Bilet no: ${lastTicket}` : `Ticket: ${lastTicket}`}
+              {tr ? ' — Ekibimiz en kısa sürede dönecektir.' : ' — Our team will respond shortly.'}
+            </p>
+          </div>
+          <button onClick={() => setLastTicket(null)} className="ml-auto text-subtle hover:text-main">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Message form */}
+      <form onSubmit={handleSubmit} className="surface-panel p-5">
         <h3 className="text-sm font-semibold text-main mb-4 flex items-center gap-2">
           <MessageSquare size={14} className="text-brand-accent" />
           {tr ? 'Mesaj Gönder' : 'Send a Message'}
@@ -694,8 +735,12 @@ function SupportTab({ tr }: { tr: boolean }) {
             <label className="block text-[10px] text-subtle uppercase tracking-wider mb-1.5">
               {tr ? 'Konu' : 'Subject'}
             </label>
-            <select className={`${inputCls} appearance-none`} disabled>
-              <option>{tr ? 'Rezervasyon hakkında' : 'About a reservation'}</option>
+            <select
+              className={`${inputCls} appearance-none`}
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+            >
+              {categories.map(c => <option key={c}>{c}</option>)}
             </select>
           </div>
           <div>
@@ -705,16 +750,59 @@ function SupportTab({ tr }: { tr: boolean }) {
             <textarea
               className={`${inputCls} resize-none h-24`}
               placeholder={tr ? 'Mesajınızı buraya yazın…' : 'Type your message here…'}
-              disabled
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              required
             />
           </div>
         </div>
         <div className="mt-4 flex justify-end">
-          <button className="px-5 py-2 rounded-lg bg-brand-accent/30 text-brand-accent/60 text-xs font-bold cursor-not-allowed border border-brand-accent/20">
-            {tr ? 'Gönder' : 'Send'}
+          <button
+            type="submit"
+            disabled={submitting || !message.trim()}
+            className="btn-primary px-5 py-2 text-xs disabled:opacity-60"
+          >
+            {submitting ? '…' : (tr ? 'Gönder' : 'Send')}
           </button>
         </div>
-      </div>
+      </form>
+
+      {/* Ticket history */}
+      {ticketsLoaded && tickets.length > 0 && (
+        <div className="surface-panel p-5">
+          <h3 className="text-sm font-semibold text-main mb-4 flex items-center gap-2">
+            <ChevronRight size={14} className="text-brand-accent" />
+            {tr ? 'Taleplerim' : 'My Tickets'}
+          </h3>
+          <div className="space-y-3">
+            {tickets.map(t => (
+              <div key={t.id} className="surface-card p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-[10px] font-bold text-brand-accent">{t.ticketId}</span>
+                  <span className="text-[10px] text-subtle shrink-0">
+                    {new Date(t.createdAt).toLocaleDateString(tr ? 'tr-TR' : 'en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+                <p className="text-[10px] text-subtle uppercase tracking-wider">{t.category}</p>
+                <p className="text-xs text-muted leading-relaxed">{t.message}</p>
+                {t.adminReply && (
+                  <div className="border-t border-emerald-500/20 pt-2 mt-2">
+                    <p className="text-[9px] text-emerald-400 uppercase tracking-wider mb-1">
+                      {tr ? 'Yanıt' : 'Reply'}
+                    </p>
+                    <p className="text-xs text-muted leading-relaxed">{t.adminReply}</p>
+                  </div>
+                )}
+                {!t.adminReply && (
+                  <span className="inline-block text-[9px] text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded px-1.5 py-0.5">
+                    {tr ? 'Yanıt bekleniyor' : 'Awaiting reply'}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* FAQ */}
       <div className="surface-panel p-5">
@@ -959,8 +1047,7 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
               >
                 {activeTab === 'reservations' && <CustomerReservations user={user} tr={tr} />}
                 {activeTab === 'profile'      && <ProfileTab user={user} tr={tr} people={people} onPeopleChanged={setPeople} />}
-                {activeTab === 'preferences'  && <PreferencesTab tr={tr} />}
-                {activeTab === 'support'      && <SupportTab tr={tr} />}
+                {activeTab === 'support'      && <SupportTab tr={tr} user={user} />}
               </motion.div>
             </AnimatePresence>
           </div>

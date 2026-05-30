@@ -453,6 +453,7 @@ export function ReservationScreen() {
   const [profileDecision, setProfileDecision] = useState<ProfileDecision | null>(null);
   const [passwordResetState, setPasswordResetState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
+  const [kvkkAccepted, setKvkkAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [newAccountProfileOwner, setNewAccountProfileOwner] = useState<NewAccountProfileOwner | null>(null);
   const [result, setResult] = useState<{ ok: boolean; confirmationId?: string; message?: string; needsProfileSetup?: boolean } | null>(null);
@@ -584,7 +585,8 @@ export function ReservationScreen() {
         wantsAccount === true &&
         password.length >= 8 &&
         password === passwordConfirm &&
-        newAccountProfileOwner !== null
+        newAccountProfileOwner !== null &&
+        kvkkAccepted
       );
 
   async function goToStep2() {
@@ -1510,8 +1512,21 @@ export function ReservationScreen() {
                         </div>
                       </div>
                     )}
+                    <label className="flex items-start gap-2.5 text-xs text-white/60 cursor-pointer mt-1">
+                      <input
+                        type="checkbox"
+                        checked={kvkkAccepted}
+                        onChange={e => setKvkkAccepted(e.target.checked)}
+                        className="mt-0.5 shrink-0 accent-brand-accent"
+                      />
+                      <span>
+                        {tr
+                          ? 'Kişisel verilerimin Garden Hotel tarafından rezervasyon ve iletişim amacıyla işlenmesini KVKK kapsamında kabul ediyorum.'
+                          : 'I consent to Garden Hotel processing my personal data for reservation and communication purposes (KVKK/GDPR).'}
+                      </span>
+                    </label>
                     <button
-                      onClick={() => { setWantsAccount(null); setPassword(''); setPasswordConfirm(''); setNewAccountProfileOwner(null); }}
+                      onClick={() => { setWantsAccount(null); setPassword(''); setPasswordConfirm(''); setNewAccountProfileOwner(null); setKvkkAccepted(false); }}
                       className="text-[10px] text-white/30 hover:text-white/50 transition-colors"
                     >
                       {tr ? 'Vazgeç, hesap istemiyorum' : 'Never mind, skip account'}
