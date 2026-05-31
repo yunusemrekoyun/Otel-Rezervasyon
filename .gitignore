@@ -66,3 +66,5 @@ coverage/
 # ===== User Media =====
 public/uploads/
 .private/
+/.playwright-mcp
+/presentation

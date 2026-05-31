@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, Variants } from 'motion/react';
 import {
-  Star, Calendar, Sparkles, ShieldCheck,
+  Star, Sparkles, ShieldCheck,
   Compass, MessageSquare, Send, CheckCircle2, ChevronLeft, ChevronRight,
   MapPin, Mail, Phone, Lock, Eye, CalendarCheck, HelpCircle, Flame, Droplets, Fan,
   Leaf, Menu, BedDouble, Wifi, Coffee, Clock, UserCircle2,
 } from 'lucide-react';
-import { experiencesData, reviews as initialReviews } from './data';
+import { reviews as initialReviews } from './data';
 import { Review } from './types';
 import { LoginModal } from './components/auth/LoginModal';
 import { RoomsScreen } from './components/RoomsScreen';
@@ -28,6 +28,15 @@ const TARGET_TIME_RATIOS: Record<ScreenType, number> = {
   experiences: 0.67,
   contact: 0.83,
 };
+
+interface PublicReviewSummary {
+  source: 'google' | 'dummy';
+  enabled: boolean;
+  rating: number;
+  count: number;
+  labelTr: string;
+  labelEn: string;
+}
 
 const screenVariants: Variants = {
   enter: (direction: number) => ({
@@ -73,19 +82,37 @@ export default function App() {
   // Peak occupants loading state counter
   const [count, setCount] = useState(0);
 
-  // Review & Guest diary state
+  // Public review showcase state
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
-  const [newReviewAuthor, setNewReviewAuthor] = useState('');
-  const [newReviewComment, setNewReviewComment] = useState('');
-  const [newReviewRating, setNewReviewRating] = useState(5);
-  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewSummary, setReviewSummary] = useState<PublicReviewSummary>({
+    source: 'dummy',
+    enabled: false,
+    rating: 4.8,
+    count: 99,
+    labelTr: 'Misafir Memnuniyeti',
+    labelEn: 'Guest Satisfaction',
+  });
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
-  // Experiences tab state
-  const [selectedExpId, setSelectedExpId] = useState('kayaking');
-  const currentExp = experiencesData.find(e => e.id === selectedExpId) || experiencesData[0];
-  const [expGuests, setExpGuests] = useState(2);
-  const [expDay, setExpDay] = useState(14);
-  const [experienceSubmitting, setExperienceSubmitting] = useState(false);
+  const reviewStats = useMemo(() => {
+    const sourceReviews = reviews.length > 0 ? reviews : initialReviews;
+    const total = sourceReviews.length;
+    const average = total > 0
+      ? sourceReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / total
+      : reviewSummary.rating;
+
+    return {
+      total,
+      average,
+      distribution: [5, 4, 3].map((star) => {
+        const countForStar = sourceReviews.filter((review) => Math.round(review.rating) === star).length;
+        return {
+          star,
+          percent: total > 0 ? Math.round((countForStar / total) * 100) : 0,
+        };
+      }),
+    };
+  }, [reviews, reviewSummary.rating]);
 
   // Contact/Concierge status state
   const [contactName, setContactName] = useState('');
@@ -103,6 +130,33 @@ export default function App() {
       .then(r => r.json())
       .then(data => { if (data.ok) setSessionUser({ roleSlug: data.user.roleSlug, email: data.user.email }); })
       .catch(() => null);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/public/reviews')
+      .then((response) => response.json())
+      .then((payload) => {
+        if (!payload?.ok) return;
+        if (payload.summary) setReviewSummary(payload.summary);
+        if (Array.isArray(payload.reviews) && payload.reviews.length > 0) {
+          setReviews(payload.reviews.map((item: {
+            id: string;
+            userName: string;
+            rating: number;
+            date: string;
+            comment: string;
+          }) => ({
+            id: item.id,
+            userName: item.userName,
+            rating: item.rating,
+            date: item.date,
+            comment: item.comment,
+            avatarUrl: '',
+          })));
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => setReviewsLoading(false));
   }, []);
 
   // Disable background scrolling when login modal is open
@@ -181,18 +235,16 @@ export default function App() {
       }
     };
 
-    // Check if the event target sits inside a scrollable element that hasn't
-    // reached its limit in the scroll direction yet. If so, let the inner
-    // element consume the scroll — don't hijack to next screen.
-    function isConsumedByScrollable(target: EventTarget | null, deltaY: number): boolean {
+    // If the pointer is over an internal scroll area, keep all wheel/touch
+    // movement there. Reaching the edge should not trigger a screen change.
+    function isConsumedByScrollable(target: EventTarget | null): boolean {
       let el = target as Element | null;
       while (el && el !== document.documentElement) {
+        if (el.hasAttribute('data-scroll-lock')) return true;
         const style = window.getComputedStyle(el);
         const overflowY = style.overflowY;
         if (overflowY === 'auto' || overflowY === 'scroll') {
-          const canScrollDown = el.scrollHeight > el.clientHeight + 1;
-          if (deltaY > 0 && canScrollDown && el.scrollTop < el.scrollHeight - el.clientHeight - 1) return true;
-          if (deltaY < 0 && el.scrollTop > 1) return true;
+          if (el.scrollHeight > el.clientHeight + 1) return true;
         }
         el = el.parentElement;
       }
@@ -201,7 +253,7 @@ export default function App() {
 
     const handleWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) < 30) return;
-      if (isConsumedByScrollable(e.target, e.deltaY)) return;
+      if (isConsumedByScrollable(e.target)) return;
       navigateTo(e.deltaY > 0 ? 1 : -1);
     };
 
@@ -214,7 +266,7 @@ export default function App() {
       const deltaY = lastTouchY - currentTouchY;
 
       if (Math.abs(deltaY) > 40) {
-        if (isConsumedByScrollable(e.target, deltaY)) return;
+        if (isConsumedByScrollable(e.target)) return;
         navigateTo(deltaY > 0 ? 1 : -1);
         lastTouchY = currentTouchY;
       }
@@ -252,26 +304,6 @@ export default function App() {
     return () => clearInterval(timer);
   }, [screen]);
 
-  const handleReviewInscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newReviewAuthor.trim() || !newReviewComment.trim()) return;
-
-    const diaryEntry: Review = {
-      id: `review-${Date.now()}`,
-      userName: newReviewAuthor.trim(),
-      comment: newReviewComment.trim(),
-      rating: newReviewRating,
-      date: 'May 2026',
-      avatarUrl: `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 900000)}?q=80&w=100&auto=format&fit=crop`
-    };
-
-    setReviews([diaryEntry, ...reviews]);
-    setNewReviewAuthor('');
-    setNewReviewComment('');
-    setReviewSubmitted(true);
-    setTimeout(() => setReviewSubmitted(false), 3500);
-  };
-
   const handleContactDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactName.trim() || !contactMessage.trim()) return;
@@ -307,36 +339,6 @@ export default function App() {
     } finally {
       setContactSuccess(false);
       setIsContactSending(false);
-    }
-  };
-
-  const handleExperienceBooking = async () => {
-    setExperienceSubmitting(true);
-
-    try {
-      const response = await fetch('/api/experiences', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          experienceId: currentExp.id,
-          day: expDay,
-          guests: expGuests,
-        }),
-      });
-
-      const payload = await response.json();
-
-      if (!response.ok) {
-        throw new Error(payload?.message || 'Experience request failed.');
-      }
-
-      alert(`Request submitted for ${currentExp.name} on May ${expDay}. Reference: ${payload.confirmationId}.`);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Experience request could not be sent.');
-    } finally {
-      setExperienceSubmitting(false);
     }
   };
 
@@ -566,14 +568,14 @@ export default function App() {
               {screen === 'experiences' && (
                 <>
                   {/* Left Column Section: Matching Layout structure precisely */}
-                  <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-4 lg:space-y-4">
+                  <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-3 lg:space-y-3">
                     <div>
-                      <div className="badge-accent mb-4">
+                      <div className="badge-accent mb-3">
                         <Sparkles size={11} className="animate-pulse" />
                         <span>{t('exp.badge')}</span>
                       </div>
                       
-                      <h1 className="text-4xl sm:text-6xl lg:text-[3.5rem] font-medium tracking-tighter leading-none text-white font-sans">
+                      <h1 className="text-4xl sm:text-5xl lg:text-[3.05rem] xl:text-[3.35rem] font-medium tracking-tighter leading-none text-white font-sans">
                         {t('exp.title1')}
                         <br />
                         {t('exp.title2')}
@@ -582,116 +584,191 @@ export default function App() {
                       </h1>
                     </div>
 
-                    {/* Interactive Experiences Selector and dynamic highlights */}
-                    <div className="max-w-md bg-black/15 backdrop-blur-md p-4 rounded-xl border border-white/5 space-y-3 shadow-lg">
-                      <div className="flex gap-2">
-                        {experiencesData.map((e) => (
-                          <button
-                            key={e.id}
-                            onClick={() => setSelectedExpId(e.id)}
-                            className={`flex-1 text-[10px] font-semibold tracking-wider uppercase py-2 px-1 rounded-lg border transition-all ${
-                              selectedExpId === e.id 
-                                ? 'bg-brand-accent text-brand-emerald border-brand-accent' 
-                                : 'bg-surface-glass border-border-glass hover:bg-surface-glass-hover text-text-secondary hover:text-white'
-                            }`}
-                          >
-                            {t(`exp.${e.id}.name`).split(' ')[0]} / {t(`exp.${e.id}.name`).split(' ').slice(1).join(' ')}
-                          </button>
-                        ))}
+                    {/* Public review showcase */}
+                    <div data-scroll-lock className="max-w-md bg-black/15 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-white/5 space-y-2.5 shadow-lg overflow-hidden">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <span className="label-accent font-mono">
+                            {language === 'tr' ? 'MİSAFİR YORUMLARI' : 'GUEST REVIEWS'}
+                          </span>
+                          <h3 className="mt-1 text-lg sm:text-xl font-bold text-white tracking-tight">
+                            {language === 'tr' ? 'Garden Hotel deneyimi' : 'Garden Hotel experience'}
+                          </h3>
+                        </div>
+                        <div className="text-right">
+                          <div className="inline-flex items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-400/20 px-2.5 py-1 font-mono text-sm font-bold text-amber-300">
+                            <Star size={13} className="fill-amber-300" />
+                            {reviewSummary.rating.toFixed(1)}
+                          </div>
+                          <p className="mt-1 text-[10px] text-white/45">
+                            {reviewSummary.source === 'google'
+                              ? (language === 'tr' ? 'Google puanı' : 'Google rating')
+                              : (language === 'tr' ? 'Demo puan' : 'Demo rating')}
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <h3 className="font-bold text-sm text-white">{t(`exp.${currentExp.id}.name`)}</h3>
-                          <span className="text-xs text-brand-accent font-semibold">{t(`exp.${currentExp.id}.duration`)}</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                          <p className="text-[10px] uppercase tracking-wider text-white/35">
+                            {language === 'tr' ? 'Kaynak' : 'Source'}
+                          </p>
+                          <p className="mt-1 text-xs font-semibold text-white">
+                            {language === 'tr' ? reviewSummary.labelTr : reviewSummary.labelEn}
+                          </p>
                         </div>
-                        <p className="text-xs text-white/80 leading-relaxed font-light">
-                          {t(`exp.${currentExp.id}.desc`)}
-                        </p>
+                        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                          <p className="text-[10px] uppercase tracking-wider text-white/35">
+                            {language === 'tr' ? 'Memnuniyet' : 'Satisfaction'}
+                          </p>
+                          <p className="mt-1 text-xs font-semibold text-white">
+                            {reviewSummary.source === 'google'
+                              ? `${reviewSummary.count.toLocaleString(language === 'tr' ? 'tr-TR' : 'en-US')} ${language === 'tr' ? 'değerlendirme' : 'reviews'}`
+                              : `${reviewSummary.count}% ${language === 'tr' ? 'misafir önerisi' : 'guest approval'}`}
+                          </p>
+                        </div>
                       </div>
-                      
-                      <div className="flex items-center justify-between border-t border-white/10 pt-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1 bg-amber-400/25 border border-amber-400/40 rounded px-2 py-0.5 text-amber-300 font-mono text-xs font-semibold">
-                            ★ {currentExp.rating}
+
+                      <div className="max-h-[155px] space-y-2 overflow-y-auto overscroll-contain border-t border-white/10 pt-2.5 pr-2 md:max-h-[175px] xl:max-h-[205px]">
+                        {reviewsLoading ? (
+                          <div className="py-6 text-center text-xs text-white/45">
+                            {language === 'tr' ? 'Yorumlar yükleniyor…' : 'Loading reviews…'}
                           </div>
-                          <span className="text-xs text-white/60 font-medium">99% {t('exp.recommendation')}</span>
-                        </div>
-                        <span className="text-xs text-white/40">{t('exp.includesGear')}</span>
+                        ) : reviews.map((review) => {
+                          const parsedDate = Date.parse(review.date);
+                          const reviewDate = Number.isNaN(parsedDate)
+                            ? review.date
+                            : new Date(parsedDate).toLocaleDateString(language === 'tr' ? 'tr-TR' : 'en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+
+                          return (
+                            <div key={review.id} className="rounded-xl border border-white/10 bg-black/10 p-3">
+                              <div className="mb-1.5 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1">
+                                  {Array.from({ length: 5 }).map((_, index) => (
+                                    <Star
+                                      key={index}
+                                      size={11}
+                                      className={index < Math.round(review.rating) ? 'fill-brand-accent text-brand-accent' : 'text-white/25'}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="text-[10px] text-white/35">{reviewDate}</span>
+                              </div>
+                              <p className="line-clamp-2 text-xs leading-relaxed text-white/75">"{review.comment}"</p>
+                              <p className="mt-2 text-[11px] font-semibold text-white/80">{review.userName}</p>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Column Section: Custom Experience Planning Card matching reservation structure */}
-                  <div className="w-full lg:w-[410px] items-center">
-                    <div className="panel-glass p-4 w-full flex flex-col gap-3 shadow-2xl relative">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="label-accent font-mono">{t('exp.planner')}</span>
-                          <h2 className="text-2xl font-bold text-white tracking-tight mt-0.5 leading-snug">
-                            {t(`exp.${currentExp.id}.name`)}
-                          </h2>
-                          <p className="text-xs text-white/50">{t('exp.guided')}</p>
-                        </div>
-                      </div>
-
-                      {/* Custom selectors aligned nicely to original picker slots */}
-                      <div className="grid grid-cols-2 gap-3.5">
-                        <div 
-                          onClick={() => setExpDay(prev => Math.max(1, prev - 1))}
-                          className="panel-card"
-                        >
-                          <span className="label-sm mb-1">{t('exp.targetDate')}</span>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <Calendar size={13} className="text-brand-accent" />
-                              <span className="font-semibold text-sm">{t('loc.may')} {expDay}</span>
-                            </div>
-                            <span className="text-[10px] text-white/40">▼</span>
+                  {/* Right Column Section: Trust summary supporting guest reviews */}
+                  <div className="w-full lg:w-[410px] flex h-full items-center justify-center">
+                    <div data-scroll-lock className="panel-glass p-3.5 w-full max-h-[calc(100dvh-260px)] overflow-hidden flex flex-col gap-2.5 shadow-2xl relative">
+                      <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain pr-1">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="label-accent font-mono">
+                              {language === 'tr' ? 'YORUMLARIN ÖZETİ' : 'REVIEW SNAPSHOT'}
+                            </span>
+                            <h2 className="text-xl font-bold text-white tracking-tight mt-0.5 leading-tight">
+                              {language === 'tr' ? 'Misafirler en çok neyi seviyor?' : 'What guests mention most'}
+                            </h2>
+                            <p className="text-[11px] text-white/50 leading-relaxed">
+                              {language === 'tr'
+                                ? 'Public yorumlar ve otel içi geri bildirimlerden kısa bir tablo.'
+                                : 'A quick read from public and in-house guest feedback.'}
+                            </p>
                           </div>
                         </div>
 
-                        <div 
-                          onClick={() => setExpGuests(prev => Math.min(6, prev + 1))}
-                          className="panel-card-sm"
-                        >
-                          <span className="label-sm mb-1">{t('exp.activitySize')}</span>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-semibold text-sm">{expGuests} {t('exp.attendees')}</span>
+                        <div className="grid grid-cols-[auto_1fr] gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                          <div className="grid size-16 place-items-center rounded-2xl border border-amber-300/30 bg-amber-300/15">
+                            <div className="text-center">
+                              <div className="flex items-center justify-center gap-1 text-xl font-black text-amber-200">
+                                <Star size={14} className="fill-amber-200" />
+                                {reviewSummary.rating.toFixed(1)}
+                              </div>
+                              <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-white/45">/ 5</p>
                             </div>
-                            <span className="text-[10px] text-white/40">▲</span>
+                          </div>
+                          <div className="min-w-0 self-center">
+                            <p className="text-xs font-bold text-white">
+                              {reviewSummary.source === 'google'
+                                ? (language === 'tr' ? 'Google değerlendirmeleri aktif' : 'Google reviews enabled')
+                                : (language === 'tr' ? 'Demo puan + iç yorumlar' : 'Demo score + in-house reviews')}
+                            </p>
+                            <p className="mt-1 text-[11px] leading-relaxed text-white/55">
+                              {language === 'tr'
+                                ? `${reviewStats.total} yorum kartı gösteriliyor. Onay bekleyen yorumlar public alana çıkmıyor.`
+                                : `${reviewStats.total} review cards are shown. Pending reviews stay private.`}
+                            </p>
                           </div>
                         </div>
+
+                        <div className="space-y-1.5 rounded-xl border border-white/10 bg-black/10 p-3">
+                          {reviewStats.distribution.map((item) => (
+                            <div key={item.star} className="grid grid-cols-[42px_1fr_34px] items-center gap-2 text-xs">
+                              <span className="inline-flex items-center gap-1 font-bold text-white/75">
+                                {item.star}
+                                <Star size={10} className="fill-brand-accent text-brand-accent" />
+                              </span>
+                              <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                                <div
+                                  className="h-full rounded-full bg-brand-accent"
+                                  style={{ width: `${Math.max(item.percent, item.percent > 0 ? 8 : 0)}%` }}
+                                />
+                              </div>
+                              <span className="text-right font-mono text-[10px] text-white/45">%{item.percent}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-1.5">
+                          {[
+                            {
+                              Icon: MapPin,
+                              tr: 'Merkez ve kafelere yürüme mesafesi',
+                              en: 'Walkable city-center location',
+                            },
+                            {
+                              Icon: BedDouble,
+                              tr: 'Oda konforu ve temizlik öne çıkıyor',
+                              en: 'Room comfort and cleanliness stand out',
+                            },
+                            {
+                              Icon: ShieldCheck,
+                              tr: 'Yayınlanan yorumlar admin onayından geçiyor',
+                              en: 'Published in-house reviews are moderated',
+                            },
+                          ].map(({ Icon, tr, en }) => (
+                            <div key={tr} className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+                              <div className="grid size-8 shrink-0 place-items-center rounded-lg border border-brand-accent/25 bg-brand-accent/10 text-brand-accent">
+                                <Icon size={14} />
+                              </div>
+                              <p className="text-[11px] font-semibold leading-snug text-white/75">
+                                {language === 'tr' ? tr : en}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
 
-                      <div className="bg-surface-glass rounded-card p-3 border border-border-subtle space-y-1.5 text-xs text-text-secondary">
-                        <div className="flex justify-between">
-                          <span>{t('exp.baseFee')}</span>
-                          <span>${currentExp.price}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>{t('exp.insurance')}</span>
-                          <span>$15</span>
-                        </div>
-                        <div className="flex justify-between border-t border-white/10 pt-2 font-semibold text-white">
-                          <span>{t('exp.subtotal')}</span>
-                          <span className="text-brand-accent">${(currentExp.price + 15) * expGuests}</span>
-                        </div>
+                      <div className="shrink-0 space-y-2 border-t border-white/10 pt-2.5">
+                        <button
+                          onClick={() => setScreen('rooms')}
+                          className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-brand-accent px-4 text-sm font-semibold leading-none text-brand-emerald shadow-lg transition-colors hover:brightness-105 active:scale-[0.99]"
+                        >
+                          {language === 'tr' ? 'Odaları İncele' : 'Browse Rooms'}
+                        </button>
+                        <button
+                          onClick={() => setScreen('reserve')}
+                          className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-semibold leading-none text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+                        >
+                          {language === 'tr' ? 'Rezervasyon Yap' : 'Make a Reservation'}
+                        </button>
                       </div>
-
-                      <div className="flex justify-between text-[11px] text-white/50">
-                        <span>{t('exp.ranger')}</span>
-                        <span>{t('exp.briefing')}</span>
-                      </div>
-
-                      <button
-                        onClick={handleExperienceBooking}
-                        disabled={experienceSubmitting}
-                        className="w-full bg-brand-accent text-brand-emerald font-semibold text-xs py-3.5 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 shimmer-btn shadow-lg cursor-pointer text-center"
-                      >
-                        {experienceSubmitting ? t('exp.securingBtn') : `${t('exp.secureBtn')}${(currentExp.price + 15) * expGuests}`}
-                      </button>
                     </div>
                   </div>
                 </>

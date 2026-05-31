@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   LogOut, Calendar, User, Users, MessageSquare,
@@ -13,6 +13,7 @@ import {
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useTheme } from '@/theme/ThemeContext';
 import { CustomerReservations } from '@/components/customer/CustomerReservations';
+import { CustomerReviews } from '@/components/customer/CustomerReviews';
 import type { AuthUser } from '@/lib/auth/session';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { BirthDateInput, formatBirthDate } from '@/components/ui/BirthDateInput';
@@ -25,7 +26,7 @@ interface CustomerDashboardProps {
   authSource: 'access' | 'refresh';
 }
 
-type TabId = 'reservations' | 'profile' | 'support';
+type TabId = 'reservations' | 'reviews' | 'profile' | 'support';
 
 interface AccountPerson {
   id: string;
@@ -149,6 +150,7 @@ function ProfileHero({ user, tr }: { user: AuthUser; tr: boolean }) {
 
 const TABS: { id: TabId; labelTr: string; labelEn: string; icon: React.ElementType }[] = [
   { id: 'reservations', labelTr: 'Rezervasyonlarım', labelEn: 'My Stays',    icon: Calendar     },
+  { id: 'reviews',      labelTr: 'Yorumlarım',       labelEn: 'Reviews',     icon: Star         },
   { id: 'profile',      labelTr: 'Profilim',         labelEn: 'Profile',     icon: User         },
   { id: 'support',      labelTr: 'Destek',           labelEn: 'Support',     icon: MessageSquare},
 ];
@@ -901,6 +903,7 @@ function LoyaltyCard({ tr }: { tr: boolean }) {
 
 export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { language, setLanguage } = useLanguage();
   const { mode, setMode } = useTheme();
   const tr = language === 'tr';
@@ -909,6 +912,12 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
   const [people, setPeople] = useState<AccountPerson[]>([]);
   const [peopleLoaded, setPeopleLoaded] = useState(false);
   const [showProfileSetupPrompt, setShowProfileSetupPrompt] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'reviews') {
+      setActiveTab('reviews');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetch('/api/account/people')
@@ -1046,6 +1055,7 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
                 transition={{ duration: 0.18 }}
               >
                 {activeTab === 'reservations' && <CustomerReservations user={user} tr={tr} />}
+                {activeTab === 'reviews'      && <CustomerReviews user={user} tr={tr} focusConfirmationId={searchParams.get('reservation')} />}
                 {activeTab === 'profile'      && <ProfileTab user={user} tr={tr} people={people} onPeopleChanged={setPeople} />}
                 {activeTab === 'support'      && <SupportTab tr={tr} user={user} />}
               </motion.div>

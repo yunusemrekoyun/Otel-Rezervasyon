@@ -255,3 +255,55 @@ export function renderCheckinEmail(data: CheckinEmailData) {
 
   return { html, text };
 }
+
+// ── 4. Konaklama Değerlendirme Daveti ────────────────────────────────────────
+
+export interface ReviewRequestEmailData {
+  firstName: string;
+  roomName: string;
+  confirmationId: string;
+  reviewUrl: string;
+}
+
+export function renderReviewRequestEmail(data: ReviewRequestEmailData) {
+  const hotel = hotelName();
+
+  const body = `
+    <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+      Merhaba <strong>${e(data.firstName)}</strong>,<br/>
+      ${e(data.roomName)} konaklamanız için teşekkür ederiz. Kısa değerlendirmeniz, ekibimizin doğru yerde iyileştirme yapmasına yardımcı olur.
+    </p>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;margin-bottom:20px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${infoRow('Rezervasyon', data.confirmationId)}
+        ${infoRow('Oda', data.roomName)}
+      </table>
+    </div>
+    <div style="margin:24px 0;text-align:center;">
+      <a href="${e(data.reviewUrl)}"
+         style="display:inline-block;padding:13px 28px;border-radius:8px;background:${ACCENT};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;letter-spacing:.02em;">
+        Konaklamamı Değerlendir
+      </a>
+    </div>
+    <p style="margin:16px 0 0;color:#94a3b8;font-size:12px;line-height:1.6;">
+      Yorumunuz public alanda görünmeden önce otel yönetimi tarafından kontrol edilir.
+    </p>`;
+
+  const html = emailShell(
+    'Konaklamanızı Değerlendirin',
+    `${hotel} konaklamanız hakkında kısa bir yorum bırakabilirsiniz.`,
+    body,
+  );
+
+  const text = [
+    `${hotel} — Konaklamanızı Değerlendirin`,
+    '',
+    `Merhaba ${data.firstName},`,
+    `${data.roomName} konaklamanız için teşekkür ederiz.`,
+    `Rezervasyon: ${data.confirmationId}`,
+    '',
+    `Yorum bırakmak için: ${data.reviewUrl}`,
+  ].join('\n');
+
+  return { html, text };
+}

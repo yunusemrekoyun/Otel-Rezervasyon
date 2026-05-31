@@ -21,6 +21,7 @@ import { AdminSettings } from '@/components/admin/AdminSettings';
 import { AdminUserManager } from '@/components/admin/AdminUserManager';
 import { AdminOperationsPanel } from '@/components/admin/AdminOperationsPanel';
 import { AuditLogPanel } from '@/components/admin/AuditLogPanel';
+import { AdminReviewsPanel } from '@/components/admin/AdminReviewsPanel';
 import { CustomerDashboard } from '@/components/customer/CustomerDashboard';
 import { CheckinPanel } from '@/components/personel/CheckinPanel';
 import { PersonelDashboard } from '@/components/personel/PersonelDashboard';
@@ -55,6 +56,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'checkinout',   label: 'Giriş / Çıkış',     description: 'Misafir giriş ve çıkış işlemleri ile QR tarama terminali.',                                icon: DoorOpen },
       { id: 'rooms',        label: 'Odalar',              description: 'Oda çeşitlerini, imkanlarını ve medyalarını buradan yönetebilirsiniz.',                    icon: Building2 },
       { id: 'operations',   label: 'Hasar & Kayıp Eşya', description: 'Personelden gelen hasar bildirimleri ve kayıp eşya kayıtlarını buradan yönetin.',           icon: Wrench },
+      { id: 'reviews',      label: 'Yorum Yönetimi',      description: 'Müşteri yorumlarını inceleyin, onaylayın veya yayından kaldırın.',                         icon: MessageSquare },
       { id: 'audit',        label: 'İşlem Logları',       description: 'Kritik sistem işlemleri ve yetkili kullanıcı hareketlerini takip edin.',                    icon: FileClock },
       { id: 'settings',     label: 'Sistem Ayarları',     description: 'Kabin fiyatlandırmaları, site ayarları ve genel yapılandırmalar.',                         icon: Settings },
     ],
@@ -90,6 +92,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'checkinout',   label: 'Check-in / Out',   description: 'Guest check-in and check-out operations with QR scanning terminal.',                  icon: DoorOpen },
       { id: 'rooms',        label: 'Rooms',             description: 'Manage room types, their amenities and media from here.',                            icon: Building2 },
       { id: 'operations',   label: 'Damage & Lost Items', description: 'Manage damage reports and lost item logs submitted by housekeeping staff.',          icon: Wrench },
+      { id: 'reviews',      label: 'Review Management',   description: 'Review, approve or unpublish guest stay reviews.',                                  icon: MessageSquare },
       { id: 'audit',        label: 'Audit Logs',        description: 'Track critical system operations and authorized user activity.',                    icon: FileClock },
       { id: 'settings',     label: 'Settings',          description: 'Cabin pricing, site configurations and general structures.',                         icon: Settings },
     ],
@@ -336,6 +339,10 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           /* ── Admin operations (damage reports + lost items) ── */
           ) : activeTabId === 'operations' && user.roleSlug === 'admin' ? (
             <AdminOperationsPanel tr={language === 'tr'} />
+
+          /* ── Admin review moderation ── */
+          ) : activeTabId === 'reviews' && user.roleSlug === 'admin' ? (
+            <AdminReviewsPanel tr={language === 'tr'} />
 
           /* ── Admin audit logs ── */
           ) : activeTabId === 'audit' && user.roleSlug === 'admin' ? (

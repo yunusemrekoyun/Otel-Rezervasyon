@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
 import { sendMail } from '@/lib/mail';
-import { renderCheckinEmail } from '@/lib/mail/hotel-templates';
+import { renderCheckinEmail, renderReviewRequestEmail } from '@/lib/mail/hotel-templates';
 import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -18,6 +18,10 @@ class RoomStatusConflictError extends Error {
   constructor(readonly status: string | null | undefined) {
     super('ROOM_STATUS_CONFLICT');
   }
+}
+
+function getAppUrl(request: NextRequest) {
+  return process.env.APP_URL?.trim() || request.nextUrl.origin;
 }
 
 export async function GET(request: NextRequest) {
@@ -260,6 +264,48 @@ export async function PATCH(request: NextRequest) {
       sendToCleaning,
     },
   });
+
+  // Send review request only to registered customer accounts (fire-and-forget).
+  try {
+    const customer = updated.userId
+      ? await prisma.user.findFirst({
+          where: { id: updated.userId, isActive: true, role: { slug: 'musteri' } },
+          select: { id: true, email: true, firstName: true },
+        })
+      : await prisma.user.findFirst({
+          where: { email: updated.email, isActive: true, role: { slug: 'musteri' } },
+          select: { id: true, email: true, firstName: true },
+        });
+
+    if (customer) {
+      const existingReview = await prisma.hotelReview.findUnique({
+        where: { reservationId: updated.id },
+        select: { id: true },
+      });
+
+      if (!existingReview) {
+        const reviewUrl = new URL('/musteri', getAppUrl(request));
+        reviewUrl.searchParams.set('tab', 'reviews');
+        reviewUrl.searchParams.set('reservation', updated.confirmationId);
+
+        const { html, text } = renderReviewRequestEmail({
+          firstName: customer.firstName || updated.firstName,
+          roomName: updated.room.name,
+          confirmationId: updated.confirmationId,
+          reviewUrl: reviewUrl.toString(),
+        });
+
+        sendMail({
+          to: customer.email,
+          subject: 'Konaklamanızı değerlendirin',
+          html,
+          text,
+        }).catch(console.error);
+      }
+    }
+  } catch (mailError) {
+    console.error('Review request email send failed.', mailError);
+  }
 
   return NextResponse.json({ ok: true, reservation: updated });
 }
