@@ -50,6 +50,10 @@ export async function GET(request: NextRequest) {
           where: {
             roomId: { in: rooms.map((room) => room.id) },
             status: { notIn: ['cancelled'] },
+            NOT: {
+              status: 'payment_pending',
+              paymentExpiresAt: { lte: new Date() },
+            },
             checkInDate: { lt: monthEnd },
             checkOutDate: { gt: monthStart },
           },

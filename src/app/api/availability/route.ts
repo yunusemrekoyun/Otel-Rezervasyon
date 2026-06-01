@@ -28,6 +28,10 @@ export async function GET(request: NextRequest) {
       prisma.reservation.findMany({
         where: {
           status: { notIn: ['cancelled'] },
+          NOT: {
+            status: 'payment_pending',
+            paymentExpiresAt: { lte: new Date() },
+          },
           checkInDate:  { lt: monthEnd },
           checkOutDate: { gt: monthStart },
           ...(roomId ? { roomId } : {}),

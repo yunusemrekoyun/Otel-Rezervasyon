@@ -183,6 +183,9 @@ model Reservation {
   userId                      String?   @map("user_id")
   user                        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   hotelReview                 HotelReview?
+  payments                    Payment[]
+  paymentStatus               String    @default("unpaid") @map("payment_status")
+  paymentExpiresAt            DateTime? @map("payment_expires_at")
   createdAt                   DateTime  @default(now()) @map("created_at")
   updatedAt                   DateTime  @updatedAt @map("updated_at")
 
@@ -190,6 +193,32 @@ model Reservation {
   @@index([userId])
   @@index([checkInDate, checkOutDate])
   @@map("reservations")
+}
+
+model Payment {
+  id               String      @id @default(cuid())
+  reservationId    String      @map("reservation_id")
+  reservation      Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  provider         String      @default("iyzico")
+  status           String      @default("initializing")
+  amount           Int
+  currency         String      @default("TRY")
+  conversationId   String      @unique @map("conversation_id")
+  iyzicoToken      String?     @unique @map("iyzico_token")
+  iyzicoPaymentId  String?     @map("iyzico_payment_id")
+  paymentPageUrl   String?     @map("payment_page_url")
+  checkoutFormHtml String?     @map("checkout_form_html")
+  errorCode        String?     @map("error_code")
+  errorMessage     String?     @map("error_message")
+  paidAt           DateTime?   @map("paid_at")
+  failedAt         DateTime?   @map("failed_at")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  @@index([reservationId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payments")
 }
 
 model ContactRequest {

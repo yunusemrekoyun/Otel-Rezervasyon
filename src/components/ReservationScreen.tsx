@@ -6,6 +6,7 @@ import {
   Calendar, ChevronLeft, ChevronRight, X, Check,
   User, Phone, Mail, Building2, FileText, BedDouble,
   Loader2, CheckCircle2, AlertCircle, ChevronDown,
+  CreditCard, ShieldCheck, Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -83,6 +84,122 @@ interface AccountPerson {
   companyName: string | null;
   taxNumber: string | null;
   taxOffice: string | null;
+}
+
+interface PaymentSession {
+  id: string;
+  reservationId: string;
+  confirmationId: string;
+  status: string;
+  amount: number;
+  currency: string;
+  expiresAt: string | null;
+  paymentPageUrl: string | null;
+  checkoutFormContent: string | null;
+}
+
+function IyzicoCheckoutForm({
+  html,
+  paymentPageUrl,
+  tr,
+}: {
+  html: string | null;
+  paymentPageUrl: string | null;
+  tr: boolean;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !html) return;
+
+    const win = window as Window & {
+      iyziInit?: unknown;
+      iyziUcsInit?: unknown;
+    };
+
+    const removeIyzicoBundles = () => {
+      document
+        .querySelectorAll('script[src*="iyzipay.com/checkoutform"]')
+        .forEach((node) => node.remove());
+    };
+
+    // iyzico's snippet declares `var iyziInit = {...}` at global scope, which
+    // creates a non-configurable window property — `delete` throws in strict
+    // mode ("Cannot delete property 'iyziInit'"). Reset to undefined instead so
+    // the snippet's `typeof iyziInit == 'undefined'` guard runs again on every
+    // (re)mount and re-renders the form.
+    win.iyziInit = undefined;
+    win.iyziUcsInit = undefined;
+    removeIyzicoBundles();
+
+    container.innerHTML = '';
+
+    const checkoutMount = document.createElement('div');
+    checkoutMount.id = 'iyzipay-checkout-form';
+    checkoutMount.className = 'responsive';
+    container.appendChild(checkoutMount);
+
+    const fragment = document.createElement('div');
+    fragment.innerHTML = html;
+    const scripts = Array.from(fragment.querySelectorAll('script'));
+    scripts.forEach(script => script.remove());
+
+    while (fragment.firstChild) {
+      container.appendChild(fragment.firstChild);
+    }
+
+    scripts.forEach((sourceScript) => {
+      const script = document.createElement('script');
+      Array.from(sourceScript.attributes).forEach((attr) => {
+        script.setAttribute(attr.name, attr.value);
+      });
+      script.text = sourceScript.textContent ?? '';
+      container.appendChild(script);
+    });
+
+    return () => {
+      container.innerHTML = '';
+      removeIyzicoBundles();
+      win.iyziInit = undefined;
+      win.iyziUcsInit = undefined;
+    };
+  }, [html]);
+
+  if (!html && paymentPageUrl) {
+    return (
+      <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 bg-white p-5 text-center text-black/70">
+        <p className="text-sm">
+          {tr
+            ? 'Ödeme formu doğrudan yüklenemedi. Iyzico güvenli ödeme sayfasını açabilirsiniz.'
+            : 'The embedded payment form could not be loaded. You can open the iyzico secure payment page.'}
+        </p>
+        <a
+          href={paymentPageUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white"
+        >
+          {tr ? 'Ödeme Sayfasını Aç' : 'Open Payment Page'}
+        </a>
+      </div>
+    );
+  }
+
+  if (!html) {
+    return (
+      <div className="flex h-[300px] items-center justify-center text-sm text-black/60">
+        {tr ? 'Ödeme formu hazırlanıyor…' : 'Preparing payment form…'}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="min-h-[430px] bg-white [&_iframe]:w-full [&_iframe]:max-w-full"
+    />
+  );
 }
 
 const emptyForm: GuestForm = {
@@ -376,7 +493,7 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomTypeId, roomNa
 
 // ── Step indicator ─────────────────────────────────────────────────────────────
 
-const STEPS = ['Oda & Tarih', 'Misafir Bilgileri', 'Onay'];
+const STEPS = ['Oda & Tarih', 'Misafir Bilgileri', 'Onay', 'Ödeme'];
 
 function StepBar({ step }: { step: number }) {
   return (
@@ -457,6 +574,11 @@ export function ReservationScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [newAccountProfileOwner, setNewAccountProfileOwner] = useState<NewAccountProfileOwner | null>(null);
   const [result, setResult] = useState<{ ok: boolean; confirmationId?: string; message?: string; needsProfileSetup?: boolean } | null>(null);
+  const [paymentSession, setPaymentSession] = useState<PaymentSession | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentNow, setPaymentNow] = useState(() => Date.now());
+  const finishingPaymentRef = useRef(false);
+  const needsProfileSetupRef = useRef(false);
 
   const [savedPeople, setSavedPeople] = useState<AccountPerson[] | null>(null);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
@@ -504,6 +626,42 @@ export function ReservationScreen() {
       } catch { /* not logged in or network error */ }
     }
     detectLogin();
+  }, []);
+
+  // Returning from a top-level 3DS redirect: /?payment=<paymentId>. Fetch the
+  // payment status and surface the themed confirmation (with QR) in-app.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pid = params.get('payment');
+    if (!pid) return;
+
+    params.delete('payment');
+    const qs = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/payments/${pid}/status`, { cache: 'no-store' });
+        const data = await res.json().catch(() => null);
+        const paid = data?.ok && (data.payment?.status === 'paid' || data.reservation?.paymentStatus === 'paid');
+        if (paid) {
+          setResult({ ok: true, confirmationId: data.reservation?.confirmationId });
+        } else {
+          setResult({
+            ok: false,
+            message: tr
+              ? 'Ödeme tamamlanamadı veya iptal edildi. Lütfen tekrar deneyin.'
+              : 'Payment could not be completed or was cancelled. Please try again.',
+          });
+        }
+      } catch {
+        setResult({
+          ok: false,
+          message: tr ? 'Ödeme durumu alınamadı.' : 'Could not retrieve payment status.',
+        });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectedRoom = rooms.find(r => r.id === selectedRoomId) ?? null;
@@ -579,15 +737,16 @@ export function ReservationScreen() {
   const mismatchLabels = getGuestProfileMismatchLabels(accountProfile, form, isTurkish, tr);
   const needsProfileDecision = existingAccountVerified && mismatchLabels.length > 0 && profileDecision === null;
 
-  const step2Valid = emailCheckState === 'exists'
+  const step2BaseValid = emailCheckState === 'exists'
     ? loginPassword.length > 0 && !needsProfileDecision
     : wantsAccount === false || (
         wantsAccount === true &&
         password.length >= 8 &&
         password === passwordConfirm &&
-        newAccountProfileOwner !== null &&
-        kvkkAccepted
+        newAccountProfileOwner !== null
       );
+
+  const step2Valid = kvkkAccepted && step2BaseValid;
 
   async function goToStep2() {
     setEmailCheckState('checking');
@@ -626,10 +785,105 @@ export function ReservationScreen() {
     }
   }
 
-  async function handleSubmit() {
+  async function finalizePaidReservation(session: PaymentSession) {
+    if (finishingPaymentRef.current) return;
+    finishingPaymentRef.current = true;
+    try {
+      // Account creation / guest-person add runs before payment (see
+      // handleSubmit), so on success we only surface the confirmation. This
+      // keeps the flow correct even when 3DS redirects the top window and the
+      // in-memory form state is gone.
+      setResult({
+        ok: true,
+        confirmationId: session.confirmationId,
+        needsProfileSetup: needsProfileSetupRef.current,
+      });
+    } finally {
+      finishingPaymentRef.current = false;
+    }
+  }
+
+  async function refreshPaymentStatus(session: PaymentSession) {
+    try {
+      const response = await fetch(`/api/payments/${session.id}/status`, { cache: 'no-store' });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.ok) {
+        setPaymentError(data?.message ?? (tr ? 'Ödeme durumu alınamadı.' : 'Could not fetch payment status.'));
+        return;
+      }
+
+      if (data.payment?.status === 'paid' || data.reservation?.paymentStatus === 'paid') {
+        await finalizePaidReservation({
+          ...session,
+          confirmationId: data.reservation?.confirmationId ?? session.confirmationId,
+        });
+        return;
+      }
+
+      if (data.reservation?.paymentStatus === 'expired' || data.payment?.status === 'expired') {
+        setPaymentError(tr
+          ? 'Ödeme süresi doldu. Lütfen rezervasyonu yeniden başlatın.'
+          : 'Payment time expired. Please restart the reservation.');
+        return;
+      }
+
+      if (data.payment?.status === 'failed') {
+        setPaymentError(data.payment.errorMessage || (tr
+          ? 'Ödeme tamamlanamadı. Aynı süre içinde tekrar deneyebilirsiniz.'
+          : 'Payment could not be completed. You can try again within the hold period.'));
+      }
+    } catch {
+      setPaymentError(tr ? 'Ödeme durumu kontrol edilemedi.' : 'Payment status could not be checked.');
+    }
+  }
+
+  async function cancelPaymentAndEdit() {
+    if (paymentSession) {
+      await fetch(`/api/payments/${paymentSession.id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      }).catch(() => null);
+    }
+
+    setPaymentSession(null);
+    setPaymentError(null);
+    setStep(2);
+  }
+
+  useEffect(() => {
+    if (!paymentSession || result) return;
+    const interval = window.setInterval(() => {
+      setPaymentNow(Date.now());
+      refreshPaymentStatus(paymentSession);
+    }, 2500);
+
+    return () => window.clearInterval(interval);
+  }, [paymentSession, result]);
+
+  useEffect(() => {
+    if (!paymentSession) return;
+    const activeSession = paymentSession;
+
+    function onMessage(event: MessageEvent) {
+      const data = event.data as { type?: string; paymentId?: string; status?: string; message?: string } | null;
+      if (!data || data.type !== 'garden-payment-callback' || data.paymentId !== activeSession.id) return;
+      if (data.status === 'failed') {
+        setPaymentError(data.message ?? (tr ? 'Ödeme tamamlanamadı.' : 'Payment could not be completed.'));
+      }
+      refreshPaymentStatus(activeSession);
+    }
+
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [paymentSession, tr]);
+
+  async function handleSubmit(retryReservationId?: string) {
     if (!step0Valid || !step1Valid || !step2Valid) return;
     setSubmitting(true);
     setLoginError(null);
+    setPaymentError(null);
 
     // Mevcut hesap varsa önce giriş doğrulaması yap
     let verifiedProfile = accountProfile;
@@ -672,6 +926,66 @@ export function ReservationScreen() {
       ? formWithAccountProfile(form, verifiedProfile)
       : form;
 
+    // Create the account / add the guest person BEFORE starting payment, so the
+    // reservation links to the user and nothing depends on in-memory state
+    // surviving a top-level 3DS redirect. Skipped on retry (already done).
+    if (!retryReservationId) {
+      if (emailCheckState === 'exists' && profileDecision === 'entered') {
+        await fetch('/api/account/people', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: form.firstName,
+            lastName: form.lastName,
+            email: form.email,
+            phone: form.phone,
+            birthDate: form.birthDate || undefined,
+            gender: form.gender || undefined,
+            nationality: form.nationality || 'TR',
+            tcKimlikNo: isTurkish ? form.tcKimlikNo : undefined,
+            passportNo: !isTurkish ? form.passportNo : undefined,
+            passportExpiry: !isTurkish ? form.passportExpiry : undefined,
+            companyName: showCorporate ? form.companyName : undefined,
+            taxNumber: showCorporate ? form.taxNumber : undefined,
+            taxOffice: showCorporate ? form.taxOffice : undefined,
+            relation: 'guest',
+            isDefault: false,
+          }),
+        }).catch(() => null);
+      }
+
+      if (emailCheckState !== 'exists' && wantsAccount === true) {
+        const registerRes = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: form.firstName,
+            lastName: form.lastName,
+            email: form.email,
+            phone: form.phone,
+            birthDate: form.birthDate || undefined,
+            gender: form.gender || undefined,
+            nationality: form.nationality || 'TR',
+            tcKimlikNo: isTurkish ? form.tcKimlikNo : undefined,
+            passportNo: !isTurkish ? form.passportNo : undefined,
+            passportExpiry: !isTurkish ? form.passportExpiry : undefined,
+            companyName: showCorporate ? form.companyName : undefined,
+            taxNumber: showCorporate ? form.taxNumber : undefined,
+            taxOffice: showCorporate ? form.taxOffice : undefined,
+            password,
+            profileOwner: newAccountProfileOwner ?? 'self',
+          }),
+        }).catch(() => null);
+        const registerData = registerRes ? await registerRes.json().catch(() => null) : null;
+        if (!registerData?.ok) {
+          setPaymentError(registerData?.message ?? (tr ? 'Hesap oluşturulamadı.' : 'Account could not be created.'));
+          setSubmitting(false);
+          return;
+        }
+        needsProfileSetupRef.current = !!registerData.needsProfileSetup;
+      }
+    }
+
     const payload = {
       roomTypeId: selectedRoomId,
       checkInDate: dateKey(checkIn!),
@@ -692,26 +1006,12 @@ export function ReservationScreen() {
       taxNumber: showCorporate ? reservationForm.taxNumber : undefined,
       taxOffice: showCorporate ? reservationForm.taxOffice : undefined,
       specialRequests: reservationForm.specialRequests || undefined,
-    };
-
-    const personPayload = {
-      firstName: reservationForm.firstName,
-      lastName: reservationForm.lastName,
-      email: reservationForm.email,
-      phone: reservationForm.phone,
-      birthDate: reservationForm.birthDate || undefined,
-      gender: reservationForm.gender || undefined,
-      nationality: reservationForm.nationality || 'TR',
-      tcKimlikNo: isTurkish ? reservationForm.tcKimlikNo : undefined,
-      passportNo: !isTurkish ? reservationForm.passportNo : undefined,
-      passportExpiry: !isTurkish ? reservationForm.passportExpiry : undefined,
-      companyName: showCorporate ? reservationForm.companyName : undefined,
-      taxNumber: showCorporate ? reservationForm.taxNumber : undefined,
-      taxOffice: showCorporate ? reservationForm.taxOffice : undefined,
+      kvkkAccepted,
+      ...(retryReservationId ? { retryReservationId } : {}),
     };
 
     try {
-      const resRes = await fetch('/api/reservations', {
+      const resRes = await fetch('/api/reservations/payment-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -719,47 +1019,31 @@ export function ReservationScreen() {
       const resData = await resRes.json();
 
       if (!resData.ok) {
-        setResult({ ok: false, message: resData.message });
+        setPaymentError(resData.message);
         setSubmitting(false);
         return;
       }
 
-      let needsProfileSetup = false;
-
-      if (emailCheckState === 'exists' && profileDecision === 'entered') {
-        await fetch('/api/account/people', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...personPayload,
-            relation: 'guest',
-            isDefault: false,
-          }),
-        }).catch(() => null);
-      }
-
-      // Hesap oluşturma — yalnızca yeni kayıt akışında
-      if (wantsAccount === true && emailCheckState !== 'exists') {
-        const registerRes = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...personPayload,
-            password,
-            profileOwner: newAccountProfileOwner ?? 'self',
-          }),
-        }).catch(() => null);
-        const registerData = registerRes ? await registerRes.json().catch(() => null) : null;
-        needsProfileSetup = !!registerData?.needsProfileSetup;
-      }
-
-      setResult({ ok: true, confirmationId: resData.confirmationId, needsProfileSetup });
+      setPaymentSession(resData.payment);
+      setPaymentNow(Date.now());
+      setStep(3);
     } catch {
-      setResult({ ok: false, message: tr ? 'Bağlantı hatası.' : 'Connection error.' });
+      setPaymentError(tr ? 'Bağlantı hatası.' : 'Connection error.');
     } finally {
       setSubmitting(false);
     }
   }
+
+  const paymentRemainingMs = paymentSession?.expiresAt
+    ? Math.max(0, new Date(paymentSession.expiresAt).getTime() - paymentNow)
+    : 0;
+
+  const paymentRemainingText = (() => {
+    const totalSeconds = Math.ceil(paymentRemainingMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  })();
 
   // ── Result screen ──────────────────────────────────────────────────────────
 
@@ -772,7 +1056,7 @@ export function ReservationScreen() {
               <CheckCircle2 size={32} className="text-brand-accent" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">
-              {tr ? 'Rezervasyonunuz Alındı!' : 'Reservation Confirmed!'}
+              {tr ? 'Ödeme Alındı, Rezervasyonunuz Onaylandı!' : 'Payment Received, Reservation Confirmed!'}
             </h2>
             <p className="text-white/50 text-sm mb-4">
               {tr ? 'Onay kodunuz:' : 'Your confirmation code:'}
@@ -1512,19 +1796,6 @@ export function ReservationScreen() {
                         </div>
                       </div>
                     )}
-                    <label className="flex items-start gap-2.5 text-xs text-white/60 cursor-pointer mt-1">
-                      <input
-                        type="checkbox"
-                        checked={kvkkAccepted}
-                        onChange={e => setKvkkAccepted(e.target.checked)}
-                        className="mt-0.5 shrink-0 accent-brand-accent"
-                      />
-                      <span>
-                        {tr
-                          ? 'Kişisel verilerimin Garden Hotel tarafından rezervasyon ve iletişim amacıyla işlenmesini KVKK kapsamında kabul ediyorum.'
-                          : 'I consent to Garden Hotel processing my personal data for reservation and communication purposes (KVKK/GDPR).'}
-                      </span>
-                    </label>
                     <button
                       onClick={() => { setWantsAccount(null); setPassword(''); setPasswordConfirm(''); setNewAccountProfileOwner(null); setKvkkAccepted(false); }}
                       className="text-[10px] text-white/30 hover:text-white/50 transition-colors"
@@ -1541,6 +1812,26 @@ export function ReservationScreen() {
                     <button onClick={() => setWantsAccount(null)} className="text-brand-accent/60 hover:text-brand-accent transition-colors ml-1">
                       {tr ? 'Değiştir' : 'Change'}
                     </button>
+                  </p>
+                )}
+
+                <label className="flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/60 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={kvkkAccepted}
+                    onChange={e => setKvkkAccepted(e.target.checked)}
+                    className="mt-0.5 shrink-0 accent-brand-accent"
+                  />
+                  <span>
+                    {tr
+                      ? 'Kişisel verilerimin Garden Hotel tarafından rezervasyon, ödeme ve iletişim amacıyla işlenmesini KVKK kapsamında kabul ediyorum.'
+                      : 'I consent to Garden Hotel processing my personal data for reservation, payment and communication purposes (KVKK/GDPR).'}
+                  </span>
+                </label>
+
+                {paymentError && (
+                  <p className="rounded-lg border border-red-400/20 bg-red-400/10 px-3 py-2 text-[11px] text-red-200">
+                    {paymentError}
                   </p>
                 )}
 
@@ -1568,12 +1859,106 @@ export function ReservationScreen() {
                       emailCheckState === 'idle' ||
                       (emailCheckState === 'not-exists' && wantsAccount === null)
                     }
-                    onClick={handleSubmit}
+                    onClick={() => handleSubmit()}
                     className="px-6 py-2.5 rounded-lg bg-brand-accent text-black font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-brand-accent/90 transition-colors flex items-center gap-2"
                   >
                     {submitting && <Loader2 size={14} className="animate-spin" />}
-                    {tr ? 'Rezervasyonu Tamamla' : 'Complete Reservation'}
+                    {tr ? 'Güvenli Ödemeye Geç' : 'Continue to Secure Payment'}
                   </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── Step 3: Payment ───────────────────────────────────────────── */}
+            {step === 3 && paymentSession && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4"
+              >
+                <div className="rounded-xl border border-brand-accent/20 bg-brand-accent/10 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-brand-accent/15 border border-brand-accent/25 flex items-center justify-center text-brand-accent">
+                        <ShieldCheck size={18} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">
+                          {tr ? 'Güvenli ödeme' : 'Secure payment'}
+                        </p>
+                        <p className="text-xs text-white/45">
+                          {tr ? 'Kart bilgileri iyzico güvenli alanında işlenir.' : 'Card details are processed inside iyzico secure checkout.'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/10 px-3 py-2 text-xs text-white/70">
+                      <Clock size={13} className="text-brand-accent" />
+                      <span>{paymentRemainingText}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center rounded-xl border border-white/10 bg-white/5 p-4">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold">
+                      {tr ? 'Ödenecek tutar' : 'Amount due'}
+                    </p>
+                    <p className="mt-1 text-xl font-bold text-brand-accent">
+                      ₺{paymentSession.amount.toLocaleString('tr-TR')}
+                    </p>
+                    <p className="mt-1 text-xs text-white/40">
+                      {selectedRoom?.name} · {formatDate(checkIn)} → {formatDate(checkOut)}
+                    </p>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/55">
+                    <CreditCard size={14} />
+                    iyzico
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl">
+                  <IyzicoCheckoutForm
+                    html={paymentSession.checkoutFormContent}
+                    paymentPageUrl={paymentSession.paymentPageUrl}
+                    tr={tr}
+                  />
+                </div>
+
+                {paymentError && (
+                  <div className="rounded-xl border border-red-400/25 bg-red-400/10 p-3 text-xs text-red-100">
+                    {paymentError}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={cancelPaymentAndEdit}
+                    className="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-sm transition-colors"
+                  >
+                    {tr ? 'Bilgileri Düzenle' : 'Edit Details'}
+                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => refreshPaymentStatus(paymentSession)}
+                      className="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-sm transition-colors"
+                    >
+                      {tr ? 'Durumu Kontrol Et' : 'Check Status'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={submitting || paymentRemainingMs <= 0}
+                      onClick={() => handleSubmit(paymentSession.reservationId)}
+                      className="px-5 py-2.5 rounded-lg bg-brand-accent text-black font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-brand-accent/90 transition-colors flex items-center gap-2"
+                    >
+                      {submitting && <Loader2 size={14} className="animate-spin" />}
+                      {tr ? 'Tekrar Dene' : 'Try Again'}
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}

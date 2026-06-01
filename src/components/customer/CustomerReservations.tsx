@@ -50,6 +50,8 @@ function statusBadge(status: string, tr: boolean) {
       return { label: tr ? 'Onaylı' : 'Confirmed', icon: CheckCircle2, cls: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' };
     case 'pending':
       return { label: tr ? 'Bekliyor' : 'Pending', icon: Clock, cls: 'text-amber-400 bg-amber-400/10 border-amber-400/20' };
+    case 'payment_pending':
+      return { label: tr ? 'Ödeme Bekliyor' : 'Payment Pending', icon: Clock, cls: 'text-sky-400 bg-sky-400/10 border-sky-400/20' };
     case 'cancelled':
       return { label: tr ? 'İptal Edildi' : 'Cancelled', icon: XCircle, cls: 'text-red-400 bg-red-400/10 border-red-400/20' };
     case 'checked_in':

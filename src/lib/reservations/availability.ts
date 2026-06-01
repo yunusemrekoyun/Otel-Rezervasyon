@@ -33,10 +33,15 @@ export async function roomHasReservationConflict(
   checkIn: Date,
   checkOut: Date,
 ) {
+  const now = new Date();
   const conflict = await db.reservation.findFirst({
     where: {
       roomId,
       status: { notIn: BLOCKING_RESERVATION_STATUSES },
+      NOT: {
+        status: 'payment_pending',
+        paymentExpiresAt: { lte: now },
+      },
       AND: [
         { checkInDate: { lt: checkOut } },
         { checkOutDate: { gt: checkIn } },

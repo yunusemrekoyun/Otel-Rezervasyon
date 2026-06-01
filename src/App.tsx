@@ -125,6 +125,15 @@ export default function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [sessionUser, setSessionUser] = useState<{ roleSlug: string; email: string } | null>(null);
 
+  // Returning from a top-level 3DS payment redirect (/?payment=<id>) opens the
+  // reservation screen so ReservationScreen can show the in-app confirmation.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('payment')) {
+      setScreen('reserve');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     fetch('/api/auth/me')
       .then(r => r.json())

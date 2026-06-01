@@ -52,6 +52,13 @@ export async function POST(request: NextRequest) {
   const auth = await getAuthContextFromRequest(request).catch(() => null);
   const isStaff = auth?.user.roleSlug === 'admin' || auth?.user.roleSlug === 'personel';
 
+  if (!isStaff) {
+    return NextResponse.json(
+      { ok: false, message: 'Public rezervasyonlar güvenli ödeme akışı üzerinden tamamlanmalıdır.' },
+      { status: 403 },
+    );
+  }
+
   if (data.roomId && !isStaff) {
     return NextResponse.json(
       { ok: false, message: 'Public rezervasyon için oda tipi seçimi gereklidir.' },

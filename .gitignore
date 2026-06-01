@@ -22,6 +22,7 @@ dist/
 prisma/seed-reset.ts
 
 # ===== AI Tool Configs =====
+.claude/
 .gemini/
 .cursor/
 .copilot/
@@ -68,3 +69,6 @@ public/uploads/
 .private/
 /.playwright-mcp
 /presentation
+
+# ===== Internal planning (not pushed) =====
+docs/ROADMAP.md
