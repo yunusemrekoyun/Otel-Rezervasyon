@@ -50,21 +50,24 @@ type RoomManagerMode = 'admin' | 'frontdesk';
 const STATUS_TAG: Record<string, string> = {
   available:   'tag tag-success',
   occupied:    'tag tag-info',
-  cleaning:    'tag tag-warning',
+  dirty:       'tag tag-warning',
+  cleaning:    'tag tag-info',
   maintenance: 'tag tag-danger',
 };
 
 const STATUS_LABEL: Record<string, { tr: string; en: string }> = {
-  available:   { tr: 'Müsait',   en: 'Available'   },
-  occupied:    { tr: 'Dolu',     en: 'Occupied'     },
-  cleaning:    { tr: 'Temizlik', en: 'Cleaning'     },
-  maintenance: { tr: 'Bakım',    en: 'Maintenance'  },
+  available:   { tr: 'Müsait',       en: 'Available'   },
+  occupied:    { tr: 'Dolu',         en: 'Occupied'     },
+  dirty:       { tr: 'Temizlenecek', en: 'Needs Cleaning' },
+  cleaning:    { tr: 'Temizleniyor', en: 'Cleaning'     },
+  maintenance: { tr: 'Bakım',        en: 'Maintenance'  },
 };
 
 const STATUS_STYLE: Record<string, { dot: string; text: string; border: string; glow: string }> = {
   available:   { dot: 'bg-emerald-400', text: 'text-emerald-400', border: 'border-emerald-500/35', glow: 'rgba(52,211,153,0.15)'  },
   occupied:    { dot: 'bg-sky-400',     text: 'text-sky-400',     border: 'border-sky-500/35',     glow: 'rgba(56,189,248,0.15)'  },
-  cleaning:    { dot: 'bg-amber-400',   text: 'text-amber-400',   border: 'border-amber-500/35',   glow: 'rgba(251,191,36,0.15)'  },
+  dirty:       { dot: 'bg-amber-400',   text: 'text-amber-400',   border: 'border-amber-500/35',   glow: 'rgba(251,191,36,0.15)'  },
+  cleaning:    { dot: 'bg-sky-400',     text: 'text-sky-400',     border: 'border-sky-500/35',     glow: 'rgba(56,189,248,0.15)'  },
   maintenance: { dot: 'bg-red-400',     text: 'text-red-400',     border: 'border-red-500/35',     glow: 'rgba(248,113,113,0.15)' },
 };
 
@@ -843,7 +846,7 @@ export function RoomManager({ viewMode = 'list', mode = 'admin' }: { viewMode?: 
           tr={tr}
           onClose={() => setCleaningTarget(null)}
           onSent={() => {
-            setRooms(prev => prev.map(r => r.id === cleaningTarget.id ? { ...r, status: 'cleaning' } : r));
+            setRooms(prev => prev.map(r => r.id === cleaningTarget.id ? { ...r, status: 'dirty' } : r));
             setCleaningTarget(null);
           }}
         />

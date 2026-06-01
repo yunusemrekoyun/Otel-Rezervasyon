@@ -225,9 +225,11 @@ export async function PATCH(request: NextRequest) {
 
   // checkout — atomically update room status and optionally create a cleaning task
   const updated = await prisma.$transaction(async (tx) => {
+    // Sent to cleaning → room becomes "dirty" (queued in the shared pool, not yet
+    // claimed). Otherwise it goes straight back to available.
     await tx.room.update({
       where: { id: reservation.roomId },
-      data: { status: sendToCleaning ? 'cleaning' : 'available' },
+      data: { status: sendToCleaning ? 'dirty' : 'available' },
     });
 
     if (sendToCleaning) {
@@ -235,9 +237,10 @@ export async function PATCH(request: NextRequest) {
         data: {
           roomId: reservation.roomId,
           reportedById: auth.user.id,
+          assignedToId: null,
           status: 'pending',
           priority: 'normal',
-          notes: checkoutNote ?? 'Check-out sonrası otomatik temizlik görevi',
+          notes: checkoutNote ?? 'Check-out sonrası temizlik (havuza eklendi).',
         },
       });
     }
