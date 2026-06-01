@@ -116,7 +116,7 @@ export default function App() {
 
   // Contact/Concierge status state
   const [contactName, setContactName] = useState('');
-  const [contactCategory, setContactCategory] = useState('Check-in Guidelines');
+  const [contactCategory, setContactCategory] = useState('Rezervasyon & Giriş');
   const [contactMessage, setContactMessage] = useState('');
   const [contactSuccess, setContactSuccess] = useState(false);
   const [contactError, setContactError] = useState('');
@@ -387,7 +387,7 @@ export default function App() {
               />
             </div>
             <span className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent select-none">
-              Garden Hotel
+              KÃ¼tahya Garden Otel
             </span>
           </div>
 
@@ -601,7 +601,7 @@ export default function App() {
                             {language === 'tr' ? 'MİSAFİR YORUMLARI' : 'GUEST REVIEWS'}
                           </span>
                           <h3 className="mt-1 text-lg sm:text-xl font-bold text-white tracking-tight">
-                            {language === 'tr' ? 'Garden Hotel deneyimi' : 'Garden Hotel experience'}
+                            {language === 'tr' ? 'KÃ¼tahya Garden Otel deneyimi' : 'KÃ¼tahya Garden Otel experience'}
                           </h3>
                         </div>
                         <div className="text-right">
@@ -857,9 +857,9 @@ export default function App() {
                             onChange={(e) => setContactCategory(e.target.value)}
                             className="input-base text-xs cursor-pointer"
                           >
-                            <option value="Check-in Guidelines">{t('contact.topicOpt1')}</option>
-                            <option value="Cabin upgrades">{t('contact.topicOpt2')}</option>
-                            <option value="Solar protocol & Heating">{t('contact.topicOpt3')}</option>
+                            <option value="Rezervasyon & Giriş">{t('contact.topicOpt1')}</option>
+                            <option value="Oda Tipleri & Fiyatlar">{t('contact.topicOpt2')}</option>
+                            <option value="Özel İstekler / Şikayetler">{t('contact.topicOpt3')}</option>
                           </select>
                         </div>
 

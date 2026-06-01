@@ -7,7 +7,7 @@ export const translations = {
     'nav.rooms': 'ODALAR',
     'nav.reserve': 'REZERVASYON',
     'nav.atmosphere': 'KONFOR',
-    'nav.experiences': 'DENEYİMLER',
+    'nav.experiences': 'YORUMLAR',
     'nav.contact': 'İLETİŞİM',
     'nav.login': 'Giriş Yap',
     'nav.logout': 'Çıkış Yap',
@@ -86,12 +86,11 @@ export const translations = {
     'sound.wind': 'Hafif Esinti',
     'sound.active': 'Rahatlatıcı ses döngüsü aktif',
     
-    // Screen 4: Experiences
-    // Screen 4: Experiences
-    'exp.badge': 'Rezervasyon Seçenekleri',
-    'exp.title1': 'Konum',
-    'exp.title2': 'Avantajlı',
-    'exp.title3': 'İmkanlar',
+    // Screen 4: Reviews
+    'exp.badge': 'Misafir Değerlendirmeleri',
+    'exp.title1': 'Misafirler',
+    'exp.title2': 'Ne',
+    'exp.title3': 'Diyor?',
     'exp.recommendation': 'Misafir Memnuniyeti',
     'exp.includesGear': 'Tesis içi / Yakın mesafe',
     'exp.planner': 'Aktivite Detayları',
@@ -195,7 +194,7 @@ export const translations = {
     'nav.rooms': 'ROOMS',
     'nav.reserve': 'RESERVE',
     'nav.atmosphere': 'COMFORT',
-    'nav.experiences': 'EXPERIENCES',
+    'nav.experiences': 'REVIEWS',
     'nav.contact': 'CONTACT',
     'nav.login': 'Login',
     'nav.logout': 'Log Out',
@@ -274,11 +273,11 @@ export const translations = {
     'sound.wind': 'Light Breeze',
     'sound.active': 'Relaxing sound loop is active',
     
-    // Screen 4: Experiences
-    'exp.badge': 'Booking Options',
-    'exp.title1': 'Prime',
-    'exp.title2': 'Location',
-    'exp.title3': 'Highlights',
+    // Screen 4: Reviews
+    'exp.badge': 'Guest Reviews',
+    'exp.title1': 'What',
+    'exp.title2': 'Our Guests',
+    'exp.title3': 'Say',
     'exp.recommendation': 'Guest Satisfaction',
     'exp.includesGear': 'In-hotel / Short walk',
     'exp.planner': 'Activity Details',
@@ -336,7 +335,7 @@ export const translations = {
     // Login Modal
     'login.title': 'Admin Login',
     'login.badge': 'SYSTEM AUTHENTICATION',
-    'login.desc': 'Please log in to access the Kütahya Garden Hotel management or staff panels.',
+    'login.desc': 'Please log in to access the Kütahya KÃ¼tahya Garden Otel management or staff panels.',
     'login.email': 'EMAIL ADDRESS',
     'login.password': 'PASSWORD',
     'login.submit': 'Log In',

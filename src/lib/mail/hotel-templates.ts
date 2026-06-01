@@ -9,7 +9,7 @@ function e(v: string) {
 }
 
 function hotelName() {
-  return getMailConfig().fromName || 'Garden Hotel';
+  return getMailConfig().fromName || 'KÃ¼tahya Garden Otel';
 }
 
 function formatPrice(amount: number) {

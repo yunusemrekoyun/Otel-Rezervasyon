@@ -1,5 +1,5 @@
-export const ACCESS_COOKIE_NAME = 'woodnest_access';
-export const REFRESH_COOKIE_NAME = 'woodnest_refresh';
+export const ACCESS_COOKIE_NAME = 'kgo_access';
+export const REFRESH_COOKIE_NAME = 'kgo_refresh';
 
 export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 export const REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;

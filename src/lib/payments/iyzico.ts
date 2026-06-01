@@ -114,7 +114,7 @@ function address(contactName: string) {
     contactName,
     city: 'Kutahya',
     country: 'Turkey',
-    address: 'Garden Hotel online rezervasyon',
+    address: 'KÃ¼tahya Garden Otel online rezervasyon',
     zipCode: '43000',
   };
 }
@@ -141,7 +141,7 @@ export async function initializeCheckoutForm(input: IyzicoInitializeInput) {
       gsmNumber: input.buyer.phone,
       email: input.buyer.email,
       identityNumber: input.buyer.identityNumber,
-      registrationAddress: 'Garden Hotel online rezervasyon',
+      registrationAddress: 'KÃ¼tahya Garden Otel online rezervasyon',
       ip: input.buyer.ip,
       city: 'Kutahya',
       country: 'Turkey',
@@ -152,7 +152,7 @@ export async function initializeCheckoutForm(input: IyzicoInitializeInput) {
     basketItems: [
       {
         id: input.reservationCode,
-        name: `Garden Hotel - ${input.roomName}`,
+        name: `KÃ¼tahya Garden Otel - ${input.roomName}`,
         category1: 'Konaklama',
         category2: input.roomTypeName,
         itemType: 'VIRTUAL',

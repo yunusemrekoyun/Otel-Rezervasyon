@@ -2,13 +2,11 @@
 
 /* ─────────────────────────────────────────────────────────────────────────────
    THEMES
-   Each theme owns both dark and light panel palettes. `woodnest` is kept as a
-   legacy alias so older DB settings do not break hydration.
+   Each theme owns both dark and light panel palettes.
 ───────────────────────────────────────────────────────────────────────────── */
 
 :root,
-[data-theme="sunset"],
-[data-theme="woodnest"] {
+[data-theme="sunset"] {
   --app-base:   #07100f;
   --app-accent: #ffad73;
 

@@ -44,7 +44,7 @@ export async function PATCH(
   if (customerEmail) {
     const { html, text } = renderBrandedMail({
       title: `Destek talebiniz yanıtlandı — ${contact.ticketId}`,
-      preview: 'Garden Hotel destek ekibi mesajınıza yanıt verdi.',
+      preview: 'KÃ¼tahya Garden Otel destek ekibi mesajınıza yanıt verdi.',
       intro: `Merhaba ${contact.name}, ${contact.ticketId} numaralı destek talebinize yanıt alındı.`,
       lines: [
         `Yanıt: ${parsed.data.adminReply}`,

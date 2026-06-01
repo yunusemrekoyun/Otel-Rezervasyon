@@ -1,6 +1,6 @@
-# WoodNest Next.js Fullstack App
+# Kütahya Garden Otel — Next.js Fullstack App
 
-WoodNest is a Next.js App Router project with Supabase Postgres, Prisma, DB-backed refresh sessions, argon2id password hashing, and role-protected panels.
+Kütahya Garden Otel is a Next.js App Router project with Supabase Postgres, Prisma, DB-backed refresh sessions, argon2id password hashing, and role-protected panels.
 
 ## Local Development
 
@@ -45,7 +45,7 @@ MAIL_SECURE=true
 MAIL_USER=yourgmail@gmail.com
 MAIL_APP_PASSWORD=your-google-app-password
 MAIL_FROM_EMAIL=yourgmail@gmail.com
-MAIL_FROM_NAME=WoodNest Hotel
+MAIL_FROM_NAME=Kütahya Garden Otel
 MAIL_REPLY_TO=optional-reply-address@example.com
 ```
 

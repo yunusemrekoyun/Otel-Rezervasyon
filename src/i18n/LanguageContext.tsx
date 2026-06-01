@@ -17,7 +17,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   // We can also try to load from localStorage if we wanted, but standard specifies default TR.
   useEffect(() => {
-    const savedLang = localStorage.getItem('woodnest_lang') as Language;
+    const savedLang = localStorage.getItem('kgo_lang') as Language;
     if (savedLang && (savedLang === 'tr' || savedLang === 'en')) {
       setLanguage(savedLang);
     }
@@ -25,7 +25,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const handleSetLanguage = (lang: Language) => {
     setLanguage(lang);
-    localStorage.setItem('woodnest_lang', lang);
+    localStorage.setItem('kgo_lang', lang);
   };
 
   const t = (key: string): string => {

@@ -688,7 +688,7 @@ function SupportTab({ tr, user }: { tr: boolean; user: AuthUser }) {
             <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-main">Garden Hotel</p>
+            <p className="text-sm font-semibold text-main">KÃ¼tahya Garden Otel</p>
             <p className="text-[11px] text-subtle">{tr ? 'Resepsiyon — 7/24 hizmetinizde' : 'Reception — Available 24/7'}</p>
           </div>
         </div>
@@ -861,7 +861,7 @@ function LoyaltyCard({ tr }: { tr: boolean }) {
         <div>
           <div className={`inline-flex items-center gap-1.5 text-xs font-bold mb-1 ${tier.color}`}>
             <Star size={12} />
-            {tr ? `Garden Hotel ${tier.labelTr} Üye` : `Garden Hotel ${tier.labelEn} Member`}
+            {tr ? `KÃ¼tahya Garden Otel ${tier.labelTr} Üye` : `KÃ¼tahya Garden Otel ${tier.labelEn} Member`}
           </div>
           <p className="text-2xl font-bold text-main">{pts.toLocaleString('tr-TR')}</p>
           <p className="text-[11px] text-subtle">{tr ? 'kullanılabilir puan' : 'available points'}</p>
@@ -1000,7 +1000,7 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
             <div className="w-6 h-6 rounded-lg bg-white overflow-hidden shrink-0 shadow-sm">
               <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
             </div>
-            <span className="text-sm font-bold text-main">Garden Hotel</span>
+            <span className="text-sm font-bold text-main">KÃ¼tahya Garden Otel</span>
           </div>
           <div className="flex items-center gap-2">
             <button

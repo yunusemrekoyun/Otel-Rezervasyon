@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     const { html, text } = renderBrandedMail({
       title: 'Şifre sıfırlama bağlantınız',
-      preview: 'Garden Hotel hesabınız için güvenli şifre sıfırlama bağlantısı.',
+      preview: 'KÃ¼tahya Garden Otel hesabınız için güvenli şifre sıfırlama bağlantısı.',
       intro: `Merhaba${user.firstName ? ` ${user.firstName}` : ''}, şifrenizi yenilemek için aşağıdaki bağlantıyı kullanabilirsiniz.`,
       lines: [
         `Bağlantı ${RESET_TOKEN_TTL_MINUTES} dakika boyunca geçerlidir ve yalnızca bir kez kullanılabilir.`,
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     await sendMail({
       to: user.email,
-      subject: 'Garden Hotel şifre sıfırlama bağlantınız',
+      subject: 'KÃ¼tahya Garden Otel şifre sıfırlama bağlantınız',
       html,
       text,
     });

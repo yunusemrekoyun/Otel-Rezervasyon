@@ -58,7 +58,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'operations',   label: 'Hasar & Kayıp Eşya', description: 'Personelden gelen hasar bildirimleri ve kayıp eşya kayıtlarını buradan yönetin.',           icon: Wrench },
       { id: 'reviews',      label: 'Yorum Yönetimi',      description: 'Müşteri yorumlarını inceleyin, onaylayın veya yayından kaldırın.',                         icon: MessageSquare },
       { id: 'audit',        label: 'İşlem Logları',       description: 'Kritik sistem işlemleri ve yetkili kullanıcı hareketlerini takip edin.',                    icon: FileClock },
-      { id: 'settings',     label: 'Sistem Ayarları',     description: 'Kabin fiyatlandırmaları, site ayarları ve genel yapılandırmalar.',                         icon: Settings },
+      { id: 'settings',     label: 'Sistem Ayarları',     description: 'Oda fiyatlandırması, site ayarları ve genel yapılandırmalar.',                         icon: Settings },
     ],
     personel: [
       { id: 'dashboard', label: 'Personel Paneli',   description: 'Günlük vardiya özetiniz ve aktif bildirimleriniz.',                          icon: ClipboardList },
@@ -94,7 +94,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'operations',   label: 'Damage & Lost Items', description: 'Manage damage reports and lost item logs submitted by housekeeping staff.',          icon: Wrench },
       { id: 'reviews',      label: 'Review Management',   description: 'Review, approve or unpublish guest stay reviews.',                                  icon: MessageSquare },
       { id: 'audit',        label: 'Audit Logs',        description: 'Track critical system operations and authorized user activity.',                    icon: FileClock },
-      { id: 'settings',     label: 'Settings',          description: 'Cabin pricing, site configurations and general structures.',                         icon: Settings },
+      { id: 'settings',     label: 'Settings',          description: 'Room pricing, site configurations and general structures.',                         icon: Settings },
     ],
     personel: [
       { id: 'dashboard', label: 'Staff Panel',       description: 'Your daily shift summary and active notifications.',                        icon: ClipboardList },
@@ -184,7 +184,7 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
               <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
             </div>
             <div>
-              <p className="font-bold text-main text-sm leading-none">Garden Hotel</p>
+              <p className="font-bold text-main text-sm leading-none">KÃ¼tahya Garden Otel</p>
               <p className="text-[10px] text-subtle mt-1">
                 {language === 'tr' ? 'Otel Yönetim Sistemi' : 'Hotel Management System'}
               </p>

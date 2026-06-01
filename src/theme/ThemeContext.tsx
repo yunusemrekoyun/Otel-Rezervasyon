@@ -28,7 +28,6 @@ export const THEMES: ThemeOption[] = [
 ];
 
 function normalizeTheme(theme: string | null | undefined): ThemeType {
-  if (theme === 'woodnest') return 'sunset';
   return THEMES.some((item) => item.id === theme) ? (theme as ThemeType) : 'sunset';
 }
 

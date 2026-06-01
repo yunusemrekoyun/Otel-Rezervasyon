@@ -39,7 +39,7 @@ export function getMailConfig(): MailConfig {
   const user = firstEnv('MAIL_USER', 'SMTP_USER', 'GMAIL_USER');
   const appPassword = firstEnv('MAIL_APP_PASSWORD', 'MAIL_PASSWORD', 'SMTP_PASS', 'GMAIL_APP_PASSWORD');
   const fromEmail = firstEnv('MAIL_FROM_EMAIL', 'SMTP_FROM_EMAIL') || user;
-  const fromName = firstEnv('MAIL_FROM_NAME', 'SMTP_FROM_NAME') || 'Garden Hotel';
+  const fromName = firstEnv('MAIL_FROM_NAME', 'SMTP_FROM_NAME') || 'KÃ¼tahya Garden Otel';
   const replyTo = firstEnv('MAIL_REPLY_TO', 'SMTP_REPLY_TO') || undefined;
   const missing = [
     ['MAIL_USER', user],
