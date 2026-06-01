@@ -184,6 +184,7 @@ model Reservation {
   user                        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   hotelReview                 HotelReview?
   payments                    Payment[]
+  guests                      ReservationGuest[]
   paymentStatus               String    @default("unpaid") @map("payment_status")
   paymentExpiresAt            DateTime? @map("payment_expires_at")
   createdAt                   DateTime  @default(now()) @map("created_at")
@@ -193,6 +194,25 @@ model Reservation {
   @@index([userId])
   @@index([checkInDate, checkOutDate])
   @@map("reservations")
+}
+
+model ReservationGuest {
+  id            String      @id @default(cuid())
+  reservationId String      @map("reservation_id")
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  isChild       Boolean     @default(false) @map("is_child")
+  firstName     String      @map("first_name")
+  lastName      String      @map("last_name")
+  birthDate     DateTime?   @map("birth_date")
+  gender        String?
+  nationality   String?     @default("TR")
+  tcKimlikNo    String?     @map("tc_kimlik_no")
+  passportNo    String?     @map("passport_no")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@index([reservationId])
+  @@map("reservation_guests")
 }
 
 model Payment {

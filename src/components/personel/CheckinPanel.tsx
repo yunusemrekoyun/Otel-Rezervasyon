@@ -505,6 +505,84 @@ function CheckinConfirmModal({
 }) {
   const { mode } = useTheme();
 
+  // ── Additional staying guests (required before check-in) ──────────────────
+  const requiredAdults = Math.max(res.adultsCount - 1, 0);
+  const requiredChildren = res.childrenCount;
+  const needsGuests = requiredAdults + requiredChildren > 0;
+
+  type GForm = { firstName: string; lastName: string; idType: 'tc' | 'passport'; tcKimlikNo: string; passportNo: string; birthDate: string; nationality: string };
+  const blank = (): GForm => ({ firstName: '', lastName: '', idType: 'tc', tcKimlikNo: '', passportNo: '', birthDate: '', nationality: 'TR' });
+
+  const [adults, setAdults] = useState<GForm[]>(() => Array.from({ length: requiredAdults }, blank));
+  const [children, setChildren] = useState<GForm[]>(() => Array.from({ length: requiredChildren }, blank));
+  const [guestError, setGuestError] = useState<string | null>(null);
+  const [savingGuests, setSavingGuests] = useState(false);
+
+  useEffect(() => {
+    if (!needsGuests) return;
+    let active = true;
+    type SG = { isChild: boolean; firstName: string; lastName: string; birthDate: string | null; nationality: string | null; tcKimlikNo: string | null; passportNo: string | null };
+    const toForm = (g: SG): GForm => ({
+      firstName: g.firstName, lastName: g.lastName,
+      idType: g.passportNo && !g.tcKimlikNo ? 'passport' : 'tc',
+      tcKimlikNo: g.tcKimlikNo ?? '', passportNo: g.passportNo ?? '',
+      birthDate: g.birthDate ? g.birthDate.split('T')[0] : '',
+      nationality: g.nationality ?? 'TR',
+    });
+    fetch(`/api/reservations/${res.id}/guests`)
+      .then(r => r.json())
+      .then((d) => {
+        if (!active || !d.ok) return;
+        const a = (d.guests as SG[]).filter(g => !g.isChild);
+        const c = (d.guests as SG[]).filter(g => g.isChild);
+        setAdults(prev => prev.map((slot, i) => (a[i] ? toForm(a[i]) : slot)));
+        setChildren(prev => prev.map((slot, i) => (c[i] ? toForm(c[i]) : slot)));
+      })
+      .catch(() => null);
+    return () => { active = false; };
+  }, [res.id, needsGuests]);
+
+  const setAdult = (i: number, patch: Partial<GForm>) => setAdults(prev => prev.map((g, idx) => idx === i ? { ...g, ...patch } : g));
+  const setChild = (i: number, patch: Partial<GForm>) => setChildren(prev => prev.map((g, idx) => idx === i ? { ...g, ...patch } : g));
+
+  const adultsValid = adults.every(a => a.firstName.trim() && a.lastName.trim() && (a.idType === 'tc' ? /^\d{11}$/.test(a.tcKimlikNo) : a.passportNo.trim().length >= 3));
+  const childrenValid = children.every(c => c.firstName.trim() && c.lastName.trim() && !!c.birthDate);
+  const guestsComplete = !needsGuests || (adultsValid && childrenValid);
+
+  async function handleConfirm() {
+    if (needsGuests) {
+      if (!guestsComplete) {
+        setGuestError(isTr ? 'Lütfen tüm misafir bilgilerini eksiksiz doldurun.' : 'Please complete every guest.');
+        return;
+      }
+      setSavingGuests(true);
+      setGuestError(null);
+      try {
+        const payload = {
+          guests: [
+            ...adults.map(a => ({
+              isChild: false, firstName: a.firstName.trim(), lastName: a.lastName.trim(), nationality: a.nationality || 'TR',
+              tcKimlikNo: a.idType === 'tc' ? a.tcKimlikNo : null,
+              passportNo: a.idType === 'passport' ? a.passportNo.trim().toUpperCase() : null,
+            })),
+            ...children.map(c => ({
+              isChild: true, firstName: c.firstName.trim(), lastName: c.lastName.trim(), birthDate: c.birthDate, nationality: c.nationality || 'TR',
+            })),
+          ],
+        };
+        const resp = await fetch(`/api/reservations/${res.id}/guests`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        });
+        const d = await resp.json();
+        if (!d.ok) { setGuestError(d.message || (isTr ? 'Misafir bilgileri kaydedilemedi.' : 'Could not save guests.')); setSavingGuests(false); return; }
+      } catch {
+        setGuestError(isTr ? 'Bağlantı hatası.' : 'Connection error.'); setSavingGuests(false); return;
+      }
+      setSavingGuests(false);
+    }
+    onConfirm();
+  }
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     const f = e.dataTransfer.files[0];
@@ -580,6 +658,58 @@ function CheckinConfirmModal({
               </p>
             </div>
           </div>
+
+          {/* Additional guests (required) */}
+          {needsGuests && (
+            <div>
+              <p className="text-[10px] text-muted uppercase tracking-widest font-semibold mb-1.5 flex items-center gap-1.5">
+                <Users size={11} />
+                {isTr ? "Diğer Misafirler" : "Additional Guests"}{" "}
+                <span className="text-red-400 normal-case font-normal">({isTr ? "zorunlu" : "required"})</span>
+              </p>
+              <p className="text-[10px] text-subtle mb-2.5 leading-relaxed">
+                {isTr
+                  ? `Bu odada toplam ${res.adultsCount} yetişkin${res.childrenCount > 0 ? ` + ${res.childrenCount} çocuk` : ""} konaklayacak. Lider misafir dışındaki herkesin bilgisi girilmeden check-in yapılamaz.`
+                  : `${res.adultsCount} adult${res.childrenCount > 0 ? ` + ${res.childrenCount} children` : ""} will stay in this room. Check-in is blocked until every guest beyond the lead is recorded.`}
+              </p>
+              <div className="space-y-2.5">
+                {adults.map((g, i) => (
+                  <div key={`a${i}`} className="surface-soft p-3 space-y-2">
+                    <p className="text-[10px] font-bold text-main">{isTr ? `Yetişkin ${i + 2}` : `Adult ${i + 2}`}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input value={g.firstName} onChange={(e) => setAdult(i, { firstName: e.target.value })} placeholder={isTr ? "Ad" : "First name"} className="control-base px-2.5 py-1.5 text-xs" />
+                      <input value={g.lastName} onChange={(e) => setAdult(i, { lastName: e.target.value })} placeholder={isTr ? "Soyad" : "Last name"} className="control-base px-2.5 py-1.5 text-xs" />
+                    </div>
+                    <div className="flex gap-2">
+                      <select value={g.idType} onChange={(e) => setAdult(i, { idType: e.target.value as "tc" | "passport" })} className="control-base px-2 py-1.5 text-xs w-28 appearance-none">
+                        <option value="tc">{isTr ? "T.C. No" : "TC No"}</option>
+                        <option value="passport">{isTr ? "Pasaport" : "Passport"}</option>
+                      </select>
+                      {g.idType === "tc" ? (
+                        <input value={g.tcKimlikNo} onChange={(e) => setAdult(i, { tcKimlikNo: e.target.value.replace(/\D/g, "").slice(0, 11) })} inputMode="numeric" placeholder={isTr ? "11 haneli kimlik no" : "11-digit ID"} className="control-base px-2.5 py-1.5 text-xs flex-1 font-mono tracking-wider" />
+                      ) : (
+                        <input value={g.passportNo} onChange={(e) => setAdult(i, { passportNo: e.target.value.toUpperCase() })} placeholder={isTr ? "Pasaport No" : "Passport No"} className="control-base px-2.5 py-1.5 text-xs flex-1 font-mono tracking-wider" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {children.map((g, i) => (
+                  <div key={`c${i}`} className="surface-soft p-3 space-y-2">
+                    <p className="text-[10px] font-bold text-main">{isTr ? `Çocuk ${i + 1}` : `Child ${i + 1}`}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input value={g.firstName} onChange={(e) => setChild(i, { firstName: e.target.value })} placeholder={isTr ? "Ad" : "First name"} className="control-base px-2.5 py-1.5 text-xs" />
+                      <input value={g.lastName} onChange={(e) => setChild(i, { lastName: e.target.value })} placeholder={isTr ? "Soyad" : "Last name"} className="control-base px-2.5 py-1.5 text-xs" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-subtle uppercase tracking-wider">{isTr ? "Doğum Tarihi" : "Birth date"}</label>
+                      <input type="date" value={g.birthDate} onChange={(e) => setChild(i, { birthDate: e.target.value })} className="control-base px-2.5 py-1.5 text-xs w-full mt-0.5" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {guestError && <p className="text-[10px] text-red-400 mt-2">{guestError}</p>}
+            </div>
+          )}
 
           {/* Document upload */}
           <div>
@@ -686,11 +816,11 @@ function CheckinConfirmModal({
               {isTr ? "İptal" : "Cancel"}
             </button>
             <button
-              onClick={onConfirm}
-              disabled={loading || docUploading}
+              onClick={handleConfirm}
+              disabled={loading || docUploading || savingGuests || (needsGuests && !guestsComplete)}
               className="flex-[2] flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500/12 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-400 text-sm font-bold transition-colors disabled:opacity-40"
             >
-              {loading || docUploading ? (
+              {loading || docUploading || savingGuests ? (
                 <RefreshCw size={13} className="animate-spin" />
               ) : (
                 <LogIn size={13} />

@@ -133,6 +133,28 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
+  // Identity-notification gate: every staying guest (beyond the lead) must be
+  // recorded before check-in. Adults need an ID, children need a birth date.
+  if (action === 'checkin') {
+    const requiredAdults = Math.max(reservation.adultsCount - 1, 0);
+    const requiredChildren = reservation.childrenCount;
+    if (requiredAdults + requiredChildren > 0) {
+      const guests = await prisma.reservationGuest.findMany({ where: { reservationId: reservation.id } });
+      const adults = guests.filter(g => !g.isChild);
+      const children = guests.filter(g => g.isChild);
+      const adultsOk = adults.length >= requiredAdults
+        && adults.every(g => g.firstName && g.lastName && (g.tcKimlikNo || g.passportNo));
+      const childrenOk = children.length >= requiredChildren
+        && children.every(g => g.firstName && g.lastName && g.birthDate);
+      if (!adultsOk || !childrenOk) {
+        return NextResponse.json(
+          { ok: false, code: 'GUESTS_INCOMPLETE', message: 'Tüm misafirlerin bilgileri girilmeden check-in yapılamaz.' },
+          { status: 409 },
+        );
+      }
+    }
+  }
+
   if (action === 'checkin') {
     try {
       const updated = await prisma.$transaction(async (tx) => {
