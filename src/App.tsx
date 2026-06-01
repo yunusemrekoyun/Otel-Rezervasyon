@@ -116,6 +116,7 @@ export default function App() {
 
   // Contact/Concierge status state
   const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
   const [contactCategory, setContactCategory] = useState('Rezervasyon & Giriş');
   const [contactMessage, setContactMessage] = useState('');
   const [contactSuccess, setContactSuccess] = useState(false);
@@ -315,7 +316,7 @@ export default function App() {
 
   const handleContactDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactName.trim() || !contactMessage.trim()) return;
+    if (!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()) return;
 
     setIsContactSending(true);
     setContactSuccess(true);
@@ -329,6 +330,7 @@ export default function App() {
         },
         body: JSON.stringify({
           name: contactName,
+          email: contactEmail,
           category: contactCategory,
           message: contactMessage,
         }),
@@ -342,6 +344,7 @@ export default function App() {
 
       alert(`Mesajınız iletildi. Referans: ${payload.ticketId}.`);
       setContactName('');
+      setContactEmail('');
       setContactMessage('');
     } catch (error) {
       setContactError(error instanceof Error ? error.message : 'Message could not be sent.');
@@ -387,7 +390,7 @@ export default function App() {
               />
             </div>
             <span className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent select-none">
-              KÃ¼tahya Garden Otel
+              Kütahya Garden Otel
             </span>
           </div>
 
@@ -601,7 +604,7 @@ export default function App() {
                             {language === 'tr' ? 'MİSAFİR YORUMLARI' : 'GUEST REVIEWS'}
                           </span>
                           <h3 className="mt-1 text-lg sm:text-xl font-bold text-white tracking-tight">
-                            {language === 'tr' ? 'KÃ¼tahya Garden Otel deneyimi' : 'KÃ¼tahya Garden Otel experience'}
+                            {language === 'tr' ? 'Kütahya Garden Otel deneyimi' : 'Kütahya Garden Otel experience'}
                           </h3>
                         </div>
                         <div className="text-right">
@@ -840,12 +843,24 @@ export default function App() {
                       <div className="space-y-3 pt-1">
                         <div className="space-y-1">
                           <span className="label-sm font-mono">{t('contact.yourName')}</span>
-                          <input 
-                            type="text" 
-                            required 
-                            placeholder={t('contact.placeholderName2')} 
+                          <input
+                            type="text"
+                            required
+                            placeholder={t('contact.placeholderName2')}
                             value={contactName}
                             onChange={(e) => setContactName(e.target.value)}
+                            className="input-base text-xs"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <span className="label-sm font-mono">{t('contact.yourEmail')}</span>
+                          <input
+                            type="email"
+                            required
+                            placeholder={t('contact.placeholderEmail')}
+                            value={contactEmail}
+                            onChange={(e) => setContactEmail(e.target.value)}
                             className="input-base text-xs"
                           />
                         </div>

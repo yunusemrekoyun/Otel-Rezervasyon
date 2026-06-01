@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { RefreshCw, MessageSquare, X, Tag, CheckCircle2, Send } from 'lucide-react';
+import { RefreshCw, MessageSquare, Tag, CheckCircle2, Send, Check, RotateCcw, Mail } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -12,6 +12,7 @@ interface ContactReq {
   category: string;
   message: string;
   ticketId: string;
+  status: string; // open | resolved
   createdAt: string;
   adminReply?: string | null;
   repliedAt?: string | null;
@@ -32,7 +33,8 @@ function fmtDateTime(iso: string) {
 export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
   const [requests, setRequests] = useState<ContactReq[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [showResolved, setShowResolved] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const [replyingId, setReplyingId]     = useState<string | null>(null);
   const [replyDraft, setReplyDraft]     = useState('');
@@ -51,8 +53,22 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
 
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
-  const dismiss = useCallback((id: string) => {
-    setDismissed(prev => new Set([...prev, id]));
+  // Persist open/resolved state to the DB so it survives refreshes and is shared
+  // across all staff (not just the current browser session).
+  const setStatus = useCallback(async (id: string, status: 'open' | 'resolved') => {
+    setUpdatingId(id);
+    try {
+      const res = await fetch(`/api/contact/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        setRequests(prev => prev.map(r => (r.id === id ? { ...r, status } : r)));
+      }
+    } finally {
+      setUpdatingId(null);
+    }
   }, []);
 
   const startReply = useCallback((id: string) => {
@@ -84,8 +100,137 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
     }
   }, [replyingId, replyDraft]);
 
-  const visible = requests.filter(r => !dismissed.has(r.id));
-  const dismissedCount = dismissed.size;
+  const open     = requests.filter(r => r.status !== 'resolved');
+  const resolved = requests.filter(r => r.status === 'resolved');
+
+  function renderCard(req: ContactReq) {
+    const isResolved = req.status === 'resolved';
+    const isUpdating = updatingId === req.id;
+
+    return (
+      <motion.div
+        key={req.id}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: 'hidden', transition: { duration: 0.2 } }}
+        className={`surface-card p-4 hover:border-m-border2 transition-colors ${isResolved ? 'opacity-60' : ''}`}
+      >
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0 space-y-2">
+
+            {/* Top row */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-bold text-main">{req.name}</p>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-400/8 border border-purple-400/15 text-[10px] text-purple-400 font-medium">
+                <Tag size={8} />
+                {req.category}
+              </span>
+              <span className="font-mono text-[10px] text-subtle bg-m-surface2 px-1.5 py-0.5 rounded-md border border-m-border">
+                {req.ticketId}
+              </span>
+              {req.adminReply && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-medium">
+                  <CheckCircle2 size={8} />
+                  {isTr ? 'Yanıtlandı' : 'Replied'}
+                </span>
+              )}
+              {isResolved && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-m-surface2 border border-m-border text-[10px] text-subtle font-medium">
+                  <Check size={8} />
+                  {isTr ? 'Çözüldü' : 'Resolved'}
+                </span>
+              )}
+            </div>
+
+            {/* Contact email */}
+            {req.email && (
+              <p className="inline-flex items-center gap-1.5 text-[11px] text-subtle">
+                <Mail size={10} />
+                <a href={`mailto:${req.email}`} className="hover:text-main hover:underline">{req.email}</a>
+              </p>
+            )}
+
+            {/* Message */}
+            <p className="text-xs text-muted leading-relaxed">{req.message}</p>
+
+            {/* Existing reply */}
+            {req.adminReply && (
+              <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-lg p-2.5">
+                <p className="text-[9px] text-emerald-400 uppercase tracking-wider mb-1">
+                  {isTr ? 'Yanıtınız' : 'Your reply'}
+                  {req.repliedAt && ` · ${fmtDateTime(req.repliedAt)}`}
+                </p>
+                <p className="text-xs text-muted leading-relaxed">{req.adminReply}</p>
+              </div>
+            )}
+
+            {/* Reply form */}
+            {replyingId === req.id ? (
+              <div className="space-y-2 mt-1">
+                <textarea
+                  autoFocus
+                  rows={3}
+                  className="w-full control-base px-3 py-2 text-xs resize-none"
+                  placeholder={isTr ? 'Yanıtınızı buraya yazın…' : 'Type your reply here…'}
+                  value={replyDraft}
+                  onChange={e => setReplyDraft(e.target.value)}
+                />
+                {!req.email && (
+                  <p className="text-[10px] text-amber-400">
+                    {isTr
+                      ? 'Bu talepte e-posta adresi yok; yanıt misafire e-posta ile iletilemez.'
+                      : 'No email on this request; the reply cannot be emailed to the guest.'}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={submitReply}
+                    disabled={replyLoading || !replyDraft.trim()}
+                    className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg disabled:opacity-60"
+                  >
+                    <Send size={11} />
+                    {replyLoading ? '…' : (isTr ? 'Yanıtla' : 'Reply')}
+                  </button>
+                  <button
+                    onClick={() => setReplyingId(null)}
+                    className="px-3 py-1.5 text-xs text-subtle hover:text-main transition-colors"
+                  >
+                    {isTr ? 'İptal' : 'Cancel'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => startReply(req.id)}
+                className="text-[11px] text-brand-accent hover:underline"
+              >
+                {req.adminReply
+                  ? (isTr ? 'Yanıtı güncelle' : 'Update reply')
+                  : (isTr ? 'Yanıtla' : 'Reply')}
+              </button>
+            )}
+
+            {/* Timestamp */}
+            <p className="text-[10px] text-subtle">{fmtDateTime(req.createdAt)}</p>
+
+          </div>
+
+          {/* Resolve / Reopen */}
+          <button
+            onClick={() => setStatus(req.id, isResolved ? 'open' : 'resolved')}
+            disabled={isUpdating}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold shrink-0 mt-0.5 border transition-colors disabled:opacity-50 text-subtle hover:text-main bg-m-surface hover:bg-m-hover border-m-border"
+            title={isResolved ? (isTr ? 'Yeniden aç' : 'Reopen') : (isTr ? 'Çözüldü olarak işaretle' : 'Mark resolved')}
+          >
+            {isUpdating
+              ? <RefreshCw size={11} className="animate-spin" />
+              : isResolved ? <RotateCcw size={11} /> : <Check size={11} />}
+            {isResolved ? (isTr ? 'Yeniden Aç' : 'Reopen') : (isTr ? 'Çöz' : 'Resolve')}
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <div className="space-y-4 max-w-4xl">
@@ -103,18 +248,20 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
             <p className="text-[11px] text-subtle mt-0.5">
               {loading
                 ? '…'
-                : `${visible.length} ${isTr ? 'aktif talep' : 'active requests'}`
-                  + (dismissedCount > 0 ? ` · ${dismissedCount} ${isTr ? 'kapatıldı' : 'dismissed'}` : '')}
+                : `${open.length} ${isTr ? 'açık talep' : 'open requests'}`
+                  + (resolved.length > 0 ? ` · ${resolved.length} ${isTr ? 'çözüldü' : 'resolved'}` : '')}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {dismissedCount > 0 && (
+          {resolved.length > 0 && (
             <button
-              onClick={() => setDismissed(new Set())}
+              onClick={() => setShowResolved(v => !v)}
               className="px-3 py-1.5 rounded-lg text-[11px] text-muted hover:text-main bg-m-surface hover:bg-m-hover border border-m-border transition-colors"
             >
-              {isTr ? 'Tümünü Göster' : 'Show All'}
+              {showResolved
+                ? (isTr ? 'Çözülenleri Gizle' : 'Hide Resolved')
+                : (isTr ? `Çözülenleri Göster (${resolved.length})` : `Show Resolved (${resolved.length})`)}
             </button>
           )}
           <button
@@ -133,7 +280,7 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
           <RefreshCw size={20} className="animate-spin text-faint" />
           <span className="text-xs text-subtle">{isTr ? 'Yükleniyor…' : 'Loading…'}</span>
         </div>
-      ) : visible.length === 0 ? (
+      ) : open.length === 0 && !showResolved ? (
         <div className="panel-glass-dashed">
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
             <div className="w-14 h-14 rounded-2xl surface-soft flex items-center justify-center">
@@ -141,8 +288,8 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
             </div>
             <div className="space-y-1">
               <p className="text-sm font-semibold text-subtle">
-                {dismissedCount > 0
-                  ? (isTr ? 'Tüm talepler kapatıldı' : 'All requests dismissed')
+                {resolved.length > 0
+                  ? (isTr ? 'Tüm talepler çözüldü' : 'All requests resolved')
                   : (isTr ? 'Henüz müşteri talebi yok' : 'No customer requests yet')}
               </p>
               <p className="text-xs text-faint">
@@ -156,105 +303,19 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
       ) : (
         <div className="space-y-2">
           <AnimatePresence>
-            {visible.map(req => (
-              <motion.div
-                key={req.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: 'hidden', transition: { duration: 0.2 } }}
-                className="surface-card p-4 hover:border-m-border2 transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex-1 min-w-0 space-y-2">
-
-                    {/* Top row */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-bold text-main">{req.name}</p>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-400/8 border border-purple-400/15 text-[10px] text-purple-400 font-medium">
-                        <Tag size={8} />
-                        {req.category}
-                      </span>
-                      <span className="font-mono text-[10px] text-subtle bg-m-surface2 px-1.5 py-0.5 rounded-md border border-m-border">
-                        {req.ticketId}
-                      </span>
-                      {req.adminReply && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-medium">
-                          <CheckCircle2 size={8} />
-                          {isTr ? 'Yanıtlandı' : 'Replied'}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Message */}
-                    <p className="text-xs text-muted leading-relaxed">{req.message}</p>
-
-                    {/* Existing reply */}
-                    {req.adminReply && (
-                      <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-lg p-2.5">
-                        <p className="text-[9px] text-emerald-400 uppercase tracking-wider mb-1">
-                          {isTr ? 'Yanıtınız' : 'Your reply'}
-                          {req.repliedAt && ` · ${fmtDateTime(req.repliedAt)}`}
-                        </p>
-                        <p className="text-xs text-muted leading-relaxed">{req.adminReply}</p>
-                      </div>
-                    )}
-
-                    {/* Reply form */}
-                    {replyingId === req.id ? (
-                      <div className="space-y-2 mt-1">
-                        <textarea
-                          autoFocus
-                          rows={3}
-                          className="w-full control-base px-3 py-2 text-xs resize-none"
-                          placeholder={isTr ? 'Yanıtınızı buraya yazın…' : 'Type your reply here…'}
-                          value={replyDraft}
-                          onChange={e => setReplyDraft(e.target.value)}
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={submitReply}
-                            disabled={replyLoading || !replyDraft.trim()}
-                            className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg disabled:opacity-60"
-                          >
-                            <Send size={11} />
-                            {replyLoading ? '…' : (isTr ? 'Yanıtla' : 'Reply')}
-                          </button>
-                          <button
-                            onClick={() => setReplyingId(null)}
-                            className="px-3 py-1.5 text-xs text-subtle hover:text-main transition-colors"
-                          >
-                            {isTr ? 'İptal' : 'Cancel'}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => startReply(req.id)}
-                        className="text-[11px] text-brand-accent hover:underline"
-                      >
-                        {req.adminReply
-                          ? (isTr ? 'Yanıtı güncelle' : 'Update reply')
-                          : (isTr ? 'Yanıtla' : 'Reply')}
-                      </button>
-                    )}
-
-                    {/* Timestamp */}
-                    <p className="text-[10px] text-subtle">{fmtDateTime(req.createdAt)}</p>
-
-                  </div>
-
-                  {/* Dismiss */}
-                  <button
-                    onClick={() => dismiss(req.id)}
-                    className="w-7 h-7 rounded-lg hover:bg-m-hover flex items-center justify-center text-subtle hover:text-main transition-colors shrink-0 mt-0.5"
-                    title={isTr ? 'Kapat' : 'Dismiss'}
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+            {open.map(renderCard)}
           </AnimatePresence>
+
+          {showResolved && resolved.length > 0 && (
+            <div className="space-y-2 pt-2">
+              <p className="text-[10px] text-subtle uppercase tracking-widest px-1">
+                {isTr ? 'Çözülenler' : 'Resolved'}
+              </p>
+              <AnimatePresence>
+                {resolved.map(renderCard)}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       )}
     </div>

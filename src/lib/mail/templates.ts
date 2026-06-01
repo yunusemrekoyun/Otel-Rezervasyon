@@ -57,7 +57,7 @@ export function renderBrandedMail(input: BrandedMailInput) {
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
             <tr>
               <td style="padding:24px 28px;background:#0f172a;color:#ffffff;">
-                <div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#cbd5e1;">KÃ¼tahya Garden Otel</div>
+                <div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#cbd5e1;">Kütahya Garden Otel</div>
                 <h1 style="margin:8px 0 0;font-size:24px;line-height:1.25;">${escapeHtml(input.title)}</h1>
               </td>
             </tr>
@@ -70,7 +70,7 @@ export function renderBrandedMail(input: BrandedMailInput) {
             </tr>
             <tr>
               <td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px;line-height:1.6;">
-                ${escapeHtml(input.footer ?? 'Bu e-posta KÃ¼tahya Garden Otel sistemi tarafından otomatik gönderilmiştir.')}
+                ${escapeHtml(input.footer ?? 'Bu e-posta Kütahya Garden Otel sistemi tarafından otomatik gönderilmiştir.')}
               </td>
             </tr>
           </table>

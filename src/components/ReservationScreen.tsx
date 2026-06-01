@@ -1824,8 +1824,8 @@ export function ReservationScreen() {
                   />
                   <span>
                     {tr
-                      ? 'Kişisel verilerimin KÃ¼tahya Garden Otel tarafından rezervasyon, ödeme ve iletişim amacıyla işlenmesini KVKK kapsamında kabul ediyorum.'
-                      : 'I consent to KÃ¼tahya Garden Otel processing my personal data for reservation, payment and communication purposes (KVKK/GDPR).'}
+                      ? 'Kişisel verilerimin Kütahya Garden Otel tarafından rezervasyon, ödeme ve iletişim amacıyla işlenmesini KVKK kapsamında kabul ediyorum.'
+                      : 'I consent to Kütahya Garden Otel processing my personal data for reservation, payment and communication purposes (KVKK/GDPR).'}
                   </span>
                 </label>
 

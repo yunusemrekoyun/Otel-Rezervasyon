@@ -228,6 +228,7 @@ model ContactRequest {
   email       String?
   category    String
   message     String
+  status      String    @default("open") // open | resolved
   ticketId    String    @unique @map("ticket_id")
   adminReply  String?   @map("admin_reply")
   repliedAt   DateTime? @map("replied_at")

@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
   const { html, text } = renderBrandedMail({
     title: 'Şifreniz değiştirildi',
-    preview: 'KÃ¼tahya Garden Otel hesabınızın şifresi başarıyla değiştirildi.',
+    preview: 'Kütahya Garden Otel hesabınızın şifresi başarıyla değiştirildi.',
     intro: `Merhaba${user.firstName ? ` ${user.firstName}` : ''}, şifreniz başarıyla güncellendi.`,
     lines: [
       'Diğer oturumlardaki bağlantılarınız güvenlik amacıyla kapatıldı.',
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
   });
   sendMail({
     to: user.email,
-    subject: 'KÃ¼tahya Garden Otel şifreniz değiştirildi',
+    subject: 'Kütahya Garden Otel şifreniz değiştirildi',
     html,
     text,
   }).catch(console.error);

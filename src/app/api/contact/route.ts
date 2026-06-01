@@ -8,6 +8,7 @@ export const runtime = 'nodejs';
 
 const contactSchema = z.object({
   name:     z.string().trim().min(1).max(120),
+  email:    z.string().trim().email().max(254).optional(),
   category: z.string().trim().min(1).max(120).default('General inquiry'),
   message:  z.string().trim().min(1).max(2000),
 });
@@ -44,11 +45,15 @@ export async function POST(request: NextRequest) {
   const ticketId = `GH-CON-${Date.now().toString(36).toUpperCase()}`;
   const auth = await getAuthContextFromRequest(request).catch(() => null);
 
+  // Logged-in users' email comes from their account; public visitors supply it
+  // on the form so staff replies actually reach them.
+  const effectiveEmail = auth?.user.email ?? parsed.data.email;
+
   try {
     await prisma.contactRequest.create({
       data: {
         userId:   auth?.user.id,
-        email:    auth?.user.email,
+        email:    effectiveEmail,
         name:     parsed.data.name,
         category: parsed.data.category,
         message:  parsed.data.message,
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (auth?.user.email) {
+  if (effectiveEmail) {
     const { html, text } = renderBrandedMail({
       title: 'Talebiniz alındı',
       preview: `Destek talebiniz alındı. Bilet no: ${ticketId}`,
@@ -75,7 +80,7 @@ export async function POST(request: NextRequest) {
       ],
     });
     sendMail({
-      to: auth.user.email,
+      to: effectiveEmail,
       subject: `Destek talebiniz alındı — ${ticketId}`,
       html,
       text,

@@ -9,7 +9,7 @@ function e(v: string) {
 }
 
 function hotelName() {
-  return getMailConfig().fromName || 'KÃ¼tahya Garden Otel';
+  return getMailConfig().fromName || 'Kütahya Garden Otel';
 }
 
 function formatPrice(amount: number) {
@@ -153,6 +153,17 @@ export async function renderReservationEmail(data: ReservationEmailData): Promis
         <p style="margin:0;font-family:monospace;font-size:28px;font-weight:900;color:#0f172a;letter-spacing:.3em;">${e(data.confirmationId)}</p>
        </div>`;
 
+  const infoBlock = `
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px 18px;margin:20px 0 0;">
+      <p style="margin:0 0 10px;color:#1e40af;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;">Bilmeniz Gerekenler</p>
+      <ul style="margin:0;padding-left:18px;color:#334155;font-size:13px;line-height:1.8;">
+        <li>Giriş (check-in) saat <strong>${e(data.checkInTime)}</strong>'dan itibaren, çıkış (check-out) <strong>${e(data.checkOutTime)}</strong>'a kadardır.</li>
+        <li>Resepsiyonda QR kodunuzu veya <strong>${e(data.confirmationId)}</strong> onay kodunuzu göstermeniz yeterlidir.</li>
+        <li>Tüm odalarımızda ücretsiz Wi-Fi mevcuttur.</li>
+        <li>Kahvaltı seçeneği ve özel istekleriniz için resepsiyonumuzla görüşebilirsiniz.</li>
+      </ul>
+    </div>`;
+
   const body = `
     <p style="margin:0 0 20px;color:#334155;font-size:15px;line-height:1.7;">
       Merhaba <strong>${e(data.firstName)} ${e(data.lastName)}</strong>,<br/>
@@ -172,7 +183,12 @@ export async function renderReservationEmail(data: ReservationEmailData): Promis
     </div>
 
     ${specialBlock}
-    ${qrSection}`;
+    ${qrSection}
+    ${infoBlock}
+
+    <p style="margin:22px 0 0;color:#334155;font-size:14px;line-height:1.7;">
+      Sizi ${e(hotel)}'de ağırlamak için sabırsızlanıyoruz. İyi yolculuklar dileriz!
+    </p>`;
 
   const html = emailShell(
     'Rezervasyonunuz Onaylandı',

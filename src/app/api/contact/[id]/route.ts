@@ -6,8 +6,11 @@ import { renderBrandedMail, sendMail } from '@/lib/mail';
 
 export const runtime = 'nodejs';
 
-const replySchema = z.object({
-  adminReply: z.string().trim().min(1).max(2000),
+const patchSchema = z.object({
+  adminReply: z.string().trim().min(1).max(2000).optional(),
+  status: z.enum(['open', 'resolved']).optional(),
+}).refine((d) => d.adminReply !== undefined || d.status !== undefined, {
+  message: 'Güncellenecek bir alan gönderin.',
 });
 
 export async function PATCH(
@@ -19,9 +22,9 @@ export async function PATCH(
     return NextResponse.json({ ok: false, message: 'Yetkisiz.' }, { status: 403 });
   }
 
-  const parsed = replySchema.safeParse(await request.json().catch(() => null));
+  const parsed = patchSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, message: 'Yanıt metni gerekli.' }, { status: 400 });
+    return NextResponse.json({ ok: false, message: 'Geçersiz istek.' }, { status: 400 });
   }
 
   const { id } = await params;
@@ -34,17 +37,20 @@ export async function PATCH(
   const updated = await prisma.contactRequest.update({
     where: { id },
     data: {
-      adminReply:  parsed.data.adminReply,
-      repliedAt:   new Date(),
-      repliedById: auth.user.id,
+      ...(parsed.data.adminReply !== undefined ? {
+        adminReply:  parsed.data.adminReply,
+        repliedAt:   new Date(),
+        repliedById: auth.user.id,
+      } : {}),
+      ...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}),
     },
   });
 
   const customerEmail = contact.email;
-  if (customerEmail) {
+  if (parsed.data.adminReply !== undefined && customerEmail) {
     const { html, text } = renderBrandedMail({
       title: `Destek talebiniz yanıtlandı — ${contact.ticketId}`,
-      preview: 'KÃ¼tahya Garden Otel destek ekibi mesajınıza yanıt verdi.',
+      preview: 'Kütahya Garden Otel destek ekibi mesajınıza yanıt verdi.',
       intro: `Merhaba ${contact.name}, ${contact.ticketId} numaralı destek talebinize yanıt alındı.`,
       lines: [
         `Yanıt: ${parsed.data.adminReply}`,

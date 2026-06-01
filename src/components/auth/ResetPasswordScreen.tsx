@@ -62,7 +62,7 @@ export function ResetPasswordScreen() {
           </div>
           <div>
             <h1 className="text-lg font-semibold tracking-tight">Şifrenizi yenileyin</h1>
-            <p className="text-xs text-subtle">KÃ¼tahya Garden Otel hesabınız için güvenli bağlantı</p>
+            <p className="text-xs text-subtle">Kütahya Garden Otel hesabınız için güvenli bağlantı</p>
           </div>
         </div>
 

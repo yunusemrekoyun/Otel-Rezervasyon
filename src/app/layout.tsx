@@ -13,8 +13,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'KÃ¼tahya Garden Otel',
-  description: 'KÃ¼tahya Garden Otel — Rezervasyon ve otel yönetim sistemi.',
+  title: 'Kütahya Garden Otel',
+  description: 'Kütahya Garden Otel — Rezervasyon ve otel yönetim sistemi.',
 };
 
 export const dynamic = 'force-dynamic';

@@ -184,7 +184,7 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
               <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" style={{ objectPosition: 'left center' }} />
             </div>
             <div>
-              <p className="font-bold text-main text-sm leading-none">KÃ¼tahya Garden Otel</p>
+              <p className="font-bold text-main text-sm leading-none">Kütahya Garden Otel</p>
               <p className="text-[10px] text-subtle mt-1">
                 {language === 'tr' ? 'Otel Yönetim Sistemi' : 'Hotel Management System'}
               </p>
