@@ -3,6 +3,7 @@ import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
 import { sendMail } from '@/lib/mail';
 import { renderCheckinEmail, renderReviewRequestEmail } from '@/lib/mail/hotel-templates';
+import { awardCheckoutPoints, isLoyaltyEnabled } from '@/lib/loyalty/coupons';
 import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -246,6 +247,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   // checkout — atomically update room status and optionally create a cleaning task
+  const loyaltyOn = await isLoyaltyEnabled();
   const updated = await prisma.$transaction(async (tx) => {
     // Sent to cleaning → room becomes "dirty" (queued in the shared pool, not yet
     // claimed). Otherwise it goes straight back to available.
@@ -267,11 +269,18 @@ export async function PATCH(request: NextRequest) {
       });
     }
 
-    return tx.reservation.update({
+    const updatedRes = await tx.reservation.update({
       where: { confirmationId },
       data: { status: 'checked_out' },
       include: { room: ROOM_SEL },
     });
+
+    // Loyalty points for the completed stay (only while the program is enabled).
+    if (loyaltyOn && reservation.userId) {
+      await awardCheckoutPoints(tx, reservation.userId, reservation.id, updatedRes.totalPrice);
+    }
+
+    return updatedRes;
   });
 
   await writeAuditLog({

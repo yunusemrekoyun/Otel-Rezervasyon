@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, type FormEvent } from 'react';
-import { Palette, ChevronLeft, ChevronRight, CreditCard, Bell, Server, CheckCircle2, Clock, Loader2 } from 'lucide-react';
+import { Palette, ChevronLeft, ChevronRight, CreditCard, Bell, Server, CheckCircle2, Clock, Loader2, Ban } from 'lucide-react';
 import { useTheme, THEMES } from '@/theme/ThemeContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type View = 'main' | 'appearance' | 'hotel-hours';
+type View = 'main' | 'appearance' | 'hotel-hours' | 'reservation-policy';
 
 // ── Hotel Hours sub-view ───────────────────────────────────────────────────────
 
@@ -159,6 +159,125 @@ function HotelHoursView({ isTr, onBack }: { isTr: boolean; onBack: () => void })
   );
 }
 
+// ── Reservation policy sub-view ────────────────────────────────────────────────
+
+function ReservationPolicyView({ isTr, onBack }: { isTr: boolean; onBack: () => void }) {
+  const [cutoffHours, setCutoffHours] = useState(48);
+  const [refundRate, setRefundRate]   = useState(100);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  const [message, setMessage] = useState('');
+  const [isError, setIsError] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings/reservation-policy')
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) { setCutoffHours(d.cancelCutoffHours); setRefundRate(d.refundRatePercent); }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch('/api/settings/reservation-policy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cancelCutoffHours: cutoffHours, refundRatePercent: refundRate }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message);
+      setIsError(false);
+      setMessage(isTr ? 'Politika kaydedildi.' : 'Policy saved.');
+    } catch (err) {
+      setIsError(true);
+      setMessage(err instanceof Error ? err.message : (isTr ? 'Kaydedilemedi.' : 'Could not save.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const hourPresets = [12, 24, 48, 72];
+  const ratePresets = [100, 75, 50, 0];
+
+  return (
+    <div className="space-y-5 max-w-2xl">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-subtle hover:text-main transition-colors">
+          <ChevronLeft size={14} />{isTr ? 'Sistem Ayarları' : 'Settings'}
+        </button>
+        <span className="text-faint">/</span>
+        <span className="text-xs text-muted font-medium">{isTr ? 'İptal & İade Politikası' : 'Cancellation & Refund'}</span>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
+          <Ban size={18} className="text-brand-accent" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-main leading-none">{isTr ? 'İptal & İade Politikası' : 'Cancellation & Refund Policy'}</h2>
+          <p className="text-[11px] text-subtle mt-0.5">{isTr ? 'Müşterilerin ne zamana kadar iptal edebileceğini ve iade oranını belirleyin.' : 'Set the cancellation deadline and refund rate.'}</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSave} className="surface-panel p-6 space-y-6">
+        {/* Cutoff hours */}
+        <div>
+          <label className="block text-sm font-semibold text-main mb-1">{isTr ? 'İptal Süresi' : 'Cancellation Deadline'}</label>
+          <p className="text-[11px] text-subtle mb-2.5">{isTr ? 'Müşteri, girişten en geç kaç saat öncesine kadar iptal edebilsin?' : 'Until how many hours before check-in can a guest cancel?'}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 surface-card px-2 py-1.5 rounded-xl">
+              <button type="button" onClick={() => setCutoffHours(h => Math.max(0, h - 6))} className="w-7 h-7 rounded-lg hover:bg-m-hover text-muted hover:text-main text-lg leading-none">−</button>
+              <input type="number" min={0} max={720} value={cutoffHours} onChange={e => setCutoffHours(Math.max(0, Math.min(720, Number(e.target.value) || 0)))} className="w-16 bg-transparent text-center text-lg font-bold text-main outline-none tabular-nums" />
+              <button type="button" onClick={() => setCutoffHours(h => Math.min(720, h + 6))} className="w-7 h-7 rounded-lg hover:bg-m-hover text-muted hover:text-main text-lg leading-none">+</button>
+            </div>
+            <span className="text-sm text-muted">{isTr ? 'saat önce' : 'hours before'}</span>
+            <div className="flex gap-1.5 ml-1">
+              {hourPresets.map(h => (
+                <button key={h} type="button" onClick={() => setCutoffHours(h)} className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${cutoffHours === h ? 'bg-brand-accent/15 text-brand-accent border border-brand-accent/20' : 'text-subtle border border-m-border hover:bg-m-hover'}`}>{h}s</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Refund rate */}
+        <div>
+          <label className="block text-sm font-semibold text-main mb-1">{isTr ? 'İade Oranı' : 'Refund Rate'}</label>
+          <p className="text-[11px] text-subtle mb-2.5">{isTr ? 'Zamanında yapılan iptallerde ödemenin yüzde kaçı iade edilsin?' : 'What percentage of the payment is refunded on a timely cancellation?'}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 surface-card px-2 py-1.5 rounded-xl">
+              <button type="button" onClick={() => setRefundRate(r => Math.max(0, r - 5))} className="w-7 h-7 rounded-lg hover:bg-m-hover text-muted hover:text-main text-lg leading-none">−</button>
+              <input type="number" min={0} max={100} value={refundRate} onChange={e => setRefundRate(Math.max(0, Math.min(100, Number(e.target.value) || 0)))} className="w-16 bg-transparent text-center text-lg font-bold text-main outline-none tabular-nums" />
+              <button type="button" onClick={() => setRefundRate(r => Math.min(100, r + 5))} className="w-7 h-7 rounded-lg hover:bg-m-hover text-muted hover:text-main text-lg leading-none">+</button>
+            </div>
+            <span className="text-sm text-muted">%</span>
+            <div className="flex gap-1.5 ml-1">
+              {ratePresets.map(r => (
+                <button key={r} type="button" onClick={() => setRefundRate(r)} className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${refundRate === r ? 'bg-brand-accent/15 text-brand-accent border border-brand-accent/20' : 'text-subtle border border-m-border hover:bg-m-hover'}`}>%{r}</button>
+              ))}
+            </div>
+          </div>
+          <p className="text-[11px] text-subtle mt-2">
+            {isTr
+              ? `Süre sonrasında iptal/iade kapalıdır. ${refundRate === 100 ? 'Tam iade.' : refundRate === 0 ? 'İade yapılmaz.' : `%${100 - refundRate} kesinti uygulanır.`}`
+              : `After the deadline, cancellation is closed. ${refundRate === 100 ? 'Full refund.' : refundRate === 0 ? 'No refund.' : `${100 - refundRate}% fee applies.`}`}
+          </p>
+        </div>
+
+        {message && <p className={`text-xs ${isError ? 'text-red-400' : 'text-emerald-400'}`}>{message}</p>}
+
+        <button type="submit" disabled={saving || loading} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm disabled:opacity-50">
+          {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+          {saving ? (isTr ? 'Kaydediliyor…' : 'Saving…') : (isTr ? 'Kaydet' : 'Save')}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function AdminSettings({ tr: isTr }: { tr: boolean }) {
@@ -261,6 +380,10 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
     return <HotelHoursView isTr={isTr} onBack={() => setView('main')} />;
   }
 
+  if (view === 'reservation-policy') {
+    return <ReservationPolicyView isTr={isTr} onBack={() => setView('main')} />;
+  }
+
   // ── Main settings view ─────────────────────────────────────────────────────
 
   const cards = [
@@ -285,6 +408,17 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
       badge: null,
       available: true,
       onClick: () => setView('hotel-hours'),
+    },
+    {
+      id: 'reservation-policy',
+      Icon: Ban,
+      title: isTr ? 'İptal & İade' : 'Cancellation & Refund',
+      desc: isTr
+        ? 'İptal süresi ve iade oranı kurallarını belirleyin.'
+        : 'Set the cancellation deadline and refund rate.',
+      badge: null,
+      available: true,
+      onClick: () => setView('reservation-policy'),
     },
     {
       id: 'pricing',

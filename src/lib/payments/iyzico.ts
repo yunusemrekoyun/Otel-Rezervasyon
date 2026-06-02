@@ -43,7 +43,16 @@ export interface IyzicoRetrieveResult {
   fraudStatus?: number;
   errorCode?: string;
   errorMessage?: string;
+  itemTransactions?: Array<{ paymentTransactionId?: string; paidPrice?: number }>;
   rawStatus?: string;
+}
+
+export interface IyzicoRefundResult {
+  status: string;
+  paymentId?: string;
+  price?: number;
+  errorCode?: string;
+  errorMessage?: string;
 }
 
 function config() {
@@ -190,4 +199,28 @@ export async function retrieveCheckoutForm(token: string, conversationId?: strin
     fraudStatus: data.fraudStatus === undefined ? undefined : Number(data.fraudStatus),
     rawStatus: data.status,
   };
+}
+
+// Resolve the per-item paymentTransactionId required by iyzico refunds.
+export async function getPaymentTransactionId(token: string, conversationId?: string) {
+  const detail = await retrieveCheckoutForm(token, conversationId);
+  return detail.itemTransactions?.[0]?.paymentTransactionId ?? null;
+}
+
+export async function refundPayment(input: {
+  paymentTransactionId: string;
+  price: number;
+  ip: string;
+  conversationId?: string;
+}): Promise<IyzicoRefundResult> {
+  const { locale } = config();
+  const data = await iyzicoRequest<IyzicoRefundResult>('/payment/refund', {
+    locale,
+    conversationId: input.conversationId,
+    paymentTransactionId: input.paymentTransactionId,
+    price: formatPrice(input.price),
+    ip: input.ip,
+    currency: 'TRY',
+  });
+  return data;
 }

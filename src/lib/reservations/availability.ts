@@ -32,11 +32,13 @@ export async function roomHasReservationConflict(
   roomId: string,
   checkIn: Date,
   checkOut: Date,
+  excludeReservationId?: string,
 ) {
   const now = new Date();
   const conflict = await db.reservation.findFirst({
     where: {
       roomId,
+      ...(excludeReservationId ? { id: { not: excludeReservationId } } : {}),
       status: { notIn: BLOCKING_RESERVATION_STATUSES },
       NOT: {
         status: 'payment_pending',
@@ -58,6 +60,7 @@ export async function getRoomAvailability(
   roomId: string,
   checkIn: Date,
   checkOut: Date,
+  excludeReservationId?: string,
 ) {
   const room = await db.room.findUnique({
     where: { id: roomId },
@@ -78,7 +81,7 @@ export async function getRoomAvailability(
     return { available: false, reason: 'current_status' as const, room };
   }
 
-  const hasConflict = await roomHasReservationConflict(db, roomId, checkIn, checkOut);
+  const hasConflict = await roomHasReservationConflict(db, roomId, checkIn, checkOut, excludeReservationId);
   if (hasConflict) return { available: false, reason: 'reservation_conflict' as const, room };
 
   return { available: true, reason: null, room };
@@ -92,12 +95,14 @@ export async function findAvailableRoomForRoomType(
     checkOut,
     adultsCount,
     childrenCount,
+    excludeReservationId,
   }: {
     roomTypeId: string;
     checkIn: Date;
     checkOut: Date;
     adultsCount: number;
     childrenCount: number;
+    excludeReservationId?: string;
   },
 ) {
   const rooms = await db.room.findMany({
@@ -122,7 +127,7 @@ export async function findAvailableRoomForRoomType(
   });
 
   for (const room of rooms) {
-    const hasConflict = await roomHasReservationConflict(db, room.id, checkIn, checkOut);
+    const hasConflict = await roomHasReservationConflict(db, room.id, checkIn, checkOut, excludeReservationId);
     if (!hasConflict) return room;
   }
 

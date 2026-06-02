@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { prisma } from '@/lib/prisma';
 import { retrieveCheckoutForm } from '@/lib/payments/iyzico';
 import { sendReservationConfirmationEmail } from '@/lib/reservations/confirmation';
+import { consumeCoupon } from '@/lib/loyalty/coupons';
 import { writeAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -329,6 +330,10 @@ async function handleCallback(request: NextRequest) {
           paymentExpiresAt: null,
         },
       });
+
+      if (payment.reservation.couponCode && payment.reservation.discountAmount > 0) {
+        await consumeCoupon(tx, payment.reservation.couponCode, payment.reservation.discountAmount);
+      }
     });
 
     await writeAuditLog({

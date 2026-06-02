@@ -5,6 +5,7 @@ import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { writeAuditLog } from '@/lib/audit';
 import { prisma } from '@/lib/prisma';
 import { initializeCheckoutForm, isIyzicoConfigured } from '@/lib/payments/iyzico';
+import { validateCoupon } from '@/lib/loyalty/coupons';
 import {
   findAvailableRoomForRoomType,
   getRoomAvailability,
@@ -35,6 +36,7 @@ const paymentSessionSchema = z.object({
   taxNumber: z.string().optional(),
   taxOffice: z.string().optional(),
   specialRequests: z.string().max(1000).optional(),
+  couponCode: z.string().trim().max(40).optional(),
   kvkkAccepted: z.literal(true),
 }).superRefine((data, ctx) => {
   if (data.tcKimlikNo) {
@@ -193,6 +195,16 @@ async function createPaymentAttempt({
 
     const nights = nightsBetween(checkIn, checkOut);
     const subtotal = chosenRoom.basePrice * nights;
+
+    // Apply a coupon (loyalty store or credit) when a logged-in customer supplies one.
+    let discountAmount = 0;
+    let appliedCouponCode: string | null = null;
+    if (data.couponCode && auth?.user.roleSlug === 'musteri') {
+      const result = await validateCoupon(auth.user.id, data.couponCode, subtotal);
+      if (result.ok) { discountAmount = result.discount; appliedCouponCode = result.code; }
+    }
+    const totalPrice = Math.max(0, subtotal - discountAmount);
+
     const confirmationId = await createConfirmationId(tx);
 
     const reservation = await tx.reservation.create({
@@ -219,7 +231,9 @@ async function createPaymentAttempt({
         taxOffice: data.taxOffice || undefined,
         specialRequests: data.specialRequests || undefined,
         subtotal,
-        totalPrice: subtotal,
+        discountAmount,
+        couponCode: appliedCouponCode,
+        totalPrice,
         status: 'payment_pending',
         paymentStatus: 'initialized',
         paymentExpiresAt: expiresAt,
@@ -233,7 +247,7 @@ async function createPaymentAttempt({
     const payment = await tx.payment.create({
       data: {
         reservationId: reservation.id,
-        amount: subtotal,
+        amount: totalPrice,
         conversationId: `${confirmationId}-${Date.now().toString(36)}`,
       },
     });

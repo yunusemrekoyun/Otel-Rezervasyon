@@ -22,6 +22,7 @@ import { AdminUserManager } from '@/components/admin/AdminUserManager';
 import { AdminOperationsPanel } from '@/components/admin/AdminOperationsPanel';
 import { AuditLogPanel } from '@/components/admin/AuditLogPanel';
 import { AdminReviewsPanel } from '@/components/admin/AdminReviewsPanel';
+import { AdminPayments } from '@/components/admin/AdminPayments';
 import { CustomerDashboard } from '@/components/customer/CustomerDashboard';
 import { CheckinPanel } from '@/components/personel/CheckinPanel';
 import { PersonelDashboard } from '@/components/personel/PersonelDashboard';
@@ -53,6 +54,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'overview',     label: 'Genel Bakış',        description: 'Otel genel durumunu, doluluk oranlarını ve günlük özetleri buradan takip edebilirsiniz.',  icon: LayoutDashboard },
       { id: 'users',        label: 'Kullanıcı Yönetimi', description: 'Tüm personel, muhasebe ve müşteri hesaplarını yönetebileceğiniz alan.',                   icon: Users },
       { id: 'reservations', label: 'Tüm Rezervasyonlar', description: 'Sistemdeki tüm rezervasyonları görüntüleyebilir, iptal veya onay işlemlerini yapabilirsiniz.', icon: CalendarCheck },
+      { id: 'payments',     label: 'Ödemeler & Gelir',   description: 'Tüm tahsilatları, manuel ödemeleri ve gelir özetini buradan takip edin.',                icon: CreditCard },
       { id: 'checkinout',   label: 'Giriş / Çıkış',     description: 'Misafir giriş ve çıkış işlemleri ile QR tarama terminali.',                                icon: DoorOpen },
       { id: 'rooms',        label: 'Odalar',              description: 'Oda çeşitlerini, imkanlarını ve medyalarını buradan yönetebilirsiniz.',                    icon: Building2 },
       { id: 'operations',   label: 'Hasar & Kayıp Eşya', description: 'Personelden gelen hasar bildirimleri ve kayıp eşya kayıtlarını buradan yönetin.',           icon: Wrench },
@@ -89,6 +91,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'overview',     label: 'Overview',          description: 'Track hotel general status, occupancy rates and daily summaries here.',                icon: LayoutDashboard },
       { id: 'users',        label: 'User Management',   description: 'Area where you can manage all staff, accounting and customer accounts.',              icon: Users },
       { id: 'reservations', label: 'All Reservations',  description: 'You can view all reservations in the system, cancel or approve them.',               icon: CalendarCheck },
+      { id: 'payments',     label: 'Payments & Revenue', description: 'Track all collections, manual payments and the revenue summary here.',               icon: CreditCard },
       { id: 'checkinout',   label: 'Check-in / Out',   description: 'Guest check-in and check-out operations with QR scanning terminal.',                  icon: DoorOpen },
       { id: 'rooms',        label: 'Rooms',             description: 'Manage room types, their amenities and media from here.',                            icon: Building2 },
       { id: 'operations',   label: 'Damage & Lost Items', description: 'Manage damage reports and lost item logs submitted by housekeeping staff.',          icon: Wrench },
@@ -335,6 +338,10 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           /* ── Admin reservations + availability calendar ── */
           ) : activeTabId === 'reservations' && user.roleSlug === 'admin' ? (
             <AdminReservations tr={language === 'tr'} />
+
+          /* ── Admin payments & revenue ── */
+          ) : activeTabId === 'payments' && user.roleSlug === 'admin' ? (
+            <AdminPayments tr={language === 'tr'} />
 
           /* ── Admin operations (damage reports + lost items) ── */
           ) : activeTabId === 'operations' && user.roleSlug === 'admin' ? (

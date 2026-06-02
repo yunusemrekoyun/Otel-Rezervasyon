@@ -40,6 +40,9 @@ model User {
   contactReplies          ContactRequest[]         @relation("contact_replies")
   maintenanceReports      MaintenanceReport[]
   lostItems               LostItem[]
+  coupons                 Coupon[]
+  pointsLedger            PointsLedger[]
+  loyaltyPoints           Int                      @default(0) @map("loyalty_points")
   // Profile
   firstName               String?                  @map("first_name")
   lastName                String?                  @map("last_name")
@@ -167,6 +170,8 @@ model Reservation {
   taxOffice                   String?   @map("tax_office")
   // Pricing
   subtotal                    Int
+  discountAmount              Int       @default(0) @map("discount_amount")
+  couponCode                  String?   @map("coupon_code")
   totalPrice                  Int       @map("total_price")
   // Extra
   specialRequests             String?   @map("special_requests")
@@ -220,6 +225,7 @@ model Payment {
   reservationId    String      @map("reservation_id")
   reservation      Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   provider         String      @default("iyzico")
+  method           String?     // cash | card | transfer | online
   status           String      @default("initializing")
   amount           Int
   currency         String      @default("TRY")
@@ -232,6 +238,8 @@ model Payment {
   errorMessage     String?     @map("error_message")
   paidAt           DateTime?   @map("paid_at")
   failedAt         DateTime?   @map("failed_at")
+  refundedAmount   Int?        @map("refunded_amount")
+  refundedAt       DateTime?   @map("refunded_at")
   createdAt        DateTime    @default(now()) @map("created_at")
   updatedAt        DateTime    @updatedAt @map("updated_at")
 
@@ -438,4 +446,61 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model CouponProduct {
+  id            String   @id @default(cuid())
+  name          String
+  pointsCost    Int      @map("points_cost")
+  discountType  String   @default("percent") @map("discount_type") // percent | fixed
+  value         Int      // percent (e.g. 10) or fixed TRY amount
+  minSpend      Int      @default(0) @map("min_spend")
+  maxDiscount   Int?     @map("max_discount")
+  expiresInDays Int?     @map("expires_in_days")
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  coupons       Coupon[]
+
+  @@map("coupon_products")
+}
+
+model Coupon {
+  id              String         @id @default(cuid())
+  code            String         @unique
+  userId          String         @map("user_id")
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind            String         @default("loyalty") // loyalty | credit
+  discountType    String         @map("discount_type") // percent | fixed
+  value           Int
+  minSpend        Int            @default(0) @map("min_spend")
+  maxDiscount     Int?           @map("max_discount")
+  balance         Int?           // remaining TRY for fixed/credit coupons (null for percent)
+  status          String         @default("active") // active | used | expired
+  sourceLabel     String?        @map("source_label")
+  couponProductId String?        @map("coupon_product_id")
+  couponProduct   CouponProduct? @relation(fields: [couponProductId], references: [id], onDelete: SetNull)
+  expiresAt       DateTime?      @map("expires_at")
+  usedAt          DateTime?      @map("used_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([code])
+  @@map("coupons")
+}
+
+model PointsLedger {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delta         Int
+  reason        String   // earn_checkout | spend_coupon | refund_restore | adjust
+  reservationId String?  @map("reservation_id")
+  note          String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("points_ledger")
 }

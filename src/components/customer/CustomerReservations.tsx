@@ -189,6 +189,7 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
   const [showGuest, setShowGuest] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const badge = statusBadge(res.status, tr);
   const BadgeIcon = badge.icon;
   const now = new Date();
@@ -210,8 +211,10 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
     setCancelling(false);
     if (data?.ok) {
       onCancel(res.id);
+      setConfirmCancel(false);
+    } else {
+      setCancelError(data?.message ?? (tr ? 'İptal edilemedi.' : 'Could not cancel.'));
     }
-    setConfirmCancel(false);
   }
 
   return (
@@ -320,7 +323,9 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
       {confirmCancel && (
         <div className="mt-2 pt-2 border-t border-red-400/15 flex items-center justify-between gap-2">
           <p className="text-[10px] text-red-400/80">
-            {tr ? 'Rezervasyonu iptal etmek istediğinize emin misiniz?' : 'Are you sure you want to cancel this reservation?'}
+            {cancelError
+              ? cancelError
+              : (tr ? 'Rezervasyonu iptal etmek istediğinize emin misiniz?' : 'Are you sure you want to cancel this reservation?')}
           </p>
           <div className="flex items-center gap-1.5 shrink-0">
             <button

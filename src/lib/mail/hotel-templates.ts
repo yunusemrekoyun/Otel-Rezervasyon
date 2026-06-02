@@ -323,3 +323,120 @@ export function renderReviewRequestEmail(data: ReviewRequestEmailData) {
 
   return { html, text };
 }
+
+// ── 5. İptal / İade Bildirimi ─────────────────────────────────────────────────
+
+export interface CancellationEmailData {
+  firstName: string;
+  confirmationId: string;
+  roomName: string;
+  refundAmount?: number;   // in TRY; omit/0 when nothing to refund
+  refundFailed?: boolean;  // online refund could not be initiated automatically
+}
+
+export function renderCancellationEmail(data: CancellationEmailData) {
+  const hotel = hotelName();
+  const hasRefund = (data.refundAmount ?? 0) > 0;
+
+  const refundBlock = hasRefund
+    ? (data.refundFailed
+        ? `<div style="margin:20px 0 0;padding:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;color:#92400e;font-size:13px;line-height:1.6;">
+            <strong>İade:</strong> ${formatPrice(data.refundAmount!)} tutarındaki iadeniz işleme alınmıştır; ekibimiz en kısa sürede tamamlayacaktır.
+           </div>`
+        : `<div style="margin:20px 0 0;padding:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;color:#166534;font-size:13px;line-height:1.6;">
+            <strong>İade:</strong> ${formatPrice(data.refundAmount!)} tutarındaki iadeniz başlatıldı. Bankanıza yansıma süresi ödeme yönteminize göre değişebilir.
+           </div>`)
+    : '';
+
+  const body = `
+    <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+      Merhaba <strong>${e(data.firstName)}</strong>,<br/>
+      ${e(data.confirmationId)} numaralı rezervasyonunuz iptal edilmiştir.
+    </p>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${infoRow('Rezervasyon', data.confirmationId)}
+        ${infoRow('Oda', data.roomName)}
+        ${infoRow('Durum', 'İptal edildi')}
+      </table>
+    </div>
+    ${refundBlock}
+    <p style="margin:20px 0 0;color:#334155;font-size:14px;line-height:1.7;">
+      Sizi tekrar ${e(hotel)}'de ağırlamayı dileriz.
+    </p>`;
+
+  const html = emailShell('Rezervasyonunuz İptal Edildi', `${data.confirmationId} numaralı rezervasyonunuz iptal edildi.`, body);
+
+  const text = [
+    `${hotel} — Rezervasyon İptali`,
+    '',
+    `Merhaba ${data.firstName},`,
+    `${data.confirmationId} numaralı rezervasyonunuz iptal edilmiştir.`,
+    `Oda: ${data.roomName}`,
+    hasRefund ? `İade tutarı: ${formatPrice(data.refundAmount!)}` : '',
+  ].filter(Boolean).join('\n');
+
+  return { html, text };
+}
+
+// ── 6. Rezervasyon Değişikliği ────────────────────────────────────────────────
+
+export interface ChangeEmailData {
+  firstName: string;
+  confirmationId: string;
+  roomName: string;
+  checkInDate: string;   // YYYY-MM-DD
+  checkOutDate: string;  // YYYY-MM-DD
+  nights: number;
+  totalPrice: number;
+  /** Positive = extra collected; negative = refunded; 0 = no change. */
+  difference: number;
+}
+
+export function renderChangeEmail(data: ChangeEmailData) {
+  const hotel = hotelName();
+  const diff = data.difference;
+  const diffBlock = diff > 0
+    ? `<div style="margin:20px 0 0;padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;color:#1e40af;font-size:13px;line-height:1.6;">
+        <strong>Ek tahsilat:</strong> ${formatPrice(diff)} tahsil edildi.
+       </div>`
+    : diff < 0
+      ? `<div style="margin:20px 0 0;padding:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;color:#166534;font-size:13px;line-height:1.6;">
+          <strong>İade:</strong> ${formatPrice(Math.abs(diff))} iade edildi.
+         </div>`
+      : '';
+
+  const body = `
+    <p style="margin:0 0 18px;color:#334155;font-size:15px;line-height:1.7;">
+      Merhaba <strong>${e(data.firstName)}</strong>,<br/>
+      ${e(data.confirmationId)} numaralı rezervasyonunuz güncellendi. Yeni bilgiler:
+    </p>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${infoRow('Oda', data.roomName)}
+        ${infoRow('Giriş', fmtDate(data.checkInDate))}
+        ${infoRow('Çıkış', fmtDate(data.checkOutDate))}
+        ${infoRow('Süre', `${data.nights} Gece`)}
+        ${infoRow('Yeni Toplam', formatPrice(data.totalPrice))}
+      </table>
+    </div>
+    ${diffBlock}
+    <p style="margin:20px 0 0;color:#334155;font-size:14px;line-height:1.7;">
+      Sizi ${e(hotel)}'de ağırlamayı sabırsızlıkla bekliyoruz.
+    </p>`;
+
+  const html = emailShell('Rezervasyonunuz Güncellendi', `${data.confirmationId} numaralı rezervasyonunuz güncellendi.`, body);
+
+  const text = [
+    `${hotel} — Rezervasyon Güncellemesi`,
+    '',
+    `Merhaba ${data.firstName},`,
+    `${data.confirmationId} numaralı rezervasyonunuz güncellendi.`,
+    `Oda: ${data.roomName}`,
+    `Giriş: ${data.checkInDate} · Çıkış: ${data.checkOutDate} · ${data.nights} gece`,
+    `Yeni toplam: ${formatPrice(data.totalPrice)}`,
+    diff > 0 ? `Ek tahsilat: ${formatPrice(diff)}` : diff < 0 ? `İade: ${formatPrice(Math.abs(diff))}` : '',
+  ].filter(Boolean).join('\n');
+
+  return { html, text };
+}

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { writeAuditLog } from '@/lib/audit';
 import { retrieveCheckoutForm } from '@/lib/payments/iyzico';
 import { sendReservationConfirmationEmail } from '@/lib/reservations/confirmation';
+import { consumeCoupon } from '@/lib/loyalty/coupons';
 
 export const runtime = 'nodejs';
 
@@ -19,6 +20,8 @@ async function getPayment(id: string) {
           status: true,
           paymentStatus: true,
           paymentExpiresAt: true,
+          couponCode: true,
+          discountAmount: true,
         },
       },
     },
@@ -73,6 +76,10 @@ async function syncPaymentFromIyzico(request: NextRequest, payment: PaymentRecor
           paymentExpiresAt: null,
         },
       });
+
+      if (payment.reservation.couponCode && payment.reservation.discountAmount > 0) {
+        await consumeCoupon(tx, payment.reservation.couponCode, payment.reservation.discountAmount);
+      }
     });
 
     await writeAuditLog({

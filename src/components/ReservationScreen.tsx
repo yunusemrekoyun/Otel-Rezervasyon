@@ -571,6 +571,12 @@ export function ReservationScreen() {
   const [passwordResetState, setPasswordResetState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   const [kvkkAccepted, setKvkkAccepted] = useState(false);
+  // Coupon (loyalty store / credit) — field is always available regardless of loyalty toggle.
+  const [couponInput, setCouponInput] = useState('');
+  const [couponCode, setCouponCode] = useState<string | null>(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponMsg, setCouponMsg] = useState<string | null>(null);
+  const [couponChecking, setCouponChecking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [newAccountProfileOwner, setNewAccountProfileOwner] = useState<NewAccountProfileOwner | null>(null);
   const [result, setResult] = useState<{ ok: boolean; confirmationId?: string; message?: string; needsProfileSetup?: boolean } | null>(null);
@@ -678,6 +684,35 @@ export function ReservationScreen() {
     : 0;
 
   const totalPrice = selectedRoom ? selectedRoom.basePrice * nights : 0;
+  const discountedTotal = Math.max(0, totalPrice - couponDiscount);
+
+  async function applyCoupon() {
+    if (!couponInput.trim()) return;
+    setCouponChecking(true);
+    setCouponMsg(null);
+    try {
+      const r = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponInput.trim(), subtotal: totalPrice }),
+      });
+      const d = await r.json().catch(() => null);
+      if (r.status === 401) { setCouponMsg(tr ? 'Kupon kullanmak için giriş yapın.' : 'Log in to use a coupon.'); return; }
+      if (d?.ok) { setCouponCode(d.code); setCouponDiscount(d.discount); setCouponMsg(null); }
+      else { setCouponCode(null); setCouponDiscount(0); setCouponMsg(d?.message ?? (tr ? 'Geçersiz kupon.' : 'Invalid coupon.')); }
+    } catch {
+      setCouponMsg(tr ? 'Bağlantı hatası.' : 'Connection error.');
+    } finally {
+      setCouponChecking(false);
+    }
+  }
+
+  function clearCoupon() {
+    setCouponCode(null);
+    setCouponDiscount(0);
+    setCouponInput('');
+    setCouponMsg(null);
+  }
 
   const setField = useCallback(<K extends keyof GuestForm>(key: K, value: GuestForm[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -1007,6 +1042,7 @@ export function ReservationScreen() {
       taxOffice: showCorporate ? reservationForm.taxOffice : undefined,
       specialRequests: reservationForm.specialRequests || undefined,
       kvkkAccepted,
+      couponCode: couponCode || undefined,
       ...(retryReservationId ? { retryReservationId } : {}),
     };
 
@@ -1543,6 +1579,41 @@ export function ReservationScreen() {
                   <div className="border-t border-white/5 mt-3 pt-3 flex justify-between text-sm">
                     <span className="text-white/40">{tr ? 'Toplam Tutar' : 'Total'}</span>
                     <span className="text-brand-accent font-bold text-base">₺{totalPrice.toLocaleString('tr-TR')}</span>
+                  </div>
+
+                  {/* Coupon — always available */}
+                  <div className="border-t border-white/5 mt-3 pt-3 space-y-2">
+                    <span className="label-sm font-mono text-white/40">{tr ? 'İndirim Kuponu' : 'Coupon'}</span>
+                    {couponCode ? (
+                      <div className="flex items-center justify-between gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+                        <span className="text-xs text-emerald-300 font-mono">{couponCode} · −₺{couponDiscount.toLocaleString('tr-TR')}</span>
+                        <button type="button" onClick={clearCoupon} className="text-white/40 hover:text-white text-[11px]">{tr ? 'Kaldır' : 'Remove'}</button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input
+                          value={couponInput}
+                          onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                          placeholder={tr ? 'Kupon kodu' : 'Coupon code'}
+                          className="input-base text-xs flex-1 font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={applyCoupon}
+                          disabled={couponChecking || !couponInput.trim()}
+                          className="px-3 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold disabled:opacity-40 transition-colors"
+                        >
+                          {couponChecking ? '…' : (tr ? 'Uygula' : 'Apply')}
+                        </button>
+                      </div>
+                    )}
+                    {couponMsg && <p className="text-[10px] text-red-300">{couponMsg}</p>}
+                    {couponCode && (
+                      <div className="flex justify-between text-sm pt-1">
+                        <span className="text-white/40">{tr ? 'İndirimli Toplam' : 'Discounted Total'}</span>
+                        <span className="text-emerald-300 font-bold text-base">₺{discountedTotal.toLocaleString('tr-TR')}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

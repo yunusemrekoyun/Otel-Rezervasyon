@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Calendar, ChevronLeft, ChevronRight, BedDouble,
-  CheckCircle2, Clock, XCircle, AlertCircle, MapPin, Users,
+  CheckCircle2, Clock, XCircle, AlertCircle, MapPin, Users, Loader2, Ban, Pencil, X,
 } from 'lucide-react';
 import {
   MONTHS_TR, MONTHS_EN,
@@ -344,9 +344,153 @@ function AvailabilityCalendar({ tr }: { tr: boolean }) {
 
 // ── Reservation Row ────────────────────────────────────────────────────────────
 
-function ReservationRow({ res, tr }: { res: Reservation; tr: boolean }) {
+interface ChangedSummary { roomName: string; checkInDate: string; checkOutDate: string; nights: number; totalPrice: number }
+
+function ChangeModal({ res, tr, onClose, onChanged }: {
+  res: Reservation; tr: boolean; onClose: () => void; onChanged: (u: ChangedSummary) => void;
+}) {
+  const { mode } = useTheme();
+  const [checkIn, setCheckIn]   = useState(res.checkInDate.slice(0, 10));
+  const [checkOut, setCheckOut] = useState(res.checkOutDate.slice(0, 10));
+  const [roomTypeId, setRoomTypeId] = useState('');
+  const [method, setMethod] = useState<'cash' | 'card' | 'transfer'>('cash');
+  const [types, setTypes] = useState<{ id: string; name: string }[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{ difference: number; refundFailed: boolean } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/room-types')
+      .then(r => r.json())
+      .then(d => { if (d.ok) setTypes(d.roomTypes.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }))); })
+      .catch(() => null);
+  }, []);
+
+  async function submit() {
+    setSaving(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/reservations/${res.id}/change`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomTypeId: roomTypeId || undefined, checkInDate: checkIn, checkOutDate: checkOut, settleMethod: method }),
+      });
+      const d = await r.json();
+      if (!d.ok) { setError(d.message ?? (tr ? 'Değiştirilemedi.' : 'Could not change.')); return; }
+      setResult({ difference: d.difference, refundFailed: d.refundFailed });
+      onChanged(d.reservation);
+    } catch {
+      setError(tr ? 'Bağlantı hatası.' : 'Connection error.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return createPortal(
+    <div data-mode={mode} className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-md modal-shell" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-m-border">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
+              <Pencil size={14} className="text-brand-accent" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-main">{tr ? 'Rezervasyonu Değiştir' : 'Change Reservation'}</p>
+              <p className="text-[10px] text-subtle font-mono">{res.confirmationId}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-subtle hover:text-main hover:bg-m-hover transition-colors"><X size={14} /></button>
+        </div>
+
+        {result ? (
+          <div className="p-5 space-y-4 text-center">
+            <CheckCircle2 size={32} className="text-emerald-400 mx-auto" />
+            <p className="text-sm font-bold text-main">{tr ? 'Rezervasyon güncellendi.' : 'Reservation updated.'}</p>
+            <p className="text-sm text-muted">
+              {result.difference > 0
+                ? (tr ? `Ek tahsilat: ₺${result.difference.toLocaleString('tr-TR')}` : `Extra collected: ₺${result.difference.toLocaleString('tr-TR')}`)
+                : result.difference < 0
+                  ? (tr ? `İade: ₺${Math.abs(result.difference).toLocaleString('tr-TR')}` : `Refunded: ₺${Math.abs(result.difference).toLocaleString('tr-TR')}`)
+                  : (tr ? 'Fiyat farkı yok.' : 'No price difference.')}
+            </p>
+            {result.refundFailed && <p className="text-[11px] text-amber-400">{tr ? 'Online iade otomatik başlatılamadı; lütfen elle kontrol edin.' : 'Online refund could not be auto-started; please verify manually.'}</p>}
+            <button onClick={onClose} className="btn-primary w-full text-sm py-2.5">{tr ? 'Kapat' : 'Close'}</button>
+          </div>
+        ) : (
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Giriş' : 'Check-in'}</label>
+                <input type="date" value={checkIn} onChange={e => setCheckIn(e.target.value)} className="control-base px-3 py-2 text-sm w-full" />
+              </div>
+              <div>
+                <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Çıkış' : 'Check-out'}</label>
+                <input type="date" value={checkOut} onChange={e => setCheckOut(e.target.value)} className="control-base px-3 py-2 text-sm w-full" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Oda Tipi' : 'Room Type'}</label>
+              <select value={roomTypeId} onChange={e => setRoomTypeId(e.target.value)} className="control-base px-3 py-2 text-sm w-full appearance-none">
+                <option value="">{tr ? `Mevcut (${res.room.roomType.name})` : `Keep (${res.room.roomType.name})`}</option>
+                {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Fark Tahsilat Yöntemi' : 'Difference Method'}</label>
+              <div className="flex gap-2">
+                {(['cash', 'card', 'transfer'] as const).map(m => (
+                  <button key={m} type="button" onClick={() => setMethod(m)}
+                    className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${method === m ? 'text-brand-accent border-brand-accent/30 bg-brand-accent/10' : 'text-subtle border-m-border'}`}>
+                    {m === 'cash' ? (tr ? 'Nakit' : 'Cash') : m === 'card' ? (tr ? 'Kart' : 'Card') : (tr ? 'Havale' : 'Transfer')}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-subtle mt-1.5">{tr ? 'Yalnızca ek ücret çıkarsa kullanılır; iade otomatik yapılır.' : 'Used only if extra is due; refunds are automatic.'}</p>
+            </div>
+
+            {error && <p className="text-xs text-red-400">{error}</p>}
+
+            <div className="flex gap-2.5">
+              <button onClick={onClose} className="btn-secondary flex-1 text-sm">{tr ? 'İptal' : 'Cancel'}</button>
+              <button onClick={submit} disabled={saving} className="btn-primary flex-1 text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+                {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                {tr ? 'Uygula' : 'Apply'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function ReservationRow({ res, tr, onCancelled, onChanged }: { res: Reservation; tr: boolean; onCancelled: (id: string, refund: { amount: number; failed: boolean }) => void; onChanged: (id: string, u: ChangedSummary) => void }) {
   const badge = statusBadge(res.status, tr);
   const BadgeIcon = badge.icon;
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [showChange, setShowChange] = useState(false);
+  const canCancel = ['pending', 'confirmed', 'payment_pending'].includes(res.status);
+  const canChange = ['pending', 'confirmed'].includes(res.status);
+
+  async function doCancel() {
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/reservations/${res.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      });
+      const d = await r.json();
+      if (d.ok) onCancelled(res.id, d.refund ?? { amount: 0, failed: false });
+    } finally {
+      setBusy(false);
+      setConfirming(false);
+    }
+  }
 
   return (
     <motion.div
@@ -383,11 +527,45 @@ function ReservationRow({ res, tr }: { res: Reservation; tr: boolean }) {
         ₺{res.totalPrice.toLocaleString('tr-TR')}
       </p>
 
-      {/* Status badge */}
-      <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-semibold shrink-0 ${badge.cls}`}>
-        <BadgeIcon size={9} />
-        <span className="hidden sm:inline">{badge.label}</span>
+      {/* Status + cancel/refund */}
+      <div className="flex items-center gap-2 shrink-0">
+        <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-semibold ${badge.cls}`}>
+          <BadgeIcon size={9} />
+          <span className="hidden sm:inline">{badge.label}</span>
+        </div>
+        {canChange && !confirming && (
+          <button onClick={() => setShowChange(true)} title={tr ? 'Değiştir' : 'Change'} className="w-7 h-7 rounded-lg flex items-center justify-center text-subtle hover:text-brand-accent hover:bg-brand-accent/8 border border-transparent hover:border-brand-accent/15 transition-all">
+            <Pencil size={12} />
+          </button>
+        )}
+        {canCancel && (
+          busy ? (
+            <Loader2 size={14} className="animate-spin text-subtle" />
+          ) : confirming ? (
+            <div className="flex items-center gap-1">
+              <button onClick={doCancel} className="px-2 py-1 rounded-lg text-[10px] font-bold text-red-400 border border-red-500/25 bg-red-500/10 hover:bg-red-500/20 transition-colors">
+                {tr ? 'İptal Et' : 'Cancel'}
+              </button>
+              <button onClick={() => setConfirming(false)} className="px-2 py-1 rounded-lg text-[10px] text-subtle hover:text-main transition-colors">
+                {tr ? 'Vazgeç' : 'No'}
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirming(true)} title={tr ? 'İptal / İade' : 'Cancel / Refund'} className="w-7 h-7 rounded-lg flex items-center justify-center text-subtle hover:text-red-400 hover:bg-red-500/8 border border-transparent hover:border-red-500/15 transition-all">
+              <Ban size={13} />
+            </button>
+          )
+        )}
       </div>
+
+      {showChange && (
+        <ChangeModal
+          res={res}
+          tr={tr}
+          onClose={() => setShowChange(false)}
+          onChanged={(u) => onChanged(res.id, u)}
+        />
+      )}
     </motion.div>
   );
 }
@@ -462,7 +640,15 @@ export function AdminReservations({ tr }: { tr: boolean }) {
           <AnimatePresence mode="popLayout">
             <div className="space-y-1.5">
               {filtered.map(r => (
-                <ReservationRow key={r.id} res={r} tr={tr} />
+                <ReservationRow
+                  key={r.id}
+                  res={r}
+                  tr={tr}
+                  onCancelled={(id) => setReservations(prev => prev.map(x => x.id === id ? { ...x, status: 'cancelled' } : x))}
+                  onChanged={(id, u) => setReservations(prev => prev.map(x => x.id === id
+                    ? { ...x, room: { ...x.room, name: u.roomName }, checkInDate: u.checkInDate, checkOutDate: u.checkOutDate, nights: u.nights, totalPrice: u.totalPrice }
+                    : x))}
+                />
               ))}
             </div>
           </AnimatePresence>
