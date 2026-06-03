@@ -24,6 +24,7 @@ import { AuditLogPanel } from '@/components/admin/AuditLogPanel';
 import { AdminReviewsPanel } from '@/components/admin/AdminReviewsPanel';
 import { AdminPayments } from '@/components/admin/AdminPayments';
 import { AdminLoyalty } from '@/components/admin/AdminLoyalty';
+import { MuhasebeDashboard, MuhasebeReports } from '@/components/muhasebe/MuhasebePanels';
 import { CustomerDashboard } from '@/components/customer/CustomerDashboard';
 import { CheckinPanel } from '@/components/personel/CheckinPanel';
 import { PersonelDashboard } from '@/components/personel/PersonelDashboard';
@@ -401,6 +402,14 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           /* ── Kat Hizmetleri: kayıp eşya ── */
           ) : activeTabId === 'lostitems' && user.roleSlug === 'temizlikci' ? (
             <LostItemsPanel tr={language === 'tr'} />
+
+          /* ── Muhasebe: finansal özet ── */
+          ) : activeTabId === 'dashboard' && user.roleSlug === 'muhasebe' ? (
+            <MuhasebeDashboard tr={language === 'tr'} />
+
+          /* ── Muhasebe: raporlar ── */
+          ) : activeTabId === 'reports' && user.roleSlug === 'muhasebe' ? (
+            <MuhasebeReports tr={language === 'tr'} />
 
           /* ── Coming soon placeholder ── */
           ) : (
