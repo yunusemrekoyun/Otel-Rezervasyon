@@ -7,7 +7,7 @@ import {
   LogOut, ShieldCheck, LayoutDashboard, Users, CalendarCheck,
   Settings, ClipboardList, Bell, LineChart, FileText, CreditCard, FileClock,
   User, Calendar, MessageSquare, CheckSquare, DoorOpen, Package,
-  Building2, ChevronRight, Sun, Moon, Home, Globe, AlertTriangle, Wrench,
+  Building2, ChevronRight, Sun, Moon, Home, Globe, AlertTriangle, Wrench, Gift,
 } from 'lucide-react';
 import type { AuthUser } from '@/lib/auth/session';
 import type { RoleSlug } from '@/lib/auth/constants';
@@ -23,6 +23,7 @@ import { AdminOperationsPanel } from '@/components/admin/AdminOperationsPanel';
 import { AuditLogPanel } from '@/components/admin/AuditLogPanel';
 import { AdminReviewsPanel } from '@/components/admin/AdminReviewsPanel';
 import { AdminPayments } from '@/components/admin/AdminPayments';
+import { AdminLoyalty } from '@/components/admin/AdminLoyalty';
 import { CustomerDashboard } from '@/components/customer/CustomerDashboard';
 import { CheckinPanel } from '@/components/personel/CheckinPanel';
 import { PersonelDashboard } from '@/components/personel/PersonelDashboard';
@@ -59,6 +60,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'rooms',        label: 'Odalar',              description: 'Oda çeşitlerini, imkanlarını ve medyalarını buradan yönetebilirsiniz.',                    icon: Building2 },
       { id: 'operations',   label: 'Hasar & Kayıp Eşya', description: 'Personelden gelen hasar bildirimleri ve kayıp eşya kayıtlarını buradan yönetin.',           icon: Wrench },
       { id: 'reviews',      label: 'Yorum Yönetimi',      description: 'Müşteri yorumlarını inceleyin, onaylayın veya yayından kaldırın.',                         icon: MessageSquare },
+      { id: 'loyalty',      label: 'Sadakat & Kupon',     description: 'Sadakat programını açın/kapatın ve puanla alınan kupon kataloğunu yönetin.',              icon: Gift },
       { id: 'audit',        label: 'İşlem Logları',       description: 'Kritik sistem işlemleri ve yetkili kullanıcı hareketlerini takip edin.',                    icon: FileClock },
       { id: 'settings',     label: 'Sistem Ayarları',     description: 'Oda fiyatlandırması, site ayarları ve genel yapılandırmalar.',                         icon: Settings },
     ],
@@ -96,6 +98,7 @@ const ROLE_MENUS: Record<'tr' | 'en', Record<RoleSlug, MenuTab[]>> = {
       { id: 'rooms',        label: 'Rooms',             description: 'Manage room types, their amenities and media from here.',                            icon: Building2 },
       { id: 'operations',   label: 'Damage & Lost Items', description: 'Manage damage reports and lost item logs submitted by housekeeping staff.',          icon: Wrench },
       { id: 'reviews',      label: 'Review Management',   description: 'Review, approve or unpublish guest stay reviews.',                                  icon: MessageSquare },
+      { id: 'loyalty',      label: 'Loyalty & Coupons',   description: 'Toggle the loyalty program and manage the points-based coupon catalog.',           icon: Gift },
       { id: 'audit',        label: 'Audit Logs',        description: 'Track critical system operations and authorized user activity.',                    icon: FileClock },
       { id: 'settings',     label: 'Settings',          description: 'Room pricing, site configurations and general structures.',                         icon: Settings },
     ],
@@ -350,6 +353,10 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           /* ── Admin review moderation ── */
           ) : activeTabId === 'reviews' && user.roleSlug === 'admin' ? (
             <AdminReviewsPanel tr={language === 'tr'} />
+
+          /* ── Admin loyalty & coupons ── */
+          ) : activeTabId === 'loyalty' && user.roleSlug === 'admin' ? (
+            <AdminLoyalty tr={language === 'tr'} />
 
           /* ── Admin audit logs ── */
           ) : activeTabId === 'audit' && user.roleSlug === 'admin' ? (

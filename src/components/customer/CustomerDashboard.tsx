@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -8,7 +8,7 @@ import {
   BedDouble, Moon, Sun, Star, ChevronRight, Bell,
   Globe, Shield,
   ChevronDown, CheckCircle2, Building2, Home,
-  Plus, IdCard, Save, MailCheck, X,
+  Plus, IdCard, Save, MailCheck, X, Gift, Ticket, Loader2,
 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useTheme } from '@/theme/ThemeContext';
@@ -57,9 +57,6 @@ const TIERS = [
   { id: 'elite',  labelTr: 'Elite',  labelEn: 'Elite',   minPts: 10000,color: 'text-brand-accent', bg: 'bg-brand-accent/10',border: 'border-brand-accent/20'},
 ];
 
-// Dummy points — later will come from API
-const DUMMY_POINTS = 2400;
-
 function getTier(pts: number) {
   return [...TIERS].reverse().find(t => pts >= t.minPts) ?? TIERS[0];
 }
@@ -82,8 +79,8 @@ function Avatar({ email, size = 'lg' }: { email: string; size?: 'sm' | 'md' | 'l
 
 // ── Profile Hero ───────────────────────────────────────────────────────────────
 
-function ProfileHero({ user, tr }: { user: AuthUser; tr: boolean }) {
-  const pts      = DUMMY_POINTS;
+function ProfileHero({ user, tr, points, loyaltyEnabled }: { user: AuthUser; tr: boolean; points: number; loyaltyEnabled: boolean }) {
+  const pts      = points;
   const tier     = getTier(pts);
   const nextTier = getNextTier(pts);
   const progress = nextTier ? Math.round(((pts - tier.minPts) / (nextTier.minPts - tier.minPts)) * 100) : 100;
@@ -100,10 +97,12 @@ function ProfileHero({ user, tr }: { user: AuthUser; tr: boolean }) {
             <h1 className="text-xl font-bold text-main leading-none">
               {tr ? 'Hoş Geldiniz' : 'Welcome back'}
             </h1>
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold ${tier.bg} ${tier.border} ${tier.color}`}>
-              <Star size={8} />
-              {tr ? tier.labelTr : tier.labelEn}
-            </span>
+            {loyaltyEnabled && (
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold ${tier.bg} ${tier.border} ${tier.color}`}>
+                <Star size={8} />
+                {tr ? tier.labelTr : tier.labelEn}
+              </span>
+            )}
           </div>
           <p className="text-muted text-sm truncate mb-3">{user.email}</p>
 
@@ -112,7 +111,7 @@ function ProfileHero({ user, tr }: { user: AuthUser; tr: boolean }) {
             {[
               { icon: BedDouble, value: '3',      label: tr ? 'Konaklama' : 'Stays' },
               { icon: Moon,      value: '8',       label: tr ? 'Gece'     : 'Nights' },
-              { icon: Star,      value: pts.toLocaleString('tr-TR'), label: tr ? 'Puan' : 'Points' },
+              ...(loyaltyEnabled ? [{ icon: Star, value: pts.toLocaleString('tr-TR'), label: tr ? 'Puan' : 'Points' }] : []),
             ].map(({ icon: Icon, value, label }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <Icon size={13} className="text-brand-accent/60" />
@@ -124,7 +123,7 @@ function ProfileHero({ user, tr }: { user: AuthUser; tr: boolean }) {
         </div>
 
         {/* Loyalty progress (desktop) */}
-        {nextTier && (
+        {loyaltyEnabled && nextTier && (
           <div className="hidden md:block w-48 shrink-0">
             <div className="flex justify-between text-[10px] text-subtle mb-1.5">
               <span>{tr ? tier.labelTr : tier.labelEn}</span>
@@ -843,58 +842,123 @@ function SupportTab({ tr, user }: { tr: boolean; user: AuthUser }) {
   );
 }
 
-// ── Loyalty Card ───────────────────────────────────────────────────────────────
+// ── Loyalty panel (real points + coupons + store) ──────────────────────────────
 
-function LoyaltyCard({ tr }: { tr: boolean }) {
-  const pts      = DUMMY_POINTS;
-  const tier     = getTier(pts);
-  const nextTier = getNextTier(pts);
-  const progress = nextTier ? Math.round(((pts - tier.minPts) / (nextTier.minPts - tier.minPts)) * 100) : 100;
+interface LoyaltyCoupon {
+  id: string; code: string; kind: string; discountType: string; value: number;
+  minSpend: number; maxDiscount: number | null; balance: number | null;
+  expiresAt: string | null; sourceLabel: string | null;
+}
+interface LoyaltyProduct {
+  id: string; name: string; pointsCost: number; discountType: string; value: number;
+  minSpend: number; maxDiscount: number | null; expiresInDays: number | null;
+}
+interface LoyaltyData {
+  enabled: boolean; points: number; coupons: LoyaltyCoupon[]; products: LoyaltyProduct[];
+}
 
-  const perks_tr = ['Ücretsiz oda yükseltme (%10)', 'Geç check-out (13:00)', 'Karşılama içeceği'];
-  const perks_en = ['Free room upgrade (10%)', 'Late check-out (13:00)', 'Welcome drink'];
-  const perks    = tr ? perks_tr : perks_en;
+function discountText(d: { discountType: string; value: number; balance: number | null }, tr: boolean) {
+  if (d.discountType === 'percent') return `%${d.value} ${tr ? 'indirim' : 'off'}`;
+  return `₺${(d.balance ?? d.value).toLocaleString('tr-TR')} ${tr ? 'indirim' : 'off'}`;
+}
+
+function LoyaltyPanel({ tr, data, onChanged }: { tr: boolean; data: LoyaltyData; onChanged: () => void }) {
+  const [buyingId, setBuyingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  async function buy(id: string) {
+    setBuyingId(id);
+    setNotice(null);
+    try {
+      const r = await fetch('/api/account/loyalty/purchase', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: id }),
+      });
+      const d = await r.json();
+      if (d.ok) { setNotice(tr ? 'Kupon hesabınıza eklendi.' : 'Coupon added to your account.'); onChanged(); }
+      else setNotice(d.message ?? (tr ? 'Satın alınamadı.' : 'Could not purchase.'));
+    } catch {
+      setNotice(tr ? 'Bağlantı hatası.' : 'Connection error.');
+    } finally {
+      setBuyingId(null);
+    }
+  }
+
+  function copy(code: string) {
+    navigator.clipboard?.writeText(code).then(() => { setCopied(code); setTimeout(() => setCopied(null), 1500); }).catch(() => null);
+  }
 
   return (
-    <div className={`surface-panel overflow-hidden p-5 ${tier.border}`}>
-      <div className="flex items-start justify-between mb-3">
+    <div className="surface-panel p-5 space-y-4">
+      {/* Points */}
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-xl bg-brand-accent/10 border border-brand-accent/25 flex items-center justify-center">
+          <Star size={20} className="text-brand-accent" />
+        </div>
         <div>
-          <div className={`inline-flex items-center gap-1.5 text-xs font-bold mb-1 ${tier.color}`}>
-            <Star size={12} />
-            {tr ? `Kütahya Garden Otel ${tier.labelTr} Üye` : `Kütahya Garden Otel ${tier.labelEn} Member`}
-          </div>
-          <p className="text-2xl font-bold text-main">{pts.toLocaleString('tr-TR')}</p>
-          <p className="text-[11px] text-subtle">{tr ? 'kullanılabilir puan' : 'available points'}</p>
-        </div>
-        <div className="w-10 h-10 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
-          <Building2 size={18} className="text-brand-accent/60" />
+          <p className="text-2xl font-black text-main leading-none tabular-nums">{data.points.toLocaleString('tr-TR')}</p>
+          <p className="text-[11px] text-subtle mt-0.5">{tr ? 'Sadakat Puanı' : 'Loyalty Points'}</p>
         </div>
       </div>
 
-      {nextTier && (
-        <div className="mb-3">
-          <div className="h-1.5 rounded-full bg-m-surface2 overflow-hidden">
-            <div className={`h-full rounded-full bg-brand-accent`} style={{ width: `${progress}%` }} />
+      {/* My coupons */}
+      <div>
+        <p className="text-[10px] text-subtle uppercase tracking-widest mb-2 flex items-center gap-1.5"><Ticket size={11} /> {tr ? 'Kuponlarım' : 'My Coupons'}</p>
+        {data.coupons.length === 0 ? (
+          <p className="text-[11px] text-subtle">{tr ? 'Aktif kuponunuz yok.' : 'No active coupons.'}</p>
+        ) : (
+          <div className="space-y-1.5">
+            {data.coupons.map(c => (
+              <button key={c.id} onClick={() => copy(c.code)} title={tr ? 'Kopyala' : 'Copy'}
+                className="w-full text-left rounded-lg border border-brand-accent/20 bg-brand-accent/5 px-3 py-2 hover:bg-brand-accent/10 transition-colors">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs font-bold text-brand-accent">{c.code}</span>
+                  <span className="text-[10px] text-subtle">{copied === c.code ? (tr ? 'Kopyalandı!' : 'Copied!') : discountText(c, tr)}</span>
+                </div>
+                <p className="text-[10px] text-subtle mt-0.5">
+                  {c.kind === 'credit' ? (tr ? 'Kredi kuponu' : 'Credit') : (c.sourceLabel ?? (tr ? 'Kupon' : 'Coupon'))}
+                  {c.minSpend > 0 && ` · min ₺${c.minSpend.toLocaleString('tr-TR')}`}
+                </p>
+              </button>
+            ))}
           </div>
-          <p className="text-[10px] text-subtle mt-1">
-            {tr
-              ? `${tier.labelTr} → ${nextTier.labelTr} için ${(nextTier.minPts - pts).toLocaleString()} puan kaldı`
-              : `${(nextTier.minPts - pts).toLocaleString()} pts to ${nextTier.labelEn}`}
-          </p>
-        </div>
-      )}
-
-      <div className="border-t border-m-border pt-3 space-y-1.5">
-        <p className="text-[10px] text-subtle uppercase tracking-wider mb-2">
-          {tr ? 'Mevcut Ayrıcalıklar' : 'Current Perks'}
-        </p>
-        {perks.map(p => (
-          <div key={p} className="flex items-center gap-2">
-            <CheckCircle2 size={11} className={tier.color} />
-            <span className="text-xs text-muted">{p}</span>
-          </div>
-        ))}
+        )}
       </div>
+
+      {/* Store */}
+      <div className="border-t border-m-border pt-3">
+        <p className="text-[10px] text-subtle uppercase tracking-widest mb-2 flex items-center gap-1.5"><Gift size={11} /> {tr ? 'Puan Mağazası' : 'Points Store'}</p>
+        {data.products.length === 0 ? (
+          <p className="text-[11px] text-subtle">{tr ? 'Şu an satışta kupon yok.' : 'No coupons available.'}</p>
+        ) : (
+          <div className="space-y-2">
+            {data.products.map(p => {
+              const affordable = data.points >= p.pointsCost;
+              return (
+                <div key={p.id} className="rounded-lg border border-m-border bg-m-surface px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-main">{p.name}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-accent"><Star size={9} />{p.pointsCost}</span>
+                  </div>
+                  <p className="text-[10px] text-subtle mt-0.5">
+                    {discountText({ discountType: p.discountType, value: p.value, balance: null }, tr)}
+                    {p.minSpend > 0 && ` · min ₺${p.minSpend.toLocaleString('tr-TR')}`}
+                  </p>
+                  <button
+                    onClick={() => buy(p.id)}
+                    disabled={!affordable || buyingId === p.id}
+                    className="mt-2 w-full py-1.5 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-40 bg-brand-accent text-brand-emerald hover:brightness-105 disabled:bg-m-surface2 disabled:text-subtle"
+                  >
+                    {buyingId === p.id ? '…' : affordable ? (tr ? 'Satın Al' : 'Buy') : (tr ? 'Yetersiz puan' : 'Not enough points')}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {notice && <p className="text-[11px] text-brand-accent">{notice}</p>}
     </div>
   );
 }
@@ -912,6 +976,13 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
   const [people, setPeople] = useState<AccountPerson[]>([]);
   const [peopleLoaded, setPeopleLoaded] = useState(false);
   const [showProfileSetupPrompt, setShowProfileSetupPrompt] = useState(false);
+  const [loyalty, setLoyalty] = useState<LoyaltyData | null>(null);
+
+  const fetchLoyalty = useCallback(async () => {
+    const d = await fetch('/api/account/loyalty').then(r => r.json()).catch(() => null);
+    if (d?.ok) setLoyalty({ enabled: d.enabled, points: d.points, coupons: d.coupons, products: d.products });
+  }, []);
+  useEffect(() => { fetchLoyalty(); }, [fetchLoyalty]);
 
   useEffect(() => {
     if (searchParams.get('tab') === 'reviews') {
@@ -1038,10 +1109,10 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-5">
         {/* Hero */}
-        <ProfileHero user={user} tr={tr} />
+        <ProfileHero user={user} tr={tr} points={loyalty?.points ?? 0} loyaltyEnabled={loyalty?.enabled ?? false} />
 
-        {/* Two-column layout: tabs+content left, loyalty right */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-5 items-start">
+        {/* Two-column layout: tabs+content left, loyalty right (only when enabled) */}
+        <div className={`grid grid-cols-1 gap-5 items-start ${loyalty?.enabled ? 'lg:grid-cols-[minmax(0,1fr)_20rem]' : ''}`}>
           {/* Left: tabs + content */}
           <div className="flex-1 min-w-0 space-y-4">
             <TabNav active={activeTab} setActive={setActiveTab} tr={tr} />
@@ -1062,10 +1133,12 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
             </AnimatePresence>
           </div>
 
-          {/* Right: loyalty card (sticky) */}
-          <div className="w-full lg:sticky lg:top-20">
-            <LoyaltyCard tr={tr} />
-          </div>
+          {/* Right: loyalty panel (sticky) — only when the program is enabled */}
+          {loyalty?.enabled && (
+            <div className="w-full lg:sticky lg:top-20">
+              <LoyaltyPanel tr={tr} data={loyalty} onChanged={fetchLoyalty} />
+            </div>
+          )}
         </div>
       </main>
     </div>

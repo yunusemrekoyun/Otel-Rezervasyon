@@ -5,6 +5,7 @@ import { writeAuditLog } from '@/lib/audit';
 import { sendMail } from '@/lib/mail';
 import { renderCancellationEmail } from '@/lib/mail/hotel-templates';
 import { getPaymentTransactionId, refundPayment } from '@/lib/payments/iyzico';
+import { restoreCoupon } from '@/lib/loyalty/coupons';
 
 export const runtime = 'nodejs';
 
@@ -113,6 +114,11 @@ export async function PATCH(
     where: { reservationId: id, status: 'initialized' },
     data: { status: 'cancelled', failedAt: new Date() },
   });
+
+  // Give back the coupon that was used on this (paid) reservation.
+  if (reservation.couponCode && reservation.discountAmount > 0 && paidPayments.length > 0) {
+    await prisma.$transaction((tx) => restoreCoupon(tx, reservation.couponCode!, reservation.discountAmount));
+  }
 
   const newPaymentStatus = paidPayments.length === 0
     ? (reservation.paymentStatus === 'paid' ? 'refunded' : 'cancelled')

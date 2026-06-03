@@ -129,8 +129,12 @@ export default function App() {
   // Returning from a top-level 3DS payment redirect (/?payment=<id>) opens the
   // reservation screen so ReservationScreen can show the in-app confirmation.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('payment')) {
+    const params = new URLSearchParams(window.location.search);
+    const screenParam = params.get('screen');
+    if (params.get('payment') || screenParam === 'reserve') {
       setScreen('reserve');
+    } else if (screenParam && (SCREENS as string[]).includes(screenParam)) {
+      setScreen(screenParam as ScreenType);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

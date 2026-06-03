@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Calendar, BedDouble,
   CheckCircle2, Clock, XCircle, AlertCircle, MapPin,
-  QrCode, X, Loader2, Trash2, User,
+  QrCode, X, Loader2, Trash2, User, RefreshCw,
 } from 'lucide-react';
 import type { AuthUser } from '@/lib/auth/session';
 import { formatBirthDate } from '@/components/ui/BirthDateInput';
@@ -190,6 +190,10 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [confirmChange, setConfirmChange] = useState(false);
+  const [changing, setChanging] = useState(false);
+  const [changeError, setChangeError] = useState<string | null>(null);
+  const [creditResult, setCreditResult] = useState<{ code: string; amount: number } | null>(null);
   const badge = statusBadge(res.status, tr);
   const BadgeIcon = badge.icon;
   const now = new Date();
@@ -214,6 +218,24 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
       setConfirmCancel(false);
     } else {
       setCancelError(data?.message ?? (tr ? 'İptal edilemedi.' : 'Could not cancel.'));
+    }
+  }
+
+  async function handleConvertToCredit() {
+    setChanging(true);
+    setChangeError(null);
+    const r = await fetch(`/api/reservations/${res.id}/convert-to-credit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(() => null);
+    const data = r ? await r.json().catch(() => null) : null;
+    setChanging(false);
+    if (data?.ok) {
+      setCreditResult({ code: data.couponCode, amount: data.amount });
+      setConfirmChange(false);
+      onCancel(res.id);
+    } else {
+      setChangeError(data?.message ?? (tr ? 'İşlem yapılamadı.' : 'Could not process.'));
     }
   }
 
@@ -308,15 +330,68 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
           <p className="text-[10px] text-brand-accent/60">
             {tr ? `Check-in'e ${daysLeft} gün kaldı` : `${daysLeft} days until check-in`}
           </p>
-          {canCancel && !confirmCancel && (
-            <button
-              onClick={() => setConfirmCancel(true)}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-red-400/60 hover:text-red-400 hover:bg-red-400/8 border border-transparent hover:border-red-400/15 transition-colors"
-            >
-              <Trash2 size={10} />
-              {tr ? 'İptal Et' : 'Cancel'}
-            </button>
+          {canCancel && !confirmCancel && !confirmChange && !creditResult && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => setConfirmChange(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-brand-accent/70 hover:text-brand-accent hover:bg-brand-accent/8 border border-transparent hover:border-brand-accent/15 transition-colors"
+              >
+                <RefreshCw size={10} />
+                {tr ? 'Değiştir' : 'Change'}
+              </button>
+              <button
+                onClick={() => setConfirmCancel(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-red-400/60 hover:text-red-400 hover:bg-red-400/8 border border-transparent hover:border-red-400/15 transition-colors"
+              >
+                <Trash2 size={10} />
+                {tr ? 'İptal Et' : 'Cancel'}
+              </button>
+            </div>
           )}
+        </div>
+      )}
+
+      {confirmChange && (
+        <div className="mt-2 pt-2 border-t border-brand-accent/15 space-y-2">
+          <p className="text-[10px] text-muted leading-relaxed">
+            {changeError
+              ? <span className="text-red-400">{changeError}</span>
+              : (tr
+                  ? 'Değişiklik için rezervasyon iptal edilecek ve ödediğiniz tutar bir indirim kuponuna dönüştürülecek. Ardından yeni tarih/oda için rezervasyon yapıp kuponu kullanarak yalnızca farkı ödersiniz.'
+                  : 'To change, this reservation is cancelled and the amount you paid becomes a discount coupon. You then rebook new dates/room and pay only the difference using that coupon.')}
+          </p>
+          <div className="flex items-center justify-end gap-1.5">
+            <button onClick={() => { setConfirmChange(false); setChangeError(null); }} className="btn-secondary px-2.5 py-1 text-[10px]">
+              {tr ? 'Vazgeç' : 'Cancel'}
+            </button>
+            <button
+              onClick={handleConvertToCredit}
+              disabled={changing}
+              className="px-2.5 py-1 rounded-lg text-[10px] text-brand-emerald bg-brand-accent hover:brightness-105 disabled:opacity-50 transition-all flex items-center gap-1 font-semibold"
+            >
+              {changing && <Loader2 size={9} className="animate-spin" />}
+              {tr ? 'Krediye Dönüştür' : 'Convert to Credit'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {creditResult && (
+        <div className="mt-2 pt-2 border-t border-emerald-500/20 space-y-2">
+          <p className="text-[11px] text-emerald-300">
+            {tr
+              ? `₺${creditResult.amount.toLocaleString('tr-TR')} tutarında kredi kuponunuz hazır.`
+              : `Your ₺${creditResult.amount.toLocaleString('tr-TR')} credit coupon is ready.`}
+          </p>
+          <div className="flex items-center justify-between gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+            <span className="font-mono text-xs font-bold text-emerald-300">{creditResult.code}</span>
+            <button
+              onClick={() => window.location.assign('/?screen=reserve')}
+              className="px-2.5 py-1 rounded-lg text-[10px] text-brand-emerald bg-brand-accent hover:brightness-105 transition-all font-semibold"
+            >
+              {tr ? 'Yeni Rezervasyon' : 'New Booking'}
+            </button>
+          </div>
         </div>
       )}
 

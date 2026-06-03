@@ -78,6 +78,23 @@ export async function consumeCoupon(tx: Prisma.TransactionClient, rawCode: strin
   });
 }
 
+/** Reverse a coupon consumption (e.g. when the reservation that used it is cancelled). */
+export async function restoreCoupon(tx: Prisma.TransactionClient, rawCode: string, discountApplied: number) {
+  const code = normalizeCode(rawCode);
+  const coupon = await tx.coupon.findUnique({ where: { code } });
+  if (!coupon) return;
+
+  if (coupon.discountType === 'percent') {
+    await tx.coupon.update({ where: { id: coupon.id }, data: { status: 'active', usedAt: null } });
+    return;
+  }
+
+  await tx.coupon.update({
+    where: { id: coupon.id },
+    data: { balance: (coupon.balance ?? 0) + discountApplied, status: 'active', usedAt: null },
+  });
+}
+
 /** Award loyalty points for a completed (checked-out) stay. Returns points granted. */
 export async function awardCheckoutPoints(
   tx: Prisma.TransactionClient,

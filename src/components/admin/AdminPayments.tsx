@@ -43,6 +43,7 @@ const STATUS_STYLE: Record<string, { tr: string; en: string; cls: string }> = {
   expired:     { tr: 'Süresi Doldu', en: 'Expired',   cls: 'text-zinc-400 border-zinc-500/25 bg-zinc-500/10' },
   cancelled:   { tr: 'İptal',      en: 'Cancelled',   cls: 'text-zinc-400 border-zinc-500/25 bg-zinc-500/10' },
   refunded:    { tr: 'İade',       en: 'Refunded',    cls: 'text-violet-400 border-violet-500/25 bg-violet-500/10' },
+  refund_failed: { tr: 'İade Hatası', en: 'Refund Failed', cls: 'text-red-400 border-red-500/25 bg-red-500/10' },
 };
 
 function methodLabel(p: Payment, tr: boolean) {
