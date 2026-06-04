@@ -120,6 +120,7 @@ export default function App() {
   const [contactCategory, setContactCategory] = useState('Rezervasyon & Giriş');
   const [contactMessage, setContactMessage] = useState('');
   const [contactSuccess, setContactSuccess] = useState(false);
+  const [contactTicket, setContactTicket] = useState('');
   const [contactError, setContactError] = useState('');
   const [isContactSending, setIsContactSending] = useState(false);
 
@@ -140,10 +141,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(r => r.json())
-      .then(data => { if (data.ok) setSessionUser({ roleSlug: data.user.roleSlug, email: data.user.email }); })
-      .catch(() => null);
+    const refresh = () => {
+      fetch('/api/auth/me')
+        .then(r => r.json())
+        .then(data => setSessionUser(data.ok ? { roleSlug: data.user.roleSlug, email: data.user.email } : null))
+        .catch(() => null);
+    };
+    refresh();
+    // Re-check when the user returns to this tab (e.g. after logging in elsewhere)
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   useEffect(() => {
@@ -323,7 +335,8 @@ export default function App() {
     if (!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()) return;
 
     setIsContactSending(true);
-    setContactSuccess(true);
+    setContactSuccess(false);
+    setContactTicket('');
     setContactError('');
 
     try {
@@ -346,14 +359,14 @@ export default function App() {
         throw new Error(payload?.message || 'Contact request failed.');
       }
 
-      alert(`Mesajınız iletildi. Referans: ${payload.ticketId}.`);
+      setContactSuccess(true);
+      setContactTicket(payload.ticketId ?? '');
       setContactName('');
       setContactEmail('');
       setContactMessage('');
     } catch (error) {
       setContactError(error instanceof Error ? error.message : 'Message could not be sent.');
     } finally {
-      setContactSuccess(false);
       setIsContactSending(false);
     }
   };
@@ -375,7 +388,7 @@ export default function App() {
       </div>
 
       {/* Main Glass Frame Shell */}
-      <div className="w-full max-w-[1440px] h-full glass-frame relative flex flex-col justify-between z-20 overflow-hidden md:border border-white/20 md:shadow-2xl md:rounded-[2rem]">
+      <div className="w-full max-w-[1440px] 2xl:max-w-[1760px] h-full glass-frame relative flex flex-col justify-between z-20 overflow-hidden md:border border-white/20 md:shadow-2xl md:rounded-[2rem]">
         
         {/* Navigation Header strictly matching Navigation Flow specs */}
         <nav className="nav-glass">
@@ -896,9 +909,14 @@ export default function App() {
                       </div>
 
                       {contactSuccess && (
-                        <div className="text-[10px] text-emerald-300 flex items-center gap-1.5 py-0.5 animate-pulse">
-                          <CheckCircle2 size={12} />
-                          <span>{t('contact.success')}</span>
+                        <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/25 px-3 py-2 text-[11px] text-emerald-300 flex items-start gap-2">
+                          <CheckCircle2 size={13} className="shrink-0 mt-0.5" />
+                          <span>
+                            {t('contact.success')}
+                            {contactTicket && (
+                              <> {language === 'tr' ? 'Referans no:' : 'Reference:'} <strong className="font-mono">{contactTicket}</strong></>
+                            )}
+                          </span>
                         </div>
                       )}
 

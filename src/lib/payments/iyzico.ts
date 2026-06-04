@@ -224,3 +224,20 @@ export async function refundPayment(input: {
   });
   return data;
 }
+
+// Full refund of a not-yet-settled payment (same day). Uses paymentId directly
+// — more reliable than /payment/refund which needs a paymentTransactionId.
+export async function cancelIyzicoPayment(input: {
+  paymentId: string;
+  ip: string;
+  conversationId?: string;
+}): Promise<IyzicoRefundResult> {
+  const { locale } = config();
+  const data = await iyzicoRequest<IyzicoRefundResult>('/payment/cancel', {
+    locale,
+    conversationId: input.conversationId,
+    paymentId: input.paymentId,
+    ip: input.ip,
+  });
+  return data;
+}

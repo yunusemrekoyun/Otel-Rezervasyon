@@ -19,6 +19,8 @@ interface ContactReq {
   email?: string | null;
 }
 
+interface ThreadMessage { id: string; sender: string; body: string; createdAt: string }
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtDateTime(iso: string) {
@@ -39,6 +41,23 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
   const [replyingId, setReplyingId]     = useState<string | null>(null);
   const [replyDraft, setReplyDraft]     = useState('');
   const [replyLoading, setReplyLoading] = useState(false);
+  const [resolvingId, setResolvingId]   = useState<string | null>(null);
+  const [threadOpenId, setThreadOpenId] = useState<string | null>(null);
+  const [thread, setThread]             = useState<ThreadMessage[]>([]);
+  const [threadLoading, setThreadLoading] = useState(false);
+
+  const toggleThread = useCallback(async (id: string) => {
+    if (threadOpenId === id) { setThreadOpenId(null); return; }
+    setThreadOpenId(id);
+    setThread([]);
+    setThreadLoading(true);
+    try {
+      const d = await fetch(`/api/contact/${id}/messages`).then(r => r.json());
+      if (d.ok) setThread(d.messages);
+    } finally {
+      setThreadLoading(false);
+    }
+  }, [threadOpenId]);
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
@@ -55,16 +74,17 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
 
   // Persist open/resolved state to the DB so it survives refreshes and is shared
   // across all staff (not just the current browser session).
-  const setStatus = useCallback(async (id: string, status: 'open' | 'resolved') => {
+  const setStatus = useCallback(async (id: string, status: 'open' | 'resolved', notifyCustomer?: boolean) => {
     setUpdatingId(id);
     try {
       const res = await fetch(`/api/contact/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...(notifyCustomer !== undefined ? { notifyCustomer } : {}) }),
       });
       if (res.ok) {
         setRequests(prev => prev.map(r => (r.id === id ? { ...r, status } : r)));
+        setResolvingId(null);
       }
     } finally {
       setUpdatingId(null);
@@ -80,25 +100,27 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
     if (!replyingId || !replyDraft.trim()) return;
     setReplyLoading(true);
     try {
-      const res = await fetch(`/api/contact/${replyingId}`, {
-        method: 'PATCH',
+      const res = await fetch(`/api/contact/${replyingId}/messages`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminReply: replyDraft }),
+        body: JSON.stringify({ body: replyDraft }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) {
         const now = new Date().toISOString();
+        const sent = replyDraft;
         setRequests(prev => prev.map(r =>
-          r.id === replyingId
-            ? { ...r, adminReply: replyDraft, repliedAt: now }
-            : r,
+          r.id === replyingId ? { ...r, adminReply: sent, repliedAt: now } : r,
         ));
+        // If this thread is open, append the new staff message live.
+        setThread(prev => (threadOpenId === replyingId ? [...prev, data.message] : prev));
         setReplyingId(null);
         setReplyDraft('');
       }
     } finally {
       setReplyLoading(false);
     }
-  }, [replyingId, replyDraft]);
+  }, [replyingId, replyDraft, threadOpenId]);
 
   const open     = requests.filter(r => r.status !== 'resolved');
   const resolved = requests.filter(r => r.status === 'resolved');
@@ -164,6 +186,25 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
               </div>
             )}
 
+            {/* Conversation thread */}
+            <div>
+              <button onClick={() => toggleThread(req.id)} className="text-[10px] text-purple-400 hover:underline">
+                {threadOpenId === req.id ? (isTr ? 'Konuşmayı gizle' : 'Hide conversation') : (isTr ? 'Konuşmayı gör' : 'View conversation')}
+              </button>
+              {threadOpenId === req.id && (
+                <div className="mt-2 space-y-1.5 max-h-56 overflow-y-auto border-t border-m-border pt-2">
+                  {threadLoading ? (
+                    <p className="text-[10px] text-subtle">…</p>
+                  ) : thread.map(m => (
+                    <div key={m.id} className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs ${m.sender === 'staff' ? 'bg-brand-accent/10 border border-brand-accent/15 text-muted ml-auto' : 'bg-m-surface2 text-main'}`}>
+                      <p className="text-[8px] uppercase tracking-wider text-subtle mb-0.5">{m.sender === 'staff' ? (isTr ? 'Personel' : 'Staff') : (isTr ? 'Misafir' : 'Guest')}</p>
+                      <p className="leading-relaxed whitespace-pre-wrap">{m.body}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Reply form */}
             {replyingId === req.id ? (
               <div className="space-y-2 mt-1">
@@ -216,17 +257,34 @@ export function ConciergePanel({ tr: isTr }: { tr: boolean }) {
           </div>
 
           {/* Resolve / Reopen */}
-          <button
-            onClick={() => setStatus(req.id, isResolved ? 'open' : 'resolved')}
-            disabled={isUpdating}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold shrink-0 mt-0.5 border transition-colors disabled:opacity-50 text-subtle hover:text-main bg-m-surface hover:bg-m-hover border-m-border"
-            title={isResolved ? (isTr ? 'Yeniden aç' : 'Reopen') : (isTr ? 'Çözüldü olarak işaretle' : 'Mark resolved')}
-          >
-            {isUpdating
-              ? <RefreshCw size={11} className="animate-spin" />
-              : isResolved ? <RotateCcw size={11} /> : <Check size={11} />}
-            {isResolved ? (isTr ? 'Yeniden Aç' : 'Reopen') : (isTr ? 'Çöz' : 'Resolve')}
-          </button>
+          {isResolved ? (
+            <button
+              onClick={() => setStatus(req.id, 'open')}
+              disabled={isUpdating}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold shrink-0 mt-0.5 border transition-colors disabled:opacity-50 text-subtle hover:text-main bg-m-surface hover:bg-m-hover border-m-border"
+            >
+              {isUpdating ? <RefreshCw size={11} className="animate-spin" /> : <RotateCcw size={11} />}
+              {isTr ? 'Yeniden Aç' : 'Reopen'}
+            </button>
+          ) : resolvingId === req.id ? (
+            <div className="flex flex-col gap-1 shrink-0 mt-0.5">
+              <p className="text-[9px] text-subtle max-w-[130px] leading-tight">{isTr ? 'Müşteriye çözüldü maili gönderilsin mi?' : 'Email the customer?'}</p>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setStatus(req.id, 'resolved', true)} disabled={isUpdating || !req.email} title={!req.email ? (isTr ? 'E-posta yok' : 'No email') : ''} className="px-2 py-1 rounded-lg text-[10px] font-semibold text-emerald-400 border border-emerald-500/25 bg-emerald-500/10 disabled:opacity-40">{isTr ? 'Evet' : 'Yes'}</button>
+                <button onClick={() => setStatus(req.id, 'resolved', false)} disabled={isUpdating} className="px-2 py-1 rounded-lg text-[10px] text-subtle border border-m-border hover:bg-m-hover">{isTr ? 'Hayır' : 'No'}</button>
+                <button onClick={() => setResolvingId(null)} className="px-1 text-subtle hover:text-main text-[11px]">✕</button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setResolvingId(req.id)}
+              disabled={isUpdating}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold shrink-0 mt-0.5 border transition-colors disabled:opacity-50 text-subtle hover:text-main bg-m-surface hover:bg-m-hover border-m-border"
+            >
+              <Check size={11} />
+              {isTr ? 'Çöz' : 'Resolve'}
+            </button>
+          )}
         </div>
       </motion.div>
     );

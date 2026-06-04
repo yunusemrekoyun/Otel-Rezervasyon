@@ -264,9 +264,23 @@ model ContactRequest {
   createdAt   DateTime  @default(now()) @map("created_at")
   user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   repliedBy   User?     @relation("contact_replies", fields: [repliedById], references: [id], onDelete: SetNull)
+  messages    ContactMessage[]
 
   @@index([userId])
   @@map("contact_requests")
+}
+
+model ContactMessage {
+  id               String         @id @default(cuid())
+  contactRequestId String         @map("contact_request_id")
+  contactRequest   ContactRequest @relation(fields: [contactRequestId], references: [id], onDelete: Cascade)
+  sender           String         // customer | staff
+  body             String
+  authorId         String?        @map("author_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  @@index([contactRequestId])
+  @@map("contact_messages")
 }
 
 model ExperienceBooking {

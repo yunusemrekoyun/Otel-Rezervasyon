@@ -5,7 +5,8 @@ import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { writeAuditLog } from '@/lib/audit';
 import { prisma } from '@/lib/prisma';
 import { initializeCheckoutForm, isIyzicoConfigured } from '@/lib/payments/iyzico';
-import { validateCoupon } from '@/lib/loyalty/coupons';
+import { validateCoupon, consumeCoupon } from '@/lib/loyalty/coupons';
+import { sendReservationConfirmationEmail } from '@/lib/reservations/confirmation';
 import {
   findAvailableRoomForRoomType,
   getRoomAvailability,
@@ -170,7 +171,7 @@ async function createPaymentAttempt({
         },
       });
 
-      return { reservation, payment, isRetry: true };
+      return { reservation, payment, isRetry: true, confirmedNoPayment: false };
     }
 
     const chosenRoom = await findAvailableRoomForRoomType(tx, {
@@ -204,44 +205,52 @@ async function createPaymentAttempt({
       if (result.ok) { discountAmount = result.discount; appliedCouponCode = result.code; }
     }
     const totalPrice = Math.max(0, subtotal - discountAmount);
-
     const confirmationId = await createConfirmationId(tx);
 
+    const reservationData = {
+      confirmationId,
+      roomId: chosenRoom.id,
+      checkInDate: checkIn,
+      checkOutDate: checkOut,
+      nights,
+      adultsCount: data.adultsCount,
+      childrenCount: data.childrenCount,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phone,
+      birthDate: data.birthDate ? parseDateOnly(data.birthDate) : undefined,
+      gender: data.gender || undefined,
+      nationality: data.nationality,
+      tcKimlikNo: data.tcKimlikNo || undefined,
+      passportNo: data.passportNo || undefined,
+      passportExpiry: data.passportExpiry ? parseDateOnly(data.passportExpiry) : undefined,
+      companyName: data.companyName || undefined,
+      taxNumber: data.taxNumber || undefined,
+      taxOffice: data.taxOffice || undefined,
+      specialRequests: data.specialRequests || undefined,
+      subtotal,
+      discountAmount,
+      couponCode: appliedCouponCode,
+      totalPrice,
+      userId: auth?.user.roleSlug === 'musteri' ? auth.user.id : undefined,
+    };
+
+    // Fully covered by a coupon → no online payment; confirm immediately.
+    if (totalPrice <= 0) {
+      const reservation = await tx.reservation.create({
+        data: { ...reservationData, status: 'confirmed', paymentStatus: 'paid', paymentExpiresAt: null },
+        include: { room: { include: { roomType: true } } },
+      });
+      if (appliedCouponCode && discountAmount > 0) {
+        await consumeCoupon(tx, appliedCouponCode, discountAmount);
+      }
+      return { reservation, payment: null, isRetry: false, confirmedNoPayment: true };
+    }
+
     const reservation = await tx.reservation.create({
-      data: {
-        confirmationId,
-        roomId: chosenRoom.id,
-        checkInDate: checkIn,
-        checkOutDate: checkOut,
-        nights,
-        adultsCount: data.adultsCount,
-        childrenCount: data.childrenCount,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        birthDate: data.birthDate ? parseDateOnly(data.birthDate) : undefined,
-        gender: data.gender || undefined,
-        nationality: data.nationality,
-        tcKimlikNo: data.tcKimlikNo || undefined,
-        passportNo: data.passportNo || undefined,
-        passportExpiry: data.passportExpiry ? parseDateOnly(data.passportExpiry) : undefined,
-        companyName: data.companyName || undefined,
-        taxNumber: data.taxNumber || undefined,
-        taxOffice: data.taxOffice || undefined,
-        specialRequests: data.specialRequests || undefined,
-        subtotal,
-        discountAmount,
-        couponCode: appliedCouponCode,
-        totalPrice,
-        status: 'payment_pending',
-        paymentStatus: 'initialized',
-        paymentExpiresAt: expiresAt,
-        userId: auth?.user.roleSlug === 'musteri' ? auth.user.id : undefined,
-      },
-      include: {
-        room: { include: { roomType: true } },
-      },
+      data: { ...reservationData, status: 'payment_pending', paymentStatus: 'initialized', paymentExpiresAt: expiresAt },
+      include: { room: { include: { roomType: true } } },
     });
 
     const payment = await tx.payment.create({
@@ -252,8 +261,23 @@ async function createPaymentAttempt({
       },
     });
 
-    return { reservation, payment, isRetry: false };
+    return { reservation, payment, isRetry: false, confirmedNoPayment: false };
   });
+
+  // Coupon covered the whole amount — the reservation is already confirmed.
+  if (created.confirmedNoPayment || !created.payment) {
+    sendReservationConfirmationEmail(created.reservation.id).catch((e) => console.error('Free reservation email failed.', e));
+    await writeAuditLog({
+      request,
+      auth,
+      action: 'reservation.create',
+      entityType: 'reservation',
+      entityId: created.reservation.id,
+      summary: `Kupon ile ücretsiz onaylandı: #${created.reservation.confirmationId}`,
+      after: { confirmationId: created.reservation.confirmationId, totalPrice: 0, couponCode: created.reservation.couponCode },
+    });
+    return { confirmed: { confirmationId: created.reservation.confirmationId, reservationId: created.reservation.id } };
+  }
 
   const callbackUrl = new URL('/api/payments/iyzico/callback', callbackBaseUrl);
   callbackUrl.searchParams.set('paymentId', created.payment.id);
@@ -385,6 +409,9 @@ export async function POST(request: NextRequest) {
     const result = await createPaymentAttempt({ request, data: parsed.data, auth });
 
     if ('error' in result && result.error) return result.error;
+    if ('confirmed' in result && result.confirmed) {
+      return NextResponse.json({ ok: true, confirmed: result.confirmed }, { status: 201 });
+    }
 
     return NextResponse.json({ ok: true, payment: result.session }, { status: 201 });
   } catch (error) {

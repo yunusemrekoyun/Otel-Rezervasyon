@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     const todayStart = new Date(); todayStart.setHours(0,  0,  0,   0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
-    const [arrivals, departures] = await Promise.all([
+    const [arrivals, departures, upcomingArrivals, upcomingDepartures, inHouse] = await Promise.all([
       prisma.reservation.findMany({
         where: {
           checkInDate: { gte: todayStart, lte: todayEnd },
@@ -71,9 +71,13 @@ export async function GET(request: NextRequest) {
         include: { room: ROOM_SEL },
         orderBy: { room: { name: 'asc' } },
       }),
+      // Future expected arrivals/departures + guests currently in house.
+      prisma.reservation.count({ where: { checkInDate: { gt: todayEnd }, status: { in: ['confirmed', 'pending'] } } }),
+      prisma.reservation.count({ where: { checkOutDate: { gt: todayEnd }, status: { in: ['confirmed', 'pending', 'checked_in'] } } }),
+      prisma.reservation.count({ where: { status: 'checked_in' } }),
     ]);
 
-    return NextResponse.json({ ok: true, arrivals, departures });
+    return NextResponse.json({ ok: true, arrivals, departures, upcomingArrivals, upcomingDepartures, inHouse });
   }
 
   return NextResponse.json(
@@ -257,16 +261,23 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (sendToCleaning) {
-      await tx.cleaningTask.create({
-        data: {
-          roomId: reservation.roomId,
-          reportedById: auth.user.id,
-          assignedToId: null,
-          status: 'pending',
-          priority: 'normal',
-          notes: checkoutNote ?? 'Check-out sonrası temizlik (havuza eklendi).',
-        },
+      // Idempotent: don't queue a second task if the room already has an active one.
+      const existingActive = await tx.cleaningTask.findFirst({
+        where: { roomId: reservation.roomId, status: { not: 'done' } },
+        select: { id: true },
       });
+      if (!existingActive) {
+        await tx.cleaningTask.create({
+          data: {
+            roomId: reservation.roomId,
+            reportedById: auth.user.id,
+            assignedToId: null,
+            status: 'pending',
+            priority: 'normal',
+            notes: checkoutNote ?? 'Check-out sonrası temizlik (havuza eklendi).',
+          },
+        });
+      }
     }
 
     const updatedRes = await tx.reservation.update({

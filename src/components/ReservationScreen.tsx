@@ -1060,6 +1060,13 @@ export function ReservationScreen() {
         return;
       }
 
+      // Coupon covered the whole amount → no payment step, reservation confirmed.
+      if (resData.confirmed) {
+        setResult({ ok: true, confirmationId: resData.confirmed.confirmationId, needsProfileSetup: needsProfileSetupRef.current });
+        setSubmitting(false);
+        return;
+      }
+
       setPaymentSession(resData.payment);
       setPaymentNow(Date.now());
       setStep(3);

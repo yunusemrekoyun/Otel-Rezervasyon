@@ -183,17 +183,118 @@ function QRModal({ code, onClose, tr, title }: { code: string; onClose: () => vo
 
 // ── Reservation Card ───────────────────────────────────────────────────────────
 
+function ReservationActionModal({ res, tr, mode, onClose, onDone }: {
+  res: Reservation; tr: boolean; mode: 'cancel' | 'change'; onClose: () => void; onDone: (id: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cancelDone, setCancelDone] = useState<{ refund: number } | null>(null);
+  const [credit, setCredit] = useState<{ code: string; amount: number } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function run() {
+    setBusy(true);
+    setError(null);
+    try {
+      if (mode === 'cancel') {
+        const r = await fetch(`/api/reservations/${res.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel' }),
+        });
+        const d = await r.json().catch(() => null);
+        if (d?.ok) { onDone(res.id); setCancelDone({ refund: d.refund?.amount ?? 0 }); }
+        else setError(d?.message ?? (tr ? 'İptal edilemedi.' : 'Could not cancel.'));
+      } else {
+        const r = await fetch(`/api/reservations/${res.id}/convert-to-credit`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+        });
+        const d = await r.json().catch(() => null);
+        if (d?.ok) { onDone(res.id); setCredit({ code: d.couponCode, amount: d.amount }); }
+        else setError(d?.message ?? (tr ? 'İşlem yapılamadı.' : 'Could not process.'));
+      }
+    } catch {
+      setError(tr ? 'Bağlantı hatası.' : 'Connection error.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        onClick={e => e.stopPropagation()} className="w-full max-w-md modal-shell p-5 space-y-4"
+      >
+        {credit ? (
+          <>
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/12 border border-emerald-500/25 flex items-center justify-center"><CheckCircle2 size={18} className="text-emerald-400" /></div>
+              <h3 className="text-base font-bold text-main">{tr ? 'Krediye Dönüştürüldü' : 'Converted to Credit'}</h3>
+            </div>
+            <p className="text-sm text-muted leading-relaxed">
+              {tr
+                ? `Rezervasyonunuz iptal edildi ve ödediğiniz ₺${credit.amount.toLocaleString('tr-TR')} bir kredi kuponuna dönüştürüldü. Yeni tarih/oda için rezervasyon yaparken aşağıdaki kodu girin; kalan farkı ödersiniz, kalan bakiye kuponunuzda kalır.`
+                : `Your reservation was cancelled and the ₺${credit.amount.toLocaleString('tr-TR')} you paid became a credit coupon. Enter the code below when rebooking and pay only the difference.`}
+            </p>
+            <button onClick={() => { navigator.clipboard?.writeText(credit.code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => null); }}
+              className="w-full flex items-center justify-between gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 px-3 py-2.5 hover:bg-emerald-500/15 transition-colors">
+              <span className="font-mono text-sm font-bold text-emerald-300">{credit.code}</span>
+              <span className="text-[10px] text-subtle">{copied ? (tr ? 'Kopyalandı!' : 'Copied!') : (tr ? 'Kopyala' : 'Copy')}</span>
+            </button>
+            <div className="flex gap-2.5">
+              <button onClick={onClose} className="btn-secondary flex-1 text-sm">{tr ? 'Kapat' : 'Close'}</button>
+              <button onClick={() => window.location.assign('/?screen=reserve')} className="btn-primary flex-1 text-sm">{tr ? 'Yeni Rezervasyon' : 'New Booking'}</button>
+            </div>
+          </>
+        ) : cancelDone ? (
+          <>
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/12 border border-emerald-500/25 flex items-center justify-center"><CheckCircle2 size={18} className="text-emerald-400" /></div>
+              <h3 className="text-base font-bold text-main">{tr ? 'Rezervasyon İptal Edildi' : 'Reservation Cancelled'}</h3>
+            </div>
+            <p className="text-sm text-muted leading-relaxed">
+              {cancelDone.refund > 0
+                ? (tr ? `₺${cancelDone.refund.toLocaleString('tr-TR')} tutarındaki iadeniz başlatıldı.` : `Your ₺${cancelDone.refund.toLocaleString('tr-TR')} refund has been initiated.`)
+                : (tr ? 'Rezervasyonunuz iptal edildi.' : 'Your reservation has been cancelled.')}
+            </p>
+            <button onClick={onClose} className="btn-primary w-full text-sm">{tr ? 'Kapat' : 'Close'}</button>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2.5">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${mode === 'cancel' ? 'bg-red-500/12 border border-red-500/25' : 'bg-brand-accent/12 border border-brand-accent/25'}`}>
+                {mode === 'cancel' ? <Trash2 size={16} className="text-red-400" /> : <RefreshCw size={16} className="text-brand-accent" />}
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-main">{mode === 'cancel' ? (tr ? 'Rezervasyonu İptal Et' : 'Cancel Reservation') : (tr ? 'Rezervasyonu Değiştir' : 'Change Reservation')}</h3>
+                <p className="text-[10px] text-subtle font-mono">{res.confirmationId}</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted leading-relaxed">
+              {mode === 'cancel'
+                ? (tr ? 'Bu rezervasyonu iptal etmek istediğinize emin misiniz? Ödeme yaptıysanız iade işlenecektir.' : 'Are you sure you want to cancel? If you paid, a refund will be processed.')
+                : (tr ? 'Değişiklik için rezervasyon iptal edilir ve ödediğiniz tutar bir indirim (kredi) kuponuna dönüştürülür. Sonra yeni tarih/oda için rezervasyon yapıp kuponu kullanarak yalnızca farkı ödersiniz.' : 'To change, the reservation is cancelled and the amount you paid becomes a credit coupon. You then rebook and pay only the difference.')}
+            </p>
+            {error && <p className="text-xs text-red-400">{error}</p>}
+            <div className="flex gap-2.5">
+              <button onClick={onClose} className="btn-secondary flex-1 text-sm">{tr ? 'Vazgeç' : 'Cancel'}</button>
+              <button onClick={run} disabled={busy}
+                className={`flex-1 text-sm rounded-lg py-2.5 font-semibold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors ${mode === 'cancel' ? 'text-white bg-red-500 hover:bg-red-600' : 'text-brand-emerald bg-brand-accent hover:brightness-105'}`}>
+                {busy && <Loader2 size={13} className="animate-spin" />}
+                {mode === 'cancel' ? (tr ? 'İptal Et' : 'Cancel') : (tr ? 'Krediye Dönüştür' : 'Convert to Credit')}
+              </button>
+            </div>
+          </>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
 function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res: Reservation; tr: boolean; onCancel: (id: string) => void; checkInTime: string; checkOutTime: string }) {
   const [showQR, setShowQR] = useState(false);
   const [showCheckoutQR, setShowCheckoutQR] = useState(false);
   const [showGuest, setShowGuest] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
-  const [cancelError, setCancelError] = useState<string | null>(null);
-  const [confirmChange, setConfirmChange] = useState(false);
-  const [changing, setChanging] = useState(false);
-  const [changeError, setChangeError] = useState<string | null>(null);
-  const [creditResult, setCreditResult] = useState<{ code: string; amount: number } | null>(null);
+  const [actionMode, setActionMode] = useState<'cancel' | 'change' | null>(null);
   const badge = statusBadge(res.status, tr);
   const BadgeIcon = badge.icon;
   const now = new Date();
@@ -203,41 +304,6 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
   const isUpcoming = checkIn > now && res.status !== 'cancelled';
   const daysLeft = Math.ceil((checkIn.getTime() - now.getTime()) / 86400000);
   const canCancel = isUpcoming && ['pending', 'confirmed'].includes(res.status);
-
-  async function handleCancel() {
-    setCancelling(true);
-    const r = await fetch(`/api/reservations/${res.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'cancel' }),
-    }).catch(() => null);
-    const data = r ? await r.json().catch(() => null) : null;
-    setCancelling(false);
-    if (data?.ok) {
-      onCancel(res.id);
-      setConfirmCancel(false);
-    } else {
-      setCancelError(data?.message ?? (tr ? 'İptal edilemedi.' : 'Could not cancel.'));
-    }
-  }
-
-  async function handleConvertToCredit() {
-    setChanging(true);
-    setChangeError(null);
-    const r = await fetch(`/api/reservations/${res.id}/convert-to-credit`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    }).catch(() => null);
-    const data = r ? await r.json().catch(() => null) : null;
-    setChanging(false);
-    if (data?.ok) {
-      setCreditResult({ code: data.couponCode, amount: data.amount });
-      setConfirmChange(false);
-      onCancel(res.id);
-    } else {
-      setChangeError(data?.message ?? (tr ? 'İşlem yapılamadı.' : 'Could not process.'));
-    }
-  }
 
   return (
     <motion.div
@@ -330,17 +396,17 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
           <p className="text-[10px] text-brand-accent/60">
             {tr ? `Check-in'e ${daysLeft} gün kaldı` : `${daysLeft} days until check-in`}
           </p>
-          {canCancel && !confirmCancel && !confirmChange && !creditResult && (
+          {canCancel && (
             <div className="flex items-center gap-1.5 shrink-0">
               <button
-                onClick={() => setConfirmChange(true)}
+                onClick={() => setActionMode('change')}
                 className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-brand-accent/70 hover:text-brand-accent hover:bg-brand-accent/8 border border-transparent hover:border-brand-accent/15 transition-colors"
               >
                 <RefreshCw size={10} />
                 {tr ? 'Değiştir' : 'Change'}
               </button>
               <button
-                onClick={() => setConfirmCancel(true)}
+                onClick={() => setActionMode('cancel')}
                 className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] text-red-400/60 hover:text-red-400 hover:bg-red-400/8 border border-transparent hover:border-red-400/15 transition-colors"
               >
                 <Trash2 size={10} />
@@ -351,80 +417,11 @@ function ReservationCard({ res, tr, onCancel, checkInTime, checkOutTime }: { res
         </div>
       )}
 
-      {confirmChange && (
-        <div className="mt-2 pt-2 border-t border-brand-accent/15 space-y-2">
-          <p className="text-[10px] text-muted leading-relaxed">
-            {changeError
-              ? <span className="text-red-400">{changeError}</span>
-              : (tr
-                  ? 'Değişiklik için rezervasyon iptal edilecek ve ödediğiniz tutar bir indirim kuponuna dönüştürülecek. Ardından yeni tarih/oda için rezervasyon yapıp kuponu kullanarak yalnızca farkı ödersiniz.'
-                  : 'To change, this reservation is cancelled and the amount you paid becomes a discount coupon. You then rebook new dates/room and pay only the difference using that coupon.')}
-          </p>
-          <div className="flex items-center justify-end gap-1.5">
-            <button onClick={() => { setConfirmChange(false); setChangeError(null); }} className="btn-secondary px-2.5 py-1 text-[10px]">
-              {tr ? 'Vazgeç' : 'Cancel'}
-            </button>
-            <button
-              onClick={handleConvertToCredit}
-              disabled={changing}
-              className="px-2.5 py-1 rounded-lg text-[10px] text-brand-emerald bg-brand-accent hover:brightness-105 disabled:opacity-50 transition-all flex items-center gap-1 font-semibold"
-            >
-              {changing && <Loader2 size={9} className="animate-spin" />}
-              {tr ? 'Krediye Dönüştür' : 'Convert to Credit'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {creditResult && (
-        <div className="mt-2 pt-2 border-t border-emerald-500/20 space-y-2">
-          <p className="text-[11px] text-emerald-300">
-            {tr
-              ? `₺${creditResult.amount.toLocaleString('tr-TR')} tutarında kredi kuponunuz hazır.`
-              : `Your ₺${creditResult.amount.toLocaleString('tr-TR')} credit coupon is ready.`}
-          </p>
-          <div className="flex items-center justify-between gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-            <span className="font-mono text-xs font-bold text-emerald-300">{creditResult.code}</span>
-            <button
-              onClick={() => window.location.assign('/?screen=reserve')}
-              className="px-2.5 py-1 rounded-lg text-[10px] text-brand-emerald bg-brand-accent hover:brightness-105 transition-all font-semibold"
-            >
-              {tr ? 'Yeni Rezervasyon' : 'New Booking'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {confirmCancel && (
-        <div className="mt-2 pt-2 border-t border-red-400/15 flex items-center justify-between gap-2">
-          <p className="text-[10px] text-red-400/80">
-            {cancelError
-              ? cancelError
-              : (tr ? 'Rezervasyonu iptal etmek istediğinize emin misiniz?' : 'Are you sure you want to cancel this reservation?')}
-          </p>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => setConfirmCancel(false)}
-              className="btn-secondary px-2.5 py-1 text-[10px]"
-            >
-              {tr ? 'Hayır' : 'No'}
-            </button>
-            <button
-              onClick={handleCancel}
-              disabled={cancelling}
-              className="px-2.5 py-1 rounded-lg text-[10px] text-white bg-red-500 hover:bg-red-600 disabled:opacity-50 transition-colors flex items-center gap-1"
-            >
-              {cancelling && <Loader2 size={9} className="animate-spin" />}
-              {tr ? 'İptal Et' : 'Cancel'}
-            </button>
-          </div>
-        </div>
-      )}
-
       <AnimatePresence>
         {showQR         && <QRModal code={res.confirmationId} onClose={() => setShowQR(false)} tr={tr} />}
         {showCheckoutQR && <QRModal code={res.confirmationId} onClose={() => setShowCheckoutQR(false)} tr={tr} title={tr ? 'Çıkış QR' : 'Check-out QR'} />}
         {showGuest      && <GuestInfoModal res={res} onClose={() => setShowGuest(false)} tr={tr} />}
+        {actionMode     && <ReservationActionModal res={res} tr={tr} mode={actionMode} onClose={() => setActionMode(null)} onDone={onCancel} />}
       </AnimatePresence>
     </motion.div>
   );
@@ -451,7 +448,12 @@ export function CustomerReservations({ user, tr }: { user: AuthUser; tr: boolean
   useEffect(() => {
     fetch('/api/reservations')
       .then(r => r.json())
-      .then(data => { if (data.ok) setReservations(data.reservations); })
+      .then(data => {
+        if (data.ok) {
+          // Hide transient "payment_pending" holds — they are not real bookings yet.
+          setReservations((data.reservations as Reservation[]).filter(r => r.status !== 'payment_pending'));
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [user.id]);

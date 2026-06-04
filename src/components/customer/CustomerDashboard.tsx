@@ -622,8 +622,90 @@ interface TicketItem {
   category: string;
   message: string;
   createdAt: string;
+  status?: string;
   adminReply?: string | null;
   repliedAt?: string | null;
+}
+
+interface ThreadMessage { id: string; sender: string; body: string; createdAt: string }
+
+function TicketThread({ ticket, tr }: { ticket: TicketItem; tr: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<ThreadMessage[]>([]);
+  const [status, setStatus] = useState(ticket.status ?? 'open');
+  const [loading, setLoading] = useState(false);
+  const [reply, setReply] = useState('');
+  const [sending, setSending] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const d = await fetch(`/api/contact/${ticket.id}/messages`).then(r => r.json());
+      if (d.ok) { setMessages(d.messages); setStatus(d.status); }
+    } finally { setLoading(false); }
+  }
+  function toggle() { const next = !open; setOpen(next); if (next && messages.length === 0) load(); }
+
+  async function send() {
+    if (!reply.trim()) return;
+    setSending(true);
+    try {
+      const d = await fetch(`/api/contact/${ticket.id}/messages`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body: reply }),
+      }).then(r => r.json());
+      if (d.ok) { setMessages(prev => [...prev, d.message]); setReply(''); setStatus('open'); }
+    } finally { setSending(false); }
+  }
+  async function setResolved(next: 'resolved' | 'open') {
+    const d = await fetch(`/api/contact/${ticket.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }),
+    }).then(r => r.json());
+    if (d.ok) setStatus(next);
+  }
+
+  return (
+    <div className="surface-card overflow-hidden">
+      <button onClick={toggle} className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-m-hover transition-colors">
+        <div className="min-w-0 flex items-center gap-2">
+          <span className="text-[10px] font-bold text-brand-accent">{ticket.ticketId}</span>
+          <span className="text-[10px] text-subtle truncate">{ticket.category}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`text-[9px] px-1.5 py-0.5 rounded border ${status === 'resolved' ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10' : 'text-amber-400 border-amber-500/20 bg-amber-500/10'}`}>
+            {status === 'resolved' ? (tr ? 'Çözüldü' : 'Resolved') : (tr ? 'Açık' : 'Open')}
+          </span>
+          <ChevronDown size={13} className={`text-subtle transition-transform ${open ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+      {open && (
+        <div className="px-3 pb-3 space-y-2 border-t border-m-border">
+          {loading ? (
+            <div className="py-4 text-center"><Loader2 size={16} className="animate-spin text-subtle inline" /></div>
+          ) : (
+            <div className="space-y-1.5 pt-2 max-h-64 overflow-y-auto">
+              {messages.map(m => (
+                <div key={m.id} className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs ${m.sender === 'staff' ? 'bg-brand-accent/10 border border-brand-accent/15 text-muted' : 'bg-m-surface2 text-main ml-auto'}`}>
+                  <p className="text-[8px] uppercase tracking-wider text-subtle mb-0.5">{m.sender === 'staff' ? (tr ? 'Otel' : 'Hotel') : (tr ? 'Siz' : 'You')}</p>
+                  <p className="leading-relaxed whitespace-pre-wrap">{m.body}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {status !== 'resolved' && (
+            <div className="flex gap-2 pt-1">
+              <input value={reply} onChange={e => setReply(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') send(); }} placeholder={tr ? 'Yanıt yaz…' : 'Reply…'} className="control-base px-2.5 py-1.5 text-xs flex-1" />
+              <button onClick={send} disabled={sending || !reply.trim()} className="btn-primary px-3 text-xs disabled:opacity-50">{sending ? '…' : (tr ? 'Gönder' : 'Send')}</button>
+            </div>
+          )}
+          <div className="flex justify-end pt-0.5">
+            {status === 'resolved'
+              ? <button onClick={() => setResolved('open')} className="text-[10px] text-subtle hover:text-main">{tr ? 'Yeniden aç' : 'Reopen'}</button>
+              : <button onClick={() => setResolved('resolved')} className="text-[10px] text-emerald-400 hover:underline">{tr ? 'Çözüldü olarak işaretle' : 'Mark resolved'}</button>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 const CATEGORIES_TR = ['Rezervasyon hakkında', 'Check-in / Check-out', 'Oda sorunu', 'Yemek ve servis', 'Diğer'];
@@ -641,13 +723,14 @@ function SupportTab({ tr, user }: { tr: boolean; user: AuthUser }) {
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [ticketsLoaded, setTicketsLoaded] = useState(false);
 
-  useEffect(() => {
+  const loadTickets = useCallback(() => {
     fetch('/api/contact')
       .then(r => r.json())
       .then(d => { if (d.ok) setTickets(d.requests); })
       .catch(() => undefined)
       .finally(() => setTicketsLoaded(true));
   }, []);
+  useEffect(() => { loadTickets(); }, [loadTickets]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -662,16 +745,9 @@ function SupportTab({ tr, user }: { tr: boolean; user: AuthUser }) {
       const data = await res.json().catch(() => null);
       if (res.ok && data?.ok) {
         setLastTicket(data.ticketId);
-        const newTicket: TicketItem = {
-          id: data.ticketId,
-          ticketId: data.ticketId,
-          category,
-          message,
-          createdAt: new Date().toISOString(),
-        };
-        setTickets(prev => [newTicket, ...prev]);
         setMessage('');
         setCategory(categories[0]);
+        loadTickets();
       }
     } finally {
       setSubmitting(false);
@@ -775,31 +851,9 @@ function SupportTab({ tr, user }: { tr: boolean; user: AuthUser }) {
             <ChevronRight size={14} className="text-brand-accent" />
             {tr ? 'Taleplerim' : 'My Tickets'}
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {tickets.map(t => (
-              <div key={t.id} className="surface-card p-3 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-[10px] font-bold text-brand-accent">{t.ticketId}</span>
-                  <span className="text-[10px] text-subtle shrink-0">
-                    {new Date(t.createdAt).toLocaleDateString(tr ? 'tr-TR' : 'en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </span>
-                </div>
-                <p className="text-[10px] text-subtle uppercase tracking-wider">{t.category}</p>
-                <p className="text-xs text-muted leading-relaxed">{t.message}</p>
-                {t.adminReply && (
-                  <div className="border-t border-emerald-500/20 pt-2 mt-2">
-                    <p className="text-[9px] text-emerald-400 uppercase tracking-wider mb-1">
-                      {tr ? 'Yanıt' : 'Reply'}
-                    </p>
-                    <p className="text-xs text-muted leading-relaxed">{t.adminReply}</p>
-                  </div>
-                )}
-                {!t.adminReply && (
-                  <span className="inline-block text-[9px] text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded px-1.5 py-0.5">
-                    {tr ? 'Yanıt bekleniyor' : 'Awaiting reply'}
-                  </span>
-                )}
-              </div>
+              <TicketThread key={t.id} ticket={t} tr={tr} />
             ))}
           </div>
         </div>

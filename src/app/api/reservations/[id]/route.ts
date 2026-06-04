@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { writeAuditLog } from '@/lib/audit';
 import { sendMail } from '@/lib/mail';
 import { renderCancellationEmail } from '@/lib/mail/hotel-templates';
-import { getPaymentTransactionId, refundPayment } from '@/lib/payments/iyzico';
+import { getPaymentTransactionId, refundPayment, cancelIyzicoPayment } from '@/lib/payments/iyzico';
 import { restoreCoupon } from '@/lib/loyalty/coupons';
 
 export const runtime = 'nodejs';
@@ -82,10 +82,20 @@ export async function PATCH(
     if (p.provider === 'iyzico' && p.iyzicoToken) {
       try {
         if (refundAmount > 0) {
-          const ptid = await getPaymentTransactionId(p.iyzicoToken, p.conversationId);
-          if (!ptid) throw new Error('PAYMENT_TRANSACTION_NOT_FOUND');
-          const result = await refundPayment({ paymentTransactionId: ptid, price: refundAmount, ip, conversationId: p.conversationId });
-          if (result.status !== 'success') throw new Error(result.errorMessage || 'IYZICO_REFUND_FAILED');
+          const isFull = refundAmount >= p.amount;
+          // Full refund → /payment/cancel by paymentId (reliable, pre-settlement).
+          // Partial → /payment/refund needs the per-item paymentTransactionId.
+          const result = isFull && p.iyzicoPaymentId
+            ? await cancelIyzicoPayment({ paymentId: p.iyzicoPaymentId, ip, conversationId: p.conversationId })
+            : await (async () => {
+                const ptid = await getPaymentTransactionId(p.iyzicoToken!, p.conversationId);
+                if (!ptid) throw new Error('PAYMENT_TRANSACTION_NOT_FOUND');
+                return refundPayment({ paymentTransactionId: ptid, price: refundAmount, ip, conversationId: p.conversationId });
+              })();
+          if (result.status !== 'success') {
+            console.error('iyzico refund/cancel did not succeed', { paymentId: p.id, result });
+            throw new Error(result.errorMessage || 'IYZICO_REFUND_FAILED');
+          }
         }
         await prisma.payment.update({
           where: { id: p.id },
@@ -93,6 +103,7 @@ export async function PATCH(
         });
         totalRefunded += refundAmount;
       } catch (error) {
+        console.error('Refund failed for payment', p.id, error);
         anyRefundFailed = true;
         await prisma.payment.update({
           where: { id: p.id },

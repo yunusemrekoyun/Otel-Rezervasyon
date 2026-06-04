@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const requests = await prisma.contactRequest.findMany({
-      where: isStaff ? {} : { userId: auth.user.id },
+      where: isStaff ? {} : { OR: [{ userId: auth.user.id }, { email: auth.user.email }] },
       orderBy: { createdAt: 'desc' },
       take: isStaff ? 200 : 50,
     });
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
         category: parsed.data.category,
         message:  parsed.data.message,
         ticketId,
+        messages: { create: { sender: 'customer', body: parsed.data.message, authorId: auth?.user.id } },
       },
     });
   } catch (error) {

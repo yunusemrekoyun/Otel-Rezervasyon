@@ -1102,6 +1102,7 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
 
   const [arrivals, setArrivals] = useState<Res[]>([]);
   const [departures, setDepartures] = useState<Res[]>([]);
+  const [upcoming, setUpcoming] = useState({ arrivals: 0, departures: 0, inHouse: 0 });
   const [loadingToday, setLoadingToday] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [successId, setSuccessId] = useState<string | null>(null);
@@ -1154,6 +1155,11 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
       if (data.ok) {
         setArrivals(data.arrivals);
         setDepartures(data.departures);
+        setUpcoming({
+          arrivals: data.upcomingArrivals ?? 0,
+          departures: data.upcomingDepartures ?? 0,
+          inHouse: data.inHouse ?? 0,
+        });
       }
     } finally {
       setLoadingToday(false);
@@ -1398,6 +1404,20 @@ export function CheckinPanel({ tr: isTr }: { tr: boolean }) {
             <p className="text-[10px] text-subtle mt-0.5 leading-tight">
               {s.label}
             </p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Wider outlook (in-house + upcoming totals) ── */}
+      <div className="grid grid-cols-3 gap-2.5">
+        {[
+          { label: isTr ? "Otelde Misafir" : "In House", value: upcoming.inHouse, cls: "text-sky-400" },
+          { label: isTr ? "Yaklaşan Giriş" : "Upcoming Arrivals", value: upcoming.arrivals, cls: "text-emerald-400" },
+          { label: isTr ? "Yaklaşan Çıkış" : "Upcoming Departures", value: upcoming.departures, cls: "text-brand-accent" },
+        ].map((s) => (
+          <div key={s.label} className="surface-card px-3 py-2.5">
+            <p className={`text-lg font-black tabular-nums ${s.cls}`}>{s.value}</p>
+            <p className="text-[10px] text-subtle mt-0.5 leading-tight">{s.label}</p>
           </div>
         ))}
       </div>
