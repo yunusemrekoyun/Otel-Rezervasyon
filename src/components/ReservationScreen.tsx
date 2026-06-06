@@ -464,14 +464,17 @@ function DatePickerModal({ checkIn: initCi, checkOut: initCo, roomTypeId, roomNa
             onSelect={handleSelect} onHover={setHovered} tr={tr}
           />
           <div className="hidden md:block w-px bg-m-border" />
-          <CalendarMonth
-            year={rightMonth.getFullYear()} month={rightMonth.getMonth()}
-            checkIn={checkIn} checkOut={checkOut} hovered={hovered} today={today}
-            minDate={today}
-            bookedDates={bookedDates}
-            isDateUnavailable={isDateUnavailable}
-            onSelect={handleSelect} onHover={setHovered} tr={tr}
-          />
+          {/* Second month is desktop-only; on mobile use the month arrows above. */}
+          <div className="hidden md:block">
+            <CalendarMonth
+              year={rightMonth.getFullYear()} month={rightMonth.getMonth()}
+              checkIn={checkIn} checkOut={checkOut} hovered={hovered} today={today}
+              minDate={today}
+              bookedDates={bookedDates}
+              isDateUnavailable={isDateUnavailable}
+              onSelect={handleSelect} onHover={setHovered} tr={tr}
+            />
+          </div>
         </div>
 
         {/* Confirm */}
@@ -1289,7 +1292,7 @@ export function ReservationScreen() {
                   </button>
                 </Field>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label={tr ? 'Yetişkin' : 'Adults'} required>
                     <div className="relative">
                       <select value={form.adultsCount} onChange={e => setField('adultsCount', Number(e.target.value))} className={selectCls}>
@@ -1388,7 +1391,7 @@ export function ReservationScreen() {
                 )}
 
                 {/* Name */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label={tr ? 'Ad' : 'First Name'} required>
                     <input value={form.firstName} onChange={e => setField('firstName', e.target.value)} className={inputCls} placeholder="Ayşe" />
                   </Field>
@@ -1398,7 +1401,7 @@ export function ReservationScreen() {
                 </div>
 
                 {/* Contact */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="E-posta" required>
                     <div className="relative">
                       <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
@@ -1414,7 +1417,7 @@ export function ReservationScreen() {
                 </div>
 
                 {/* Birth + Gender */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label={tr ? 'Doğum Tarihi' : 'Date of Birth'}>
                     <button
                       type="button"
@@ -1471,7 +1474,7 @@ export function ReservationScreen() {
                     )}
                   </Field>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field label={tr ? 'Pasaport No' : 'Passport No'} required>
                       <div className="relative">
                         <FileText size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
@@ -1514,7 +1517,7 @@ export function ReservationScreen() {
                         <Field label={tr ? 'Şirket Adı' : 'Company Name'}>
                           <input value={form.companyName} onChange={e => setField('companyName', e.target.value)} className={inputCls} placeholder="Örnek A.Ş." />
                         </Field>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <Field label={tr ? 'Vergi No' : 'Tax Number'}>
                             <input value={form.taxNumber} onChange={e => setField('taxNumber', e.target.value)} className={inputCls} placeholder="1234567890" />
                           </Field>
@@ -1800,7 +1803,7 @@ export function ReservationScreen() {
                       <Check size={11} />
                       {tr ? 'Şifrenizi belirleyin — hesabınız hazır!' : 'Set your password — account ready!'}
                     </p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Field label={tr ? 'Şifre (min. 8 karakter)' : 'Password (min. 8 chars)'} required>
                         <input
                           type="password"

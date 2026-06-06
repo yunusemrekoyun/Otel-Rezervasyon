@@ -197,7 +197,7 @@ function EditModal({
         <div className="p-5 space-y-4">
 
           {/* Name row */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Ad' : 'First Name'}</label>
               <input
@@ -416,7 +416,7 @@ export function AdminUserManager({ tr, currentUserId }: Props) {
     <div className="space-y-4">
 
       {/* ── Stats bar ── */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         {stats.map(s => (
           <div key={s.label} className="surface-card px-3 py-2.5">
             <p className={`text-xl font-black tabular-nums leading-none ${s.cls}`}>{loading ? '—' : s.value}</p>

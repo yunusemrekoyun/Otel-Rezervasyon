@@ -48,7 +48,7 @@ export function ResetPasswordScreen() {
   }
 
   return (
-    <main data-mode="dark" className="min-h-screen panel-root flex items-center justify-center px-4 py-12">
+    <main data-mode="dark" className="min-h-dvh panel-root flex items-center justify-center px-4 py-12">
       <motion.form
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 18, scale: 0.98 }}

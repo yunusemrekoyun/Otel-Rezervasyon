@@ -83,7 +83,7 @@ function ProductModal({ tr, initial, onClose, onSaved }: {
               <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'İsim' : 'Name'}</label>
               <input value={form.name} onChange={e => set('name', e.target.value)} placeholder={tr ? 'Örn: %10 İndirim' : 'e.g. 10% Off'} className="control-base px-3 py-2 text-sm w-full" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Puan Bedeli' : 'Points Cost'}</label>
                 <input type="number" min={1} value={form.pointsCost} onChange={e => set('pointsCost', Number(e.target.value))} className="control-base px-3 py-2 text-sm w-full" />
@@ -96,7 +96,7 @@ function ProductModal({ tr, initial, onClose, onSaved }: {
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{form.discountType === 'percent' ? (tr ? 'İndirim %' : 'Discount %') : (tr ? 'İndirim ₺' : 'Discount ₺')}</label>
                 <input type="number" min={1} value={form.value} onChange={e => set('value', Number(e.target.value))} className="control-base px-3 py-2 text-sm w-full" />
@@ -106,7 +106,7 @@ function ProductModal({ tr, initial, onClose, onSaved }: {
                 <input type="number" min={0} value={form.minSpend} onChange={e => set('minSpend', Number(e.target.value))} className="control-base px-3 py-2 text-sm w-full" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Maks. İndirim ₺' : 'Max Disc. ₺'}</label>
                 <input type="number" min={0} value={form.maxDiscount} onChange={e => set('maxDiscount', e.target.value)} placeholder={tr ? 'opsiyonel' : 'optional'} className="control-base px-3 py-2 text-sm w-full" />

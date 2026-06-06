@@ -418,7 +418,7 @@ function ChangeModal({ res, tr, onClose, onChanged }: {
           </div>
         ) : (
           <div className="p-5 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] text-subtle uppercase tracking-widest mb-1.5">{tr ? 'Giriş' : 'Check-in'}</label>
                 <input type="date" value={checkIn} onChange={e => setCheckIn(e.target.value)} className="control-base px-3 py-2 text-sm w-full" />

@@ -1070,7 +1070,7 @@ export function CustomerDashboard({ user, authSource }: CustomerDashboardProps) 
   };
 
   return (
-    <div data-mode={mode} className={`min-h-screen panel-root${mode === 'light' ? ' mode-light' : ''}`}>
+    <div data-mode={mode} className={`min-h-dvh panel-root${mode === 'light' ? ' mode-light' : ''}`}>
       <AnimatePresence>
         {peopleLoaded && showProfileSetupPrompt && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4">

@@ -8,6 +8,7 @@ import {
   Settings, ClipboardList, Bell, LineChart, FileText, CreditCard, FileClock,
   User, Calendar, MessageSquare, CheckSquare, DoorOpen, Package,
   Building2, ChevronRight, Sun, Moon, Home, Globe, AlertTriangle, Wrench, Gift,
+  MoreHorizontal, X,
 } from 'lucide-react';
 import type { AuthUser } from '@/lib/auth/session';
 import type { RoleSlug } from '@/lib/auth/constants';
@@ -150,6 +151,8 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
 
   const roleMenus = ROLE_MENUS[language][user.roleSlug] ?? ROLE_MENUS[language].musteri;
   const [activeTabId, setActiveTabId] = useState(roleMenus[0]?.id);
+  // Mobile bottom-nav "More" sheet (md and below).
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     if (authSource === 'refresh') {
@@ -170,16 +173,26 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
   const activeTab = roleMenus.find(m => m.id === activeTabId) ?? roleMenus[0];
   const ActiveIcon = activeTab.icon;
 
+  // Bottom tab-bar: up to 5 menus fit directly; more than that → first 4 + "More".
+  const showAllTabs = roleMenus.length <= 5;
+  const primaryTabs = showAllTabs ? roleMenus : roleMenus.slice(0, 4);
+  const overflowActive = !showAllTabs && !primaryTabs.some(m => m.id === activeTabId);
+
+  const selectTab = (id: string) => {
+    setActiveTabId(id);
+    setMoreOpen(false);
+  };
+
   return (
-    <div data-mode={mode} className={`flex flex-col md:flex-row min-h-screen panel-root${mode === 'light' ? ' mode-light' : ''}`}>
+    <div data-mode={mode} className={`flex flex-col md:flex-row min-h-dvh panel-root${mode === 'light' ? ' mode-light' : ''}`}>
 
       {/* ══════════════════════════════════════════════════════════
           SIDEBAR
       ══════════════════════════════════════════════════════════ */}
       <aside className="
-        w-full md:w-64 shrink-0 flex flex-col
+        hidden md:flex md:w-64 shrink-0 flex-col
         panel-sidebar rounded-none
-        border-b md:border-b-0 md:border-r
+        md:border-r
         md:sticky md:top-0 md:h-screen md:overflow-y-auto
         z-20
       ">
@@ -324,8 +337,8 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
           </div>
         </div>
 
-        {/* Page content */}
-        <div className="flex-1 p-4 md:p-5">
+        {/* Page content — extra bottom padding on mobile clears the fixed tab-bar. */}
+        <div className="flex-1 p-4 pb-24 md:p-5 md:pb-5">
 
           {/* ── Rooms ── */}
           {activeTabId === 'rooms' && user.roleSlug === 'admin' ? (
@@ -439,6 +452,81 @@ export function RoleDashboard({ user, authSource }: RoleDashboardProps) {
 
         </div>
       </div>
+
+      {/* ══════════════════════════════════════════════════════════
+          MOBILE BOTTOM TAB-BAR  (md and below)
+      ══════════════════════════════════════════════════════════ */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 panel-sidebar border-t border-m-border bottom-bar-pad px-1 pt-1 shadow-[0_-8px_24px_rgba(0,0,0,0.18)]">
+        <div className="flex items-stretch justify-around gap-0.5">
+          {primaryTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTabId === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => selectTab(tab.id)}
+                className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg transition-colors ${
+                  isActive ? 'text-brand-accent' : 'text-subtle'
+                }`}
+              >
+                <Icon size={20} className="shrink-0" />
+                <span className="text-[10px] font-medium leading-none truncate max-w-full px-0.5">{tab.label}</span>
+              </button>
+            );
+          })}
+          {!showAllTabs && (
+            <button
+              onClick={() => setMoreOpen(true)}
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg transition-colors ${
+                overflowActive ? 'text-brand-accent' : 'text-subtle'
+              }`}
+            >
+              <MoreHorizontal size={20} className="shrink-0" />
+              <span className="text-[10px] font-medium leading-none">{language === 'tr' ? 'Daha Fazla' : 'More'}</span>
+            </button>
+          )}
+        </div>
+      </nav>
+
+      {/* Mobile "More" full-menu sheet */}
+      {moreOpen && (
+        <div className="md:hidden fixed inset-0 z-40">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
+          <div className="absolute bottom-0 inset-x-0 panel-sidebar rounded-t-2xl border-t border-m-border max-h-[72vh] overflow-y-auto bottom-bar-pad">
+            <div className="flex items-center justify-between px-5 pt-4 pb-2">
+              <p className="section-title">{language === 'tr' ? 'Tüm Menü' : 'All Menu'}</p>
+              <button
+                onClick={() => setMoreOpen(false)}
+                className="btn-secondary h-8 w-8"
+                aria-label={language === 'tr' ? 'Kapat' : 'Close'}
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <div className="p-3 pt-1 space-y-0.5">
+              {roleMenus.map((menu) => {
+                const Icon = menu.icon;
+                const isActive = activeTabId === menu.id;
+                return (
+                  <button
+                    key={menu.id}
+                    onClick={() => selectTab(menu.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-brand-accent/10 text-brand-accent border border-brand-accent/15'
+                        : 'text-muted hover:bg-m-hover border border-transparent'
+                    }`}
+                  >
+                    <Icon size={17} className={isActive ? 'text-brand-accent' : 'text-subtle'} />
+                    <span className="flex-1 text-left">{menu.label}</span>
+                    {isActive && <ChevronRight size={14} className="text-brand-accent/50" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

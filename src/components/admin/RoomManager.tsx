@@ -1196,7 +1196,7 @@ function RoomFormFields({
   return (
     <div className="space-y-4">
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-2">
           <label className="label-sm">{tr ? 'Oda Adı / No' : 'Room Name / No'}</label>
           <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder={tr ? 'Örn: 101, Sultan Suite...' : 'e.g. 101, Sultan Suite...'} className="input-base" autoFocus />
@@ -1226,7 +1226,7 @@ function RoomFormFields({
         <input type="number" value={basePrice} onChange={e => setBasePrice(e.target.value)} placeholder="0" className="input-base" min={0} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-2">
           <label className="label-sm">{tr ? 'Maks. Yetişkin' : 'Max Adults'}</label>
           <input type="number" value={maxAdults} onChange={e => setMaxAdults(e.target.value)} className="input-base" min={1} max={10} placeholder="2" />

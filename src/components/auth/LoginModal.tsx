@@ -107,7 +107,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="w-full max-w-md overflow-hidden modal-shell select-none"
+            className="w-full max-w-md overflow-x-hidden overflow-y-auto modal-shell select-none"
           >
             <div className="flex justify-between items-center px-6 py-4 border-b border-m-border">
               <div className="flex items-center gap-2">

@@ -198,6 +198,9 @@
 
 html {
   background-color: var(--color-surface-base);
+  /* Keep our own type scale on mobile; don't let iOS inflate text on rotate. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -247,6 +250,37 @@ button, a, input, select, textarea { font: inherit; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   RESPONSIVE FOUNDATION  (Faz R0)
+───────────────────────────────────────────────────────────────────────────── */
+
+/* Dynamic-viewport sizing — prefer over h-screen/100vh on mobile. */
+.min-h-dvh { min-height: 100vh; min-height: 100dvh; }
+.h-dvh     { height: 100vh; height: 100dvh; }
+
+/* Safe-area insets for fixed bars (notch / iOS home indicator). */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pl-safe { padding-left: env(safe-area-inset-left); }
+.pr-safe { padding-right: env(safe-area-inset-right); }
+.mb-safe { margin-bottom: env(safe-area-inset-bottom); }
+/* Reserve the home-indicator strip below a sticky/fixed bottom bar. */
+.bottom-bar-pad { padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)); }
+
+/* Touch ergonomics: only on coarse pointers (phones/tablets) so desktop
+   density is untouched. Bumps primary controls to a 44px target and stops
+   iOS from auto-zooming when a sub-16px input gains focus. */
+@media (pointer: coarse) {
+  .control-base,
+  .input-base,
+  .tab-item,
+  .btn-primary { min-height: 2.75rem; }
+
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea { font-size: 16px !important; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    PANEL COMPONENT CLASSES  — all use --m-* variables → mode-aware
 ───────────────────────────────────────────────────────────────────────────── */
 
@@ -257,6 +291,7 @@ button, a, input, select, textarea { font: inherit; }
     background-color: var(--m-bg);
     color: var(--m-t1);
     min-height: 100vh;
+    min-height: 100dvh; /* dynamic viewport: avoids mobile address-bar jump */
     transition: background-color 0.25s ease, color 0.25s ease;
   }
 
@@ -372,6 +407,10 @@ button, a, input, select, textarea { font: inherit; }
     border-radius: 1rem;
     color: var(--m-text);
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    /* Never let a modal exceed the screen on short / mobile viewports — scroll
+       inside instead of overflowing off-screen and becoming unreachable. */
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
   }
 
   .table-shell {

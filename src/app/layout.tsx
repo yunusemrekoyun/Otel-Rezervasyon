@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Space_Grotesk } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { LanguageProvider } from '@/i18n/LanguageContext';
@@ -15,6 +15,15 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: 'Kütahya Garden Otel',
   description: 'Kütahya Garden Otel — Rezervasyon ve otel yönetim sistemi.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  // Allow the layout to extend under the notch / home indicator; pair with
+  // the safe-area helpers in globals.css for fixed bars.
+  viewportFit: 'cover',
+  themeColor: '#07100f',
 };
 
 export const dynamic = 'force-dynamic';

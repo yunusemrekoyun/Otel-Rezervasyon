@@ -280,7 +280,7 @@ export function CleaningManager({ tr }: Props) {
     <div className="space-y-4">
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {stats.map(s => (
           <div key={s.label} className="surface-card px-3 py-2.5">
             <p className={`text-xl font-black tabular-nums leading-none ${s.cls}`}>{loading ? '—' : s.value}</p>

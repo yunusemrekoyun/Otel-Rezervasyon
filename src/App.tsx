@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence, Variants } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   Star, Sparkles, ShieldCheck,
   Compass, MessageSquare, Send, CheckCircle2, ChevronLeft, ChevronRight,
   MapPin, Mail, Phone, Lock, Eye, CalendarCheck, HelpCircle, Flame, Droplets, Fan,
-  Leaf, Menu, BedDouble, Wifi, Coffee, Clock, UserCircle2,
+  Leaf, Menu, BedDouble, Wifi, Coffee, Clock, UserCircle2, LogIn,
 } from 'lucide-react';
 import { reviews as initialReviews } from './data';
 import { Review } from './types';
@@ -38,45 +38,68 @@ interface PublicReviewSummary {
   labelEn: string;
 }
 
-const screenVariants: Variants = {
-  enter: (direction: number) => ({
-    y: direction > 0 ? 60 : -60,
-    opacity: 0,
-    scale: 0.98
-  }),
-  center: {
-    y: 0,
-    opacity: 1,
-    scale: 1,
-    transition: { duration: 0.6, ease: "easeOut" }
-  },
-  exit: (direction: number) => ({
-    y: direction < 0 ? 60 : -60,
-    opacity: 0,
-    scale: 0.98,
-    transition: { duration: 0.4, ease: "easeOut" }
-  })
-};
+function ScreenLoader() {
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="h-7 w-7 rounded-full border-2 border-white/15 border-t-white/70 animate-spin" />
+    </div>
+  );
+}
+
+// One full-height snap section. Content reveals (and re-reveals) on scroll via
+// whileInView; entering a section promotes it to the active screen.
+function Section({
+  id,
+  scrollRoot,
+  onEnter,
+  children,
+}: {
+  id: ScreenType;
+  scrollRoot: React.RefObject<HTMLDivElement | null>;
+  onEnter: (s: ScreenType) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="snap-start lg:snap-always w-full shrink-0 min-h-full lg:h-full flex flex-col justify-center">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ root: scrollRoot, amount: 0.3 }}
+        transition={{ duration: 0.55, ease: 'easeOut' }}
+        onViewportEnter={() => onEnter(id)}
+        className="w-full lg:h-full flex flex-col lg:flex-row items-center justify-start lg:justify-between px-4 sm:px-6 lg:px-12 py-8 lg:py-2 gap-5 sm:gap-6 lg:gap-6 overflow-visible lg:overflow-hidden"
+      >
+        {children}
+      </motion.div>
+    </section>
+  );
+}
 
 export default function App() {
   const router = useRouter();
   const { t, language, setLanguage } = useLanguage();
 
-  // Screen names supporting navigation specs
+  // Active section is derived from scroll position (scroll-snap landing).
   const [screen, setScreenState] = useState<ScreenType>('locations');
-  const screenRef = useRef<ScreenType>('locations');
-  const [direction, setDirection] = useState(0);
-  const isScrollingRef = useRef(false);
   const targetTimeRef = useRef(0);
   const rafRef = useRef<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const setScreen = (newScreen: ScreenType) => {
-    const currentIndex = SCREENS.indexOf(screenRef.current);
-    const nextIndex = SCREENS.indexOf(newScreen);
-    if (currentIndex === nextIndex) return;
-    setDirection(nextIndex > currentIndex ? 1 : -1);
-    screenRef.current = newScreen;
-    setScreenState(newScreen);
+  // Heavy section components (rooms / reserve / atmosphere) mount on first view.
+  const [activated, setActivated] = useState<Set<ScreenType>>(() => new Set<ScreenType>(['locations']));
+
+  const handleSectionEnter = (s: ScreenType) => {
+    setScreenState(s);
+    setActivated((prev) => (prev.has(s) ? prev : new Set(prev).add(s)));
+  };
+
+  // Programmatic navigation (nav links, dots, CTAs) → smooth-scroll the snap container.
+  const setScreen = (target: ScreenType) => {
+    const container = scrollRef.current;
+    if (container) {
+      container.scrollTo({ top: SCREENS.indexOf(target) * container.clientHeight, behavior: 'smooth' });
+    }
+    setActivated((prev) => (prev.has(target) ? prev : new Set(prev).add(target)));
   };
   
   // Peak occupants loading state counter
@@ -132,10 +155,18 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const screenParam = params.get('screen');
-    if (params.get('payment') || screenParam === 'reserve') {
-      setScreen('reserve');
-    } else if (screenParam && (SCREENS as string[]).includes(screenParam)) {
-      setScreen(screenParam as ScreenType);
+    let target: ScreenType | null = null;
+    if (params.get('payment') || screenParam === 'reserve') target = 'reserve';
+    else if (screenParam && (SCREENS as string[]).includes(screenParam)) target = screenParam as ScreenType;
+    if (target) {
+      const dest = target;
+      setScreenState(dest);
+      setActivated((prev) => new Set(prev).add(dest));
+      // Jump (no animation) to the deep-linked section once the container is laid out.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const container = scrollRef.current;
+        if (container) container.scrollTo({ top: SCREENS.indexOf(dest) * container.clientHeight });
+      }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -204,110 +235,57 @@ export default function App() {
   // Video scrubbing reference and logic
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Video smooth scrubbing based on screen
+  // Video motion: glide toward the active section's anchor frame (time-based, so
+  // the speed is the same on any refresh rate) and keep a gentle forward drift
+  // once settled — the background stays subtly alive instead of freezing between
+  // sections, which reads far more naturally than the old snap-to-frame scrub.
   useEffect(() => {
-    if (!videoRef.current) return;
-    
+    const video = videoRef.current;
+    if (!video) return;
+
     const updateTargetTime = () => {
-      if (!videoRef.current || Number.isNaN(videoRef.current.duration)) return;
-      targetTimeRef.current = videoRef.current.duration * TARGET_TIME_RATIOS[screen];
+      if (!video || Number.isNaN(video.duration)) return;
+      targetTimeRef.current = video.duration * TARGET_TIME_RATIOS[screen];
     };
-    
-    videoRef.current.addEventListener('loadedmetadata', updateTargetTime);
+
+    video.addEventListener('loadedmetadata', updateTargetTime);
     updateTargetTime();
-    
-    const animateVideo = () => {
-      if (videoRef.current && !Number.isNaN(videoRef.current.duration)) {
-        const current = videoRef.current.currentTime;
-        const target = targetTimeRef.current;
-        const diff = target - current;
-        
-        if (Math.abs(diff) > 0.01) {
-          videoRef.current.currentTime = current + diff * 0.05;
+
+    const DRIFT = 0.12;  // seconds of footage per real second while at rest
+    const SETTLE = 0.7;  // glide time-constant when moving to a new section
+    let last = performance.now();
+
+    const animateVideo = (now: number) => {
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+
+      if (video && !Number.isNaN(video.duration) && video.duration > 0) {
+        const current = video.currentTime;
+        const diff = targetTimeRef.current - current;
+        // Exponential approach → smooth, no abrupt jumps regardless of frame rate.
+        let next = current + diff * (1 - Math.exp(-dt / SETTLE));
+        // Once settled on a section, let the anchor (and frame) drift gently forward.
+        if (Math.abs(diff) < 0.05) {
+          next = current + DRIFT * dt;
+          targetTimeRef.current = next;
         }
+        if (next >= video.duration) next -= video.duration;
+        if (next < 0) next = 0;
+        video.currentTime = next;
       }
       rafRef.current = requestAnimationFrame(animateVideo);
     };
-    
+
     rafRef.current = requestAnimationFrame(animateVideo);
-    
+
     return () => {
-      if (videoRef.current) videoRef.current.removeEventListener('loadedmetadata', updateTargetTime);
+      video.removeEventListener('loadedmetadata', updateTargetTime);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [screen]);
 
-  // Scroll-jacking for screens
-  useEffect(() => {
-    let lastTouchY = 0;
-
-    const navigateTo = (dir: 1 | -1) => {
-      if (isScrollingRef.current || isModalOpenRef.current) return;
-      
-      const currentIndex = SCREENS.indexOf(screenRef.current);
-      const nextIndex = currentIndex + dir;
-      
-      if (nextIndex >= 0 && nextIndex < SCREENS.length) {
-        isScrollingRef.current = true;
-        setDirection(dir);
-        
-        const nextScreen = SCREENS[nextIndex];
-        screenRef.current = nextScreen;
-        setScreenState(nextScreen);
-        
-        setTimeout(() => {
-          isScrollingRef.current = false;
-        }, 1200);
-      }
-    };
-
-    // If the pointer is over an internal scroll area, keep all wheel/touch
-    // movement there. Reaching the edge should not trigger a screen change.
-    function isConsumedByScrollable(target: EventTarget | null): boolean {
-      let el = target as Element | null;
-      while (el && el !== document.documentElement) {
-        if (el.hasAttribute('data-scroll-lock')) return true;
-        const style = window.getComputedStyle(el);
-        const overflowY = style.overflowY;
-        if (overflowY === 'auto' || overflowY === 'scroll') {
-          if (el.scrollHeight > el.clientHeight + 1) return true;
-        }
-        el = el.parentElement;
-      }
-      return false;
-    }
-
-    const handleWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) < 30) return;
-      if (isConsumedByScrollable(e.target)) return;
-      navigateTo(e.deltaY > 0 ? 1 : -1);
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      lastTouchY = e.touches[0].clientY;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      const currentTouchY = e.touches[0].clientY;
-      const deltaY = lastTouchY - currentTouchY;
-
-      if (Math.abs(deltaY) > 40) {
-        if (isConsumedByScrollable(e.target)) return;
-        navigateTo(deltaY > 0 ? 1 : -1);
-        lastTouchY = currentTouchY;
-      }
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: true });
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
-
-    return () => {
-      window.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-    };
-  }, []);
+  // Navigation is now native scroll-snap (see the body below). No wheel/touch
+  // hijacking — sections snap on scroll and reveal via whileInView.
 
   // Occupancy counter ticking on active cabin or tab shift
   useEffect(() => {
@@ -391,14 +369,14 @@ export default function App() {
       <div className="w-full max-w-[1440px] 2xl:max-w-[1760px] h-full glass-frame relative flex flex-col justify-between z-20 overflow-hidden md:border border-white/20 md:shadow-2xl md:rounded-[2rem]">
         
         {/* Navigation Header strictly matching Navigation Flow specs */}
-        <nav className="nav-glass">
-          
+        <nav className="nav-glass px-3 sm:px-6 lg:px-8 gap-2">
+
           {/* Logo */}
           <div
             onClick={() => setScreen('locations')}
-            className="flex items-center gap-2.5 cursor-pointer group"
+            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group min-w-0"
           >
-            <div className="w-9 h-9 rounded-xl bg-white overflow-hidden shrink-0 shadow-sm">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white overflow-hidden shrink-0 shadow-sm">
               <img
                 src="/logo.png"
                 alt="Logo"
@@ -406,13 +384,13 @@ export default function App() {
                 style={{ objectPosition: 'left center' }}
               />
             </div>
-            <span className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent select-none">
+            <span className="text-[15px] sm:text-xl lg:text-2xl font-bold tracking-tight whitespace-nowrap truncate bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent select-none">
               Kütahya Garden Otel
             </span>
           </div>
 
           {/* Right side Container (Nav Links + Action buttons) */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 sm:gap-6 shrink-0">
             
             {/* Navigation links */}
             <ul className="hidden lg:flex items-center gap-1.5 bg-black/25 p-1 rounded-full border border-white/5">
@@ -468,9 +446,11 @@ export default function App() {
               ) : (
                 <button
                   onClick={() => setIsLoginOpen(true)}
-                  className="bg-white/10 hover:bg-white text-white hover:text-black px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 backdrop-blur-md border border-white/20"
+                  title={t('nav.login')}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white text-white hover:text-black px-3 sm:px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 backdrop-blur-md border border-white/20 whitespace-nowrap shrink-0"
                 >
-                  {t('nav.login')}
+                  <LogIn size={16} className="sm:hidden" />
+                  <span className="hidden sm:inline">{t('nav.login')}</span>
                 </button>
               )}
             </div>
@@ -479,20 +459,13 @@ export default function App() {
 
         {/* Unified Subscreen Left/Right Columns Body */}
         <div className="flex-1 relative min-h-0">
-          <AnimatePresence mode="wait" custom={direction}>
-            <motion.main
-              key={screen}
-              custom={direction}
-              variants={screenVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="flex-1 flex flex-col lg:flex-row items-center justify-between px-4 sm:px-6 lg:px-12 py-0 sm:py-2 lg:py-2 gap-4 sm:gap-6 lg:gap-6 w-full h-full overflow-hidden"
-            >
+          <div
+            ref={scrollRef}
+            className="h-full w-full overflow-y-auto snap-y snap-proximity lg:snap-mandatory no-scrollbar overscroll-y-contain"
+          >
 
               {/* ==================== SCREEN 1: LOCATIONS ==================== */}
-              {screen === 'locations' && (
-                <>
+              <Section id="locations" scrollRoot={scrollRef} onEnter={handleSectionEnter}>
                   {/* Left Column */}
                   <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-4 lg:space-y-6">
                     <div>
@@ -579,23 +552,25 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                </>
-              )}
-
+              </Section>
 
               {/* ==================== SCREEN 2: ROOMS ==================== */}
-              {screen === 'rooms' && <RoomsScreen />}
+              <Section id="rooms" scrollRoot={scrollRef} onEnter={handleSectionEnter}>
+                {activated.has('rooms') ? <RoomsScreen /> : <ScreenLoader />}
+              </Section>
 
               {/* ==================== SCREEN 3: RESERVE ==================== */}
-              {screen === 'reserve' && <ReservationScreen />}
+              <Section id="reserve" scrollRoot={scrollRef} onEnter={handleSectionEnter}>
+                {activated.has('reserve') ? <ReservationScreen /> : <ScreenLoader />}
+              </Section>
 
               {/* ==================== SCREEN 4: ATMOSPHERE ==================== */}
-              {screen === 'atmosphere' && <AtmosphereScreen />}
+              <Section id="atmosphere" scrollRoot={scrollRef} onEnter={handleSectionEnter}>
+                {activated.has('atmosphere') ? <AtmosphereScreen /> : <ScreenLoader />}
+              </Section>
 
-
-              {/* ==================== SCREEN 3: EXPERIENCES ==================== */}
-              {screen === 'experiences' && (
-                <>
+              {/* ==================== SCREEN 5: EXPERIENCES ==================== */}
+              <Section id="experiences" scrollRoot={scrollRef} onEnter={handleSectionEnter}>
                   {/* Left Column Section: Matching Layout structure precisely */}
                   <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-3 lg:space-y-3">
                     <div>
@@ -800,13 +775,10 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                </>
-              )}
+              </Section>
 
-
-              {/* ==================== SCREEN 4: CONTACT ==================== */}
-              {screen === 'contact' && (
-                <>
+              {/* ==================== SCREEN 6: CONTACT ==================== */}
+              <Section id="contact" scrollRoot={scrollRef} onEnter={handleSectionEnter}>
                   {/* Left Column Section: Matching Layout structure precisely */}
                   <div className="w-full lg:w-1/2 flex flex-col justify-center h-full space-y-4 lg:space-y-4">
                     <div>
@@ -940,11 +912,24 @@ export default function App() {
                       </button>
                     </form>
                   </div>
-                </>
-              )}
+              </Section>
 
-            </motion.main>
-          </AnimatePresence>
+          </div>
+
+          {/* Section progress dots (touch affordance + quick jump) */}
+          <div className="pointer-events-none absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center gap-2">
+            {SCREENS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setScreen(s)}
+                aria-label={t(`nav.${s}`)}
+                className={`pointer-events-auto rounded-full transition-all duration-300 ${
+                  screen === s ? 'h-5 w-1.5 bg-white' : 'h-1.5 w-1.5 bg-white/30 hover:bg-white/60'
+                }`}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Dynamic footer status bar indicator preserving locations screen visual 100% */}

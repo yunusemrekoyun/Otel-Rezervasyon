@@ -676,7 +676,7 @@ function CheckinConfirmModal({
                 {adults.map((g, i) => (
                   <div key={`a${i}`} className="surface-soft p-3 space-y-2">
                     <p className="text-[10px] font-bold text-main">{isTr ? `Yetişkin ${i + 2}` : `Adult ${i + 2}`}</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <input value={g.firstName} onChange={(e) => setAdult(i, { firstName: e.target.value })} placeholder={isTr ? "Ad" : "First name"} className="control-base px-2.5 py-1.5 text-xs" />
                       <input value={g.lastName} onChange={(e) => setAdult(i, { lastName: e.target.value })} placeholder={isTr ? "Soyad" : "Last name"} className="control-base px-2.5 py-1.5 text-xs" />
                     </div>
