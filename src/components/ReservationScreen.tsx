@@ -86,7 +86,7 @@ interface AccountPerson {
   taxOffice: string | null;
 }
 
-interface PaymentSession {
+export interface PaymentSession {
   id: string;
   reservationId: string;
   confirmationId: string;
@@ -98,7 +98,7 @@ interface PaymentSession {
   checkoutFormContent: string | null;
 }
 
-function IyzicoCheckoutForm({
+export function IyzicoCheckoutForm({
   html,
   paymentPageUrl,
   tr,

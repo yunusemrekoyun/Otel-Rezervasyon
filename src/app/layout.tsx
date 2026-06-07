@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Space_Grotesk } from 'next/font/google';
+import { Space_Grotesk, Playfair_Display, Inter } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { LanguageProvider } from '@/i18n/LanguageContext';
 import { ThemeProvider } from '@/theme/ThemeContext';
@@ -10,6 +10,20 @@ import './globals.css';
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   variable: '--font-space-grotesk',
+});
+
+// Hotel mobile design system fonts (design-refs/refs.pdf): Playfair (serif
+// headings) + Inter (sans body). Used only by the mobile shell; desktop keeps
+// Space Grotesk.
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  weight: ['500', '600', '700'],
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
@@ -45,7 +59,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" data-theme={initialTheme}>
-      <body className={spaceGrotesk.variable}>
+      <body className={`${spaceGrotesk.variable} ${playfair.variable} ${inter.variable}`}>
         <ThemeProvider initialTheme={initialTheme as any}>
           <LanguageProvider>
             <ToastProvider>

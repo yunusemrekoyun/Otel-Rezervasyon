@@ -190,6 +190,24 @@
   --radius-card:  0.75rem;
   --radius-input: 0.5rem;
   --radius-badge: 9999px;
+
+  /* ── Hotel mobile design system (design-refs/refs.pdf) ──
+     Warm dark-brown surfaces + peach accent + cream. Mobile-only; desktop
+     keeps the existing tokens above. */
+  --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
+  --font-hotel: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-hotel-bg:            #1a1612;
+  --color-hotel-surface:       #2a2018;
+  --color-hotel-surface-2:     #332619;
+  --color-hotel-border:        #3a2f26;
+  --color-hotel-border-muted:  #2a2218;
+  --color-hotel-peach:         #f4b584;
+  --color-hotel-peach-hover:   #e8a574;
+  --color-hotel-beige:         #e8d5b7;
+  --color-hotel-text-primary:  #f5f1ea;
+  --color-hotel-text-muted:    #a89b8c;
+  --color-hotel-text-on-beige: #1a1612;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -285,6 +303,63 @@ button, a, input, select, textarea { font: inherit; }
 ───────────────────────────────────────────────────────────────────────────── */
 
 @layer components {
+
+  /* ═══ Hotel mobile component primitives (design-refs/refs.pdf) ═══ */
+  .btn-hotel {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    width: 100%; min-height: 3.5rem; padding: 0 1.25rem;
+    border-radius: 1rem;
+    background: var(--color-hotel-peach);
+    color: var(--color-hotel-bg);
+    font-family: var(--font-hotel);
+    font-weight: 500; font-size: 1rem; line-height: 1;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+  }
+  .btn-hotel:hover { background: var(--color-hotel-peach-hover); }
+  .btn-hotel:active { transform: scale(0.99); }
+  .btn-hotel:disabled { opacity: 0.5; pointer-events: none; }
+
+  .btn-hotel-secondary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    min-height: 3rem; padding: 0 1.25rem; border-radius: 1rem;
+    background: var(--color-hotel-beige);
+    color: var(--color-hotel-text-on-beige);
+    font-family: var(--font-hotel); font-weight: 600; font-size: 0.9375rem;
+    transition: filter 0.15s ease;
+  }
+  .btn-hotel-secondary:hover { filter: brightness(0.96); }
+
+  .btn-hotel-outline {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    min-height: 3rem; padding: 0 1.25rem; border-radius: 1rem;
+    border: 1px solid var(--color-hotel-border);
+    color: var(--color-hotel-text-primary); background: transparent;
+    font-family: var(--font-hotel); font-weight: 500; font-size: 0.9375rem;
+    transition: background-color 0.15s ease;
+  }
+  .btn-hotel-outline:hover { background: var(--color-hotel-surface); }
+
+  .input-hotel {
+    width: 100%; min-height: 3.5rem; padding: 0.875rem 1rem;
+    border-radius: 1rem;
+    background: var(--color-hotel-surface);
+    border: 1px solid var(--color-hotel-border);
+    color: var(--color-hotel-text-primary);
+    font-family: var(--font-hotel); font-size: 1rem;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .input-hotel::placeholder { color: var(--color-hotel-text-muted); }
+  .input-hotel:focus {
+    border-color: var(--color-hotel-peach);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-hotel-peach) 18%, transparent);
+  }
+
+  .card-hotel {
+    background: var(--color-hotel-surface);
+    border: 1px solid var(--color-hotel-border);
+    border-radius: 1rem;
+  }
 
   /* ── Root wrapper ── */
   .panel-root {
