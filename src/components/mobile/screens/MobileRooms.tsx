@@ -32,9 +32,12 @@ export function MobileRooms({
         {tr ? 'Geri' : 'Back'}
       </button>
 
-      <h1 className="font-serif text-3xl font-bold text-hotel-text-primary">
-        {tr ? 'Odalarımız' : 'Our Rooms'}
-      </h1>
+      <div>
+        <p className="hotel-eyebrow">{tr ? 'Konaklama' : 'Stay'}</p>
+        <h1 className="mt-1.5 font-serif text-[2.4rem] font-bold leading-none tracking-tight text-hotel-text-primary">
+          {tr ? 'Odalarımız' : 'Our Rooms'}
+        </h1>
+      </div>
 
       <div className="space-y-4">
         {rooms.map((room) => (

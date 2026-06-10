@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useLanguage } from '@/i18n/LanguageContext';
+import { motion, AnimatePresence } from 'motion/react';
 import { MobileHeader } from './MobileHeader';
 import { MobileBottomTab, type MobileTab } from './MobileBottomTab';
+import { MobileMenu } from './MobileMenu';
 import { MobileHome } from './screens/MobileHome';
 import { MobileRooms } from './screens/MobileRooms';
 import { MobileRoomDetail } from './screens/MobileRoomDetail';
@@ -11,20 +12,20 @@ import { MobileBooking } from './screens/MobileBooking';
 import { MobileServices } from './screens/MobileServices';
 import { MobileReviews } from './screens/MobileReviews';
 import { MobileContact } from './screens/MobileContact';
+import { MobileProfile } from './screens/MobileProfile';
 import type { RoomData } from './types';
 
-// In-page mobile shell (md:hidden). Client-side screen state + persistent header
-// and bottom tab; desktop keeps the existing App.tsx (rendered hidden md:block in
-// app/page.tsx). Built screen by screen — Home + Rooms done, rest stubbed.
+// In-page mobile shell (md:hidden). Client-side screen state + persistent header,
+// bottom tab and slide-over menu; animated screen transitions. Desktop keeps the
+// existing App.tsx (rendered hidden md:block in app/page.tsx).
 type Screen = 'home' | 'rooms' | 'room-detail' | 'booking' | 'services' | 'reviews' | 'contact' | 'profile';
 
 export function MobileApp() {
   const [screen, setScreen] = useState<Screen>('home');
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
-  // Where room-detail was opened from, so "back" returns there.
   const [roomOrigin, setRoomOrigin] = useState<Screen>('rooms');
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // Public rooms are shared across Home / Rooms / Room-detail / Booking — fetch once.
   const [rooms, setRooms] = useState<RoomData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,75 +57,77 @@ export function MobileApp() {
     setScreen('room-detail');
   };
 
-  return (
-    <div className="flex min-h-dvh flex-col bg-hotel-bg font-hotel text-hotel-text-primary">
-      <MobileHeader onLogoClick={() => setScreen('home')} />
-
-      <main className="flex-1 pb-20">
-        {screen === 'home' && (
+  const renderScreen = () => {
+    switch (screen) {
+      case 'home':
+        return (
           <MobileHome
             rooms={rooms}
             loading={loading}
             onBook={() => setScreen('booking')}
+            onRooms={() => setScreen('rooms')}
             onSelectRoom={selectRoom}
           />
-        )}
-        {screen === 'rooms' && (
-          <MobileRooms
-            rooms={rooms}
-            loading={loading}
-            onBack={() => setScreen('home')}
-            onSelectRoom={selectRoom}
-          />
-        )}
-        {screen === 'room-detail' && (
+        );
+      case 'rooms':
+        return (
+          <MobileRooms rooms={rooms} loading={loading} onBack={() => setScreen('home')} onSelectRoom={selectRoom} />
+        );
+      case 'room-detail':
+        return (
           <MobileRoomDetail
             room={rooms.find((r) => r.id === selectedRoomId) ?? null}
             onBack={() => setScreen(roomOrigin)}
             onBook={() => setScreen('booking')}
           />
-        )}
-        {screen === 'booking' && (
+        );
+      case 'booking':
+        return (
           <MobileBooking
             rooms={rooms}
             initialRoomTypeId={rooms.find((r) => r.id === selectedRoomId)?.roomTypeId ?? null}
             onExit={() => setScreen('home')}
           />
-        )}
-        {screen === 'services' && (
-          <MobileServices
-            onReviews={() => setScreen('reviews')}
-            onContact={() => setScreen('contact')}
-          />
-        )}
-        {screen === 'reviews' && <MobileReviews onBack={() => setScreen('services')} />}
-        {screen === 'contact' && <MobileContact onBack={() => setScreen('services')} />}
-        {screen === 'profile' && <Stub screen={screen} />}
+        );
+      case 'services':
+        return <MobileServices onReviews={() => setScreen('reviews')} onContact={() => setScreen('contact')} />;
+      case 'reviews':
+        return <MobileReviews onBack={() => setScreen('services')} />;
+      case 'contact':
+        return <MobileContact onBack={() => setScreen('services')} />;
+      case 'profile':
+        return <MobileProfile />;
+    }
+  };
+
+  return (
+    <div
+      className="hotel-grain relative flex min-h-dvh flex-col font-hotel text-hotel-text-primary"
+      style={{
+        background:
+          'radial-gradient(115% 45% at 50% 0%, rgba(244,181,132,0.13), transparent 55%),' +
+          'radial-gradient(90% 50% at 50% 100%, rgba(232,165,116,0.06), transparent 65%),' +
+          'linear-gradient(180deg, #241c14 0%, #1d1610 52%, #1a1612 100%)',
+      }}
+    >
+      <MobileHeader onLogoClick={() => setScreen('home')} onMenuClick={() => setMenuOpen(true)} />
+
+      <main className="flex-1 pb-20">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={screen}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {renderScreen()}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       <MobileBottomTab active={tabFor(screen)} onTabChange={onTab} />
-    </div>
-  );
-}
-
-function Stub({ screen, note }: { screen: string; note?: string | null }) {
-  const { language } = useLanguage();
-  const tr = language === 'tr';
-  const labels: Record<string, { tr: string; en: string }> = {
-    'room-detail': { tr: 'Oda Detayı', en: 'Room Detail' },
-    booking: { tr: 'Rezervasyon', en: 'Booking' },
-    contact: { tr: 'İletişim & Konum', en: 'Contact & Location' },
-    profile: { tr: 'Profil', en: 'Profile' },
-  };
-  const label = labels[screen] ?? { tr: screen, en: screen };
-
-  return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-2 px-6 text-center">
-      <p className="font-serif text-2xl text-hotel-text-primary">{tr ? label.tr : label.en}</p>
-      <p className="font-hotel text-sm text-hotel-text-muted">
-        {tr ? 'Bu ekran sıradaki adımda yapılacak.' : 'This screen is coming in the next step.'}
-      </p>
-      {note && <p className="font-hotel text-xs text-hotel-text-muted/70">#{note}</p>}
+      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} onNavigate={(s) => setScreen(s as Screen)} />
     </div>
   );
 }

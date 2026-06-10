@@ -1,6 +1,8 @@
-// Room card used in the Rooms list and Home "Öne Çıkan Odalar" carousel
-// (design-refs/refs.pdf): top image, then name (serif) + subtitle + meta on the
-// left, price (peach) + "İncele" (beige) on the right.
+import { ArrowRight } from 'lucide-react';
+
+// Editorial room card (design-refs/refs.pdf as base, elevated): full-bleed image,
+// serif name + serif peach price on a baseline, hairline rule, meta + arrow link.
+// Whole card is the tap target; image zooms slightly on press.
 export function RoomCard({
   image,
   name,
@@ -23,39 +25,42 @@ export function RoomCard({
   className?: string;
 }) {
   return (
-    <div
-      className={`overflow-hidden rounded-2xl border border-hotel-border bg-hotel-surface ${className ?? ''}`}
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`group block w-full overflow-hidden rounded-2xl bg-hotel-surface text-left shadow-xl shadow-black/35 transition-transform active:scale-[0.99] ${className ?? ''}`}
     >
-      <div className="aspect-[16/9] w-full overflow-hidden bg-hotel-surface-2">
+      <div className="aspect-[4/3] w-full overflow-hidden bg-hotel-surface-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image} alt={name} className="h-full w-full object-cover" />
+        <img
+          src={image}
+          alt={name}
+          className="h-full w-full object-cover transition-transform duration-700 ease-out group-active:scale-[1.04]"
+        />
       </div>
 
-      <div className="flex items-start justify-between gap-3 p-4">
-        <div className="min-w-0">
-          <h3 className="font-serif text-lg font-bold leading-snug text-hotel-text-primary">
-            {name}
-          </h3>
-          {subtitle && (
-            <p className="mt-0.5 font-hotel text-sm text-hotel-text-muted">{subtitle}</p>
-          )}
-          <p className="mt-1 font-hotel text-sm text-hotel-text-muted">{meta}</p>
-        </div>
-
-        <div className="flex shrink-0 flex-col items-end gap-2">
-          <p className="whitespace-nowrap font-hotel text-sm">
-            <span className="font-bold text-hotel-peach">{priceText}</span>{' '}
-            <span className="text-hotel-text-muted">{perNight}</span>
+      <div className="space-y-3 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="font-serif text-xl font-bold leading-tight text-hotel-text-primary">{name}</h3>
+          <p className="shrink-0 whitespace-nowrap pt-0.5 font-serif text-lg leading-none">
+            <span className="text-hotel-peach">{priceText}</span>
+            <span className="ml-1 font-hotel text-[11px] text-hotel-text-muted">{perNight}</span>
           </p>
-          <button
-            type="button"
-            onClick={onSelect}
-            className="btn-hotel-secondary h-9 px-4 text-sm"
-          >
+        </div>
+
+        <div className="hotel-rule" />
+
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 truncate font-hotel text-sm text-hotel-text-muted">
+            {subtitle ? `${subtitle} · ` : ''}
+            {meta}
+          </p>
+          <span className="inline-flex shrink-0 items-center gap-1 font-hotel text-sm font-medium text-hotel-peach">
             {ctaLabel}
-          </button>
+            <ArrowRight size={15} className="transition-transform group-active:translate-x-0.5" />
+          </span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }

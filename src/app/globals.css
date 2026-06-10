@@ -361,6 +361,22 @@ button, a, input, select, textarea { font: inherit; }
     border-radius: 1rem;
   }
 
+  /* Hairline divider for editorial layout. */
+  .hotel-rule {
+    height: 1px;
+    background: linear-gradient(90deg, var(--color-hotel-border) 0%, transparent 100%);
+  }
+
+  /* Editorial eyebrow / section index label. */
+  .hotel-eyebrow {
+    font-family: var(--font-hotel);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-hotel-peach);
+  }
+
   /* ── Root wrapper ── */
   .panel-root {
     background-color: var(--m-bg);
@@ -931,3 +947,29 @@ button, a, input, select, textarea { font: inherit; }
 /* ── Modal overlays: keep dark backdrop even in light mode ── */
 [data-mode="light"] .bg-black\/70  { background-color: rgba(0, 0, 0, 0.65); }
 [data-mode="light"] .bg-black\/60  { background-color: rgba(0, 0, 0, 0.55); }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MOBILE EDITORIAL — film grain + reduced motion
+───────────────────────────────────────────────────────────────────────────── */
+
+/* Subtle film grain over the mobile shell — analog warmth that breaks the flat
+   "digital" feel. Applied via .hotel-grain on the shell root. */
+.hotel-grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Respect users who reduce motion (skill guideline). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
