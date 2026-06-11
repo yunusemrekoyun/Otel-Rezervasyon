@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { Home, BedDouble, Wrench, User } from 'lucide-react';
+import { Home, BedDouble, ConciergeBell, User } from 'lucide-react';
 import type { ElementType } from 'react';
 
 // Persistent bottom tab bar (design-refs/refs.pdf): Home · Rooms · Services · Profile.
@@ -11,7 +11,7 @@ export type MobileTab = 'home' | 'rooms' | 'services' | 'profile';
 const TABS: { id: MobileTab; icon: ElementType }[] = [
   { id: 'home', icon: Home },
   { id: 'rooms', icon: BedDouble },
-  { id: 'services', icon: Wrench },
+  { id: 'services', icon: ConciergeBell },
   { id: 'profile', icon: User },
 ];
 

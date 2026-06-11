@@ -90,7 +90,13 @@ export function MobileApp() {
           />
         );
       case 'services':
-        return <MobileServices onReviews={() => setScreen('reviews')} onContact={() => setScreen('contact')} />;
+        return (
+          <MobileServices
+            rooms={rooms}
+            onReviews={() => setScreen('reviews')}
+            onContact={() => setScreen('contact')}
+          />
+        );
       case 'reviews':
         return <MobileReviews onBack={() => setScreen('services')} />;
       case 'contact':
