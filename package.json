@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "next dev -H 0.0.0.0 -p 3000",
+    "dev": "next dev -H 0.0.0.0",
     "build": "export DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/kutahya_garden?schema=public}; export DIRECT_URL=${DIRECT_URL:-postgresql://postgres:postgres@localhost:5432/kutahya_garden?schema=public}; prisma generate && next build && mkdir -p .next/standalone/.next && rm -rf .next/standalone/.next/static && cp -R .next/static .next/standalone/.next/static && if [ -d public ]; then rm -rf .next/standalone/public && cp -R public .next/standalone/public; fi",
     "start": "HOSTNAME=0.0.0.0 PORT=${PORT:-3000} node .next/standalone/server.js",
     "start:next": "next start -H 0.0.0.0 -p ${PORT:-3000}",
