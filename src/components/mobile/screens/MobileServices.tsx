@@ -2,6 +2,7 @@
 
 import { Star, MapPin, ChevronRight } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { ScreenHeader } from '../ScreenHeader';
 
 // Services hub — the bottom-tab "Services" entry groups Reviews + Contact
 // (agreed routing; the PDF ships these as separate screens).
@@ -32,9 +33,7 @@ export function MobileServices({
 
   return (
     <div className="space-y-5 px-4 py-5">
-      <h1 className="font-serif text-3xl font-bold text-hotel-text-primary">
-        {tr ? 'Hizmetler' : 'Services'}
-      </h1>
+      <ScreenHeader eyebrow={tr ? 'Otel' : 'Hotel'} title={tr ? 'Hizmetler' : 'Services'} />
       <div className="space-y-3">
         {items.map((it) => (
           <button

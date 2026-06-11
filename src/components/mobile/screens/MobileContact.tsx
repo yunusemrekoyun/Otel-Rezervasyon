@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { ChevronLeft, Phone, Mail, MapPin, Send, CheckCircle2 } from 'lucide-react';
+import { Phone, Mail, MapPin, Send, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { ScreenHeader } from '../ScreenHeader';
 
 // Contact — design-refs/refs.pdf pages 13-14:
 // map preview + phone/email/address rows + "Mesaj Gönderin" form (→ /api/contact).
@@ -57,18 +58,13 @@ export function MobileContact({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="space-y-5 px-4 py-5">
-      <button
-        type="button"
-        onClick={onBack}
-        className="-ml-1 flex items-center gap-0.5 font-hotel text-base text-hotel-text-primary"
-      >
-        <ChevronLeft size={20} />
-        {tr ? 'Geri' : 'Back'}
-      </button>
-
-      <h1 className="font-serif text-3xl font-bold text-hotel-text-primary">
-        {tr ? 'İletişim & Konum' : 'Contact & Location'}
-      </h1>
+      <ScreenHeader
+        eyebrow={tr ? 'İletişim' : 'Contact'}
+        title={tr ? 'İletişim & Konum' : 'Contact & Location'}
+        onBack={onBack}
+        backLabel={tr ? 'Geri' : 'Back'}
+        size="h2"
+      />
 
       {/* Map */}
       <iframe

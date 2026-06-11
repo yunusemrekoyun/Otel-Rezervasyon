@@ -58,8 +58,14 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" data-theme={initialTheme}>
-      <body className={`${spaceGrotesk.variable} ${playfair.variable} ${inter.variable}`}>
+    // Font variables must live on <html>: Tailwind v4 @theme tokens
+    // (--font-serif/--font-hotel) resolve their var() references at :root.
+    <html
+      lang="en"
+      data-theme={initialTheme}
+      className={`${spaceGrotesk.variable} ${playfair.variable} ${inter.variable}`}
+    >
+      <body>
         <ThemeProvider initialTheme={initialTheme as any}>
           <LanguageProvider>
             <ToastProvider>

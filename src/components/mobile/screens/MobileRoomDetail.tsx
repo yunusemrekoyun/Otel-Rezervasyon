@@ -118,7 +118,8 @@ export function MobileRoomDetail({
 
       {/* Title + price */}
       <div>
-        <h1 className="font-serif text-3xl font-bold leading-tight text-hotel-text-primary">
+        {room.roomType?.name && <p className="hotel-eyebrow">{room.roomType.name}</p>}
+        <h1 className="mt-1.5 font-serif text-[2.4rem] font-bold leading-[1.04] tracking-tight text-hotel-text-primary">
           {room.name}
         </h1>
         <p className="mt-1.5">
@@ -129,11 +130,10 @@ export function MobileRoomDetail({
         </p>
         <p className="mt-1 font-hotel text-sm text-hotel-text-muted">
           {room.maxAdults} {tr ? 'Kişilik' : 'Guests'}
-          {room.roomType?.name ? ` · ${room.roomType.name}` : ''}
         </p>
       </div>
 
-      {/* Amenity grid (2x3) */}
+      {/* Amenity grid — icon over a centered 2-line label (handles long names) */}
       {amenities.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {amenities.map((a, i) => {
@@ -141,10 +141,10 @@ export function MobileRoomDetail({
             return (
               <div
                 key={i}
-                className="flex min-h-[56px] items-center gap-2 rounded-2xl border border-hotel-border bg-hotel-surface px-3 py-3"
+                className="flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-2xl border border-hotel-border bg-hotel-surface px-2 py-3 text-center"
               >
-                <Icon size={20} className="shrink-0 text-hotel-peach" strokeWidth={1.8} />
-                <span className="font-hotel text-xs leading-tight text-hotel-text-primary line-clamp-2">
+                <Icon size={22} className="shrink-0 text-hotel-peach" strokeWidth={1.8} />
+                <span className="font-hotel text-[11px] leading-tight text-hotel-text-primary line-clamp-2">
                   {a}
                 </span>
               </div>

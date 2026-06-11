@@ -1,8 +1,8 @@
 'use client';
 
-import { ChevronLeft } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { RoomCard } from '../RoomCard';
+import { ScreenHeader } from '../ScreenHeader';
 import { roomImage, type RoomData } from '../types';
 
 // Rooms list — design-refs/refs.pdf pages 1-2:
@@ -23,21 +23,12 @@ export function MobileRooms({
 
   return (
     <div className="space-y-5 px-4 py-5">
-      <button
-        type="button"
-        onClick={onBack}
-        className="-ml-1 flex items-center gap-0.5 font-hotel text-base text-hotel-text-primary"
-      >
-        <ChevronLeft size={20} />
-        {tr ? 'Geri' : 'Back'}
-      </button>
-
-      <div>
-        <p className="hotel-eyebrow">{tr ? 'Konaklama' : 'Stay'}</p>
-        <h1 className="mt-1.5 font-serif text-[2.4rem] font-bold leading-none tracking-tight text-hotel-text-primary">
-          {tr ? 'Odalarımız' : 'Our Rooms'}
-        </h1>
-      </div>
+      <ScreenHeader
+        eyebrow={tr ? 'Konaklama' : 'Stay'}
+        title={tr ? 'Odalarımız' : 'Our Rooms'}
+        onBack={onBack}
+        backLabel={tr ? 'Geri' : 'Back'}
+      />
 
       <div className="space-y-4">
         {rooms.map((room) => (

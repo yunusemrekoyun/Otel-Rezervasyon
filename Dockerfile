@@ -18,8 +18,8 @@ RUN apt-get update \
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/woodnest?schema=public"
-ENV DIRECT_URL="postgresql://postgres:postgres@localhost:5432/woodnest?schema=public"
+ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/kutahya_garden?schema=public"
+ENV DIRECT_URL="postgresql://postgres:postgres@localhost:5432/kutahya_garden?schema=public"
 ENV JWT_ACCESS_SECRET="build-time-placeholder-not-used-at-runtime"
 
 RUN npm run build

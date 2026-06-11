@@ -1,18 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Minus, Plus, CheckCircle2 } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ChevronLeft, ChevronRight, Minus, Plus, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
-import {
-  CalendarMonth,
-  addMonths,
-  startOfDay,
-  MONTHS_TR,
-  MONTHS_EN,
-} from '@/components/ui/CalendarPicker';
+import { addMonths, startOfDay } from '@/components/ui/CalendarPicker';
 import { IyzicoCheckoutForm, type PaymentSession } from '@/components/ReservationScreen';
 import { QRCodeImage } from '@/components/ui/QRCodeImage';
 import { StepperDots } from '../StepperDots';
+import { ScreenHeader } from '../ScreenHeader';
+import { HotelCalendar } from '../HotelCalendar';
 import type { RoomData } from '../types';
 
 const dateKey = (d: Date) =>
@@ -33,7 +30,6 @@ export function MobileBooking({
 }) {
   const { language } = useLanguage();
   const tr = language === 'tr';
-  const months = tr ? MONTHS_TR : MONTHS_EN;
   const today = useMemo(() => startOfDay(new Date()), []);
 
   const roomTypes = useMemo(() => {
@@ -57,7 +53,11 @@ export function MobileBooking({
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
 
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '' });
+  const [form, setForm] = useState({
+    firstName: '', lastName: '', email: '', phone: '',
+    tcKimlikNo: '', passportNo: '', nationality: '',
+  });
+  const [foreign, setForeign] = useState(false);
   const [kvkk, setKvkk] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -152,8 +152,10 @@ export function MobileBooking({
   const total = selectedType ? selectedType.price * nightCount : 0;
   const canContinue =
     !!roomTypeId && !!checkIn && !!checkOut && checkOut > checkIn && !hasBookedNightBetween(checkIn, checkOut);
+  // payment-session requires either an 11-digit TC kimlik no or a passport no.
+  const idValid = foreign ? form.passportNo.trim().length >= 3 : /^\d{11}$/.test(form.tcKimlikNo);
   const canPay =
-    form.firstName.trim() && form.lastName.trim() && isEmail(form.email) && form.phone.trim() && kvkk;
+    form.firstName.trim() && form.lastName.trim() && isEmail(form.email) && form.phone.trim() && idValid && kvkk;
 
   async function submit() {
     if (!checkIn || !checkOut) return;
@@ -173,7 +175,10 @@ export function MobileBooking({
           lastName: form.lastName,
           email: form.email,
           phone: form.phone,
-          nationality: 'TR',
+          nationality: foreign ? form.nationality.trim().toUpperCase() || 'TR' : 'TR',
+          ...(foreign
+            ? { passportNo: form.passportNo.trim() }
+            : { tcKimlikNo: form.tcKimlikNo.trim() }),
           kvkkAccepted: true,
         }),
       });
@@ -241,9 +246,20 @@ export function MobileBooking({
         <span className="w-12" />
       </div>
 
+      <motion.div
+        key={step}
+        initial={{ opacity: 0, x: 16 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+      >
       {/* ── Step 1: room + dates + guests ── */}
       {step === 0 && (
         <div className="space-y-6">
+          <ScreenHeader
+            eyebrow={tr ? 'Rezervasyon' : 'Reservation'}
+            title={tr ? 'Oda & Tarih' : 'Room & Dates'}
+            size="h2"
+          />
           <div className="space-y-2">
             <label className="font-hotel text-sm text-hotel-text-muted">
               {tr ? 'Oda Seçimi' : 'Room Selection'}
@@ -273,41 +289,18 @@ export function MobileBooking({
             </div>
           </div>
 
-          <div className="card-hotel p-3" data-mode="dark">
-            <div className="mb-1 flex items-center justify-between px-1">
-              <button
-                type="button"
-                onClick={() => setMonth((m) => addMonths(m, -1))}
-                className="grid h-8 w-8 place-items-center rounded-lg text-hotel-text-muted"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <span className="font-hotel font-medium text-hotel-text-primary">
-                {months[month.getMonth()]} {month.getFullYear()}
-              </span>
-              <button
-                type="button"
-                onClick={() => setMonth((m) => addMonths(m, 1))}
-                className="grid h-8 w-8 place-items-center rounded-lg text-hotel-text-muted"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-            <CalendarMonth
-              year={month.getFullYear()}
-              month={month.getMonth()}
-              checkIn={checkIn}
-              checkOut={checkOut}
-              hovered={hovered}
-              today={today}
-              minDate={today}
-              bookedDates={booked}
-              isDateUnavailable={isDateUnavailable}
-              onSelect={onSelectDate}
-              onHover={setHovered}
-              tr={tr}
-            />
-          </div>
+          <HotelCalendar
+            month={month}
+            onMonthChange={(delta) => setMonth((mm) => addMonths(mm, delta))}
+            checkIn={checkIn}
+            checkOut={checkOut}
+            hovered={hovered}
+            onHover={setHovered}
+            onSelect={onSelectDate}
+            isDateUnavailable={isDateUnavailable}
+            today={today}
+            tr={tr}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <GuestStepper label={tr ? 'Yetişkin' : 'Adults'} value={adults} min={1} onChange={setAdults} />
@@ -329,14 +322,51 @@ export function MobileBooking({
       {/* ── Step 2: details ── */}
       {step === 1 && (
         <div className="space-y-5">
-          <h1 className="font-serif text-3xl font-bold text-hotel-text-primary">
-            {tr ? 'Rezervasyon Detayları' : 'Booking Details'}
-          </h1>
+          <ScreenHeader
+            eyebrow={tr ? 'Rezervasyon' : 'Reservation'}
+            title={tr ? 'Rezervasyon Detayları' : 'Booking Details'}
+            size="h2"
+          />
           <div className="card-hotel space-y-4 p-5">
             <LabeledInput label={tr ? 'Ad' : 'First name'} value={form.firstName} onChange={(v) => setForm((f) => ({ ...f, firstName: v }))} />
             <LabeledInput label={tr ? 'Soyad' : 'Last name'} value={form.lastName} onChange={(v) => setForm((f) => ({ ...f, lastName: v }))} />
             <LabeledInput label="E-posta" type="email" value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} />
             <LabeledInput label={tr ? 'Telefon' : 'Phone'} type="tel" value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} />
+            <label className="flex items-center gap-2.5 pt-1">
+              <input
+                type="checkbox"
+                checked={foreign}
+                onChange={(e) => setForeign(e.target.checked)}
+                className="h-4 w-4 shrink-0 accent-hotel-peach"
+              />
+              <span className="font-hotel text-xs leading-relaxed text-hotel-text-muted">
+                {tr ? 'Yabancı uyrukluyum' : 'I am a foreign national'}
+              </span>
+            </label>
+            {foreign ? (
+              <>
+                <LabeledInput
+                  label={tr ? 'Pasaport No' : 'Passport No'}
+                  value={form.passportNo}
+                  onChange={(v) => setForm((f) => ({ ...f, passportNo: v }))}
+                />
+                <LabeledInput
+                  label={tr ? 'Uyruk' : 'Nationality'}
+                  placeholder="DE, FR, US…"
+                  maxLength={3}
+                  value={form.nationality}
+                  onChange={(v) => setForm((f) => ({ ...f, nationality: v.toUpperCase() }))}
+                />
+              </>
+            ) : (
+              <LabeledInput
+                label={tr ? 'T.C. Kimlik No' : 'National ID (TC)'}
+                type="tel"
+                maxLength={11}
+                value={form.tcKimlikNo}
+                onChange={(v) => setForm((f) => ({ ...f, tcKimlikNo: v.replace(/\D/g, '') }))}
+              />
+            )}
             <label className="flex items-start gap-2.5 pt-1">
               <input
                 type="checkbox"
@@ -363,9 +393,11 @@ export function MobileBooking({
       {/* ── Step 3: payment ── */}
       {step === 2 && session && (
         <div className="space-y-5">
-          <h1 className="font-serif text-3xl font-bold text-hotel-text-primary">
-            {tr ? 'Ödeme Bilgileri' : 'Payment'}
-          </h1>
+          <ScreenHeader
+            eyebrow={tr ? 'Rezervasyon' : 'Reservation'}
+            title={tr ? 'Ödeme Bilgileri' : 'Payment'}
+            size="h2"
+          />
           <div className="card-hotel p-6 text-center">
             <p className="font-serif text-xl text-hotel-text-muted">{tr ? 'Toplam Tutar' : 'Total'}</p>
             <p className="mt-1 font-serif text-4xl font-bold text-hotel-text-primary">
@@ -373,6 +405,13 @@ export function MobileBooking({
             </p>
           </div>
           <div className="overflow-hidden rounded-2xl border border-hotel-border">
+            <div className="flex items-center gap-2 border-b border-hotel-border bg-hotel-surface px-4 py-3">
+              <ShieldCheck size={16} className="text-hotel-peach" />
+              <span className="font-hotel text-sm font-medium text-hotel-text-primary">
+                {tr ? 'Güvenli Ödeme' : 'Secure Payment'}
+              </span>
+              <span className="ml-auto font-hotel text-[11px] tracking-wide text-hotel-text-muted">iyzico</span>
+            </div>
             <IyzicoCheckoutForm html={session.checkoutFormContent} paymentPageUrl={session.paymentPageUrl} tr={tr} />
           </div>
           <p className="text-center font-hotel text-xs text-hotel-text-muted">
@@ -382,6 +421,7 @@ export function MobileBooking({
           </p>
         </div>
       )}
+      </motion.div>
     </div>
   );
 }
@@ -391,16 +431,27 @@ function LabeledInput({
   value,
   onChange,
   type = 'text',
+  placeholder,
+  maxLength,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
+  placeholder?: string;
+  maxLength?: number;
 }) {
   return (
     <div className="space-y-1.5">
       <label className="font-hotel text-xs uppercase tracking-wider text-hotel-text-muted">{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={label} className="input-hotel" />
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder ?? label}
+        maxLength={maxLength}
+        className="input-hotel"
+      />
     </div>
   );
 }

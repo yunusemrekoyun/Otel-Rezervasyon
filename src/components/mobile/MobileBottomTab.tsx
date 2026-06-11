@@ -1,5 +1,6 @@
 'use client';
 
+import { motion } from 'motion/react';
 import { Home, BedDouble, Wrench, User } from 'lucide-react';
 import type { ElementType } from 'react';
 
@@ -32,10 +33,17 @@ export function MobileBottomTab({
             onClick={() => onTabChange(id)}
             aria-label={id}
             aria-current={isActive ? 'page' : undefined}
-            className={`flex flex-1 items-center justify-center transition-colors ${
+            className={`relative flex flex-1 items-center justify-center transition-colors ${
               isActive ? 'text-hotel-peach' : 'text-hotel-text-muted'
             }`}
           >
+            {isActive && (
+              <motion.span
+                layoutId="tab-indicator"
+                className="absolute top-0 h-0.5 w-9 rounded-full bg-hotel-peach"
+                transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              />
+            )}
             <Icon size={24} strokeWidth={isActive ? 2.2 : 1.8} />
           </button>
         );

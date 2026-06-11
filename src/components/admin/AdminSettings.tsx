@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, type FormEvent } from 'react';
-import { Palette, ChevronLeft, ChevronRight, CreditCard, Bell, Server, CheckCircle2, Clock, Loader2, Ban } from 'lucide-react';
+import { Palette, ChevronLeft, ChevronRight, CreditCard, Bell, Server, CheckCircle2, Clock, Loader2, Ban, Smartphone } from 'lucide-react';
 import { useTheme, THEMES } from '@/theme/ThemeContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type View = 'main' | 'appearance' | 'hotel-hours' | 'reservation-policy';
+type View = 'main' | 'appearance' | 'hotel-hours' | 'reservation-policy' | 'mobile-design';
 
 // ── Hotel Hours sub-view ───────────────────────────────────────────────────────
 
@@ -278,6 +278,175 @@ function ReservationPolicyView({ isTr, onBack }: { isTr: boolean; onBack: () => 
   );
 }
 
+// ── Mobile design sub-view ─────────────────────────────────────────────────────
+
+function PhoneMock({ variant }: { variant: 'new' | 'classic' }) {
+  return (
+    <div className="w-20 h-36 rounded-[14px] border border-m-border bg-m-surface2 p-1.5 shadow-md">
+      {variant === 'new' ? (
+        <div className="h-full w-full rounded-[10px] overflow-hidden flex flex-col" style={{ background: '#1a1612' }}>
+          <div className="h-[46%] w-full" style={{ background: 'linear-gradient(160deg,#5a4636,#1a1612)' }} />
+          <div className="px-1.5 pt-1.5 space-y-1">
+            <div className="h-1.5 w-3/4 rounded-full" style={{ background: '#f4b584' }} />
+            <div className="h-1 w-1/2 rounded-full bg-white/25" />
+            <div className="mt-1 flex gap-1">
+              <div className="h-7 flex-1 rounded" style={{ background: '#2a2018' }} />
+              <div className="h-7 flex-1 rounded" style={{ background: '#2a2018' }} />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="h-full w-full rounded-[10px] overflow-hidden flex flex-col" style={{ background: '#07100f' }}>
+          <div className="h-2.5 w-full bg-white/10" />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-full border-2 border-white/20" />
+          </div>
+          <div className="h-3 w-full bg-white/[0.06]" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MobileDesignView({ isTr, onBack }: { isTr: boolean; onBack: () => void }) {
+  const [selected, setSelected] = useState<'new' | 'classic'>('new');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [isError, setIsError] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings/mobile-design')
+      .then((r) => r.json())
+      .then((d) => { if (d.mobileDesign) setSelected(d.mobileDesign); })
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function save(value: 'new' | 'classic') {
+    if (value === selected && !isError) return;
+    const previous = selected;
+    setSelected(value);
+    setSaving(true);
+    setMessage('');
+    setIsError(false);
+    try {
+      const res = await fetch('/api/settings/mobile-design', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobileDesign: value }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.ok) throw new Error(d.message);
+      setMessage(isTr ? 'Kaydedildi.' : 'Saved.');
+    } catch {
+      setSelected(previous);
+      setIsError(true);
+      setMessage(isTr ? 'Kaydedilemedi.' : 'Could not save.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const options = [
+    {
+      id: 'new' as const,
+      title: isTr ? 'Yeni Tasarım' : 'New Design',
+      tag: isTr ? 'Editoryal · Önerilen' : 'Editorial · Recommended',
+      desc: isTr
+        ? 'Mobil-öncelikli, sinematik ve modern arayüz.'
+        : 'Mobile-first, cinematic, modern interface.',
+    },
+    {
+      id: 'classic' as const,
+      title: isTr ? 'Klasik Tasarım' : 'Classic Design',
+      tag: isTr ? 'Eski görünüm' : 'Original look',
+      desc: isTr
+        ? 'Sitenin önceki (masaüstü türevi) mobil görünümü.'
+        : 'The site’s previous (desktop-derived) mobile look.',
+    },
+  ];
+
+  return (
+    <div className="space-y-5 max-w-3xl">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-xs text-subtle hover:text-main transition-colors"
+        >
+          <ChevronLeft size={14} />
+          {isTr ? 'Sistem Ayarları' : 'Settings'}
+        </button>
+        <span className="text-faint">/</span>
+        <span className="text-xs text-muted font-medium">{isTr ? 'Mobil Görünüm' : 'Mobile Design'}</span>
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
+          <Smartphone size={18} className="text-brand-accent" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-main leading-none">
+            {isTr ? 'Mobil Görünüm' : 'Mobile Design'}
+          </h2>
+          <p className="text-[11px] text-subtle mt-0.5">
+            {isTr
+              ? 'Ziyaretçilerin telefonda göreceği tasarımı seçin. Masaüstü her iki seçenekte de aynı kalır.'
+              : 'Choose the design phone visitors see. Desktop stays the same in both options.'}
+          </p>
+        </div>
+      </div>
+
+      {/* Options */}
+      <div className="grid sm:grid-cols-2 gap-3">
+        {options.map((o) => {
+          const isActive = selected === o.id;
+          return (
+            <button
+              key={o.id}
+              type="button"
+              disabled={saving || loading}
+              onClick={() => save(o.id)}
+              className={`relative text-left p-5 rounded-xl border transition-all disabled:opacity-60 ${
+                isActive
+                  ? 'bg-brand-accent/10 border-brand-accent shadow-lg shadow-brand-accent/10'
+                  : 'surface-card hover:border-m-border2 hover:bg-m-hover'
+              }`}
+            >
+              <div className="mb-4 flex justify-center">
+                <PhoneMock variant={o.id} />
+              </div>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-bold text-main">{o.title}</p>
+                  <p className="text-[10px] text-brand-accent font-semibold uppercase tracking-widest mt-0.5">
+                    {o.tag}
+                  </p>
+                </div>
+                {isActive && <CheckCircle2 size={15} className="text-brand-accent shrink-0" />}
+              </div>
+              <p className="text-[11px] text-subtle mt-2 leading-relaxed">{o.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Status */}
+      <div className="h-4">
+        {saving ? (
+          <p className="text-xs text-subtle flex items-center gap-1.5">
+            <Loader2 size={12} className="animate-spin" /> {isTr ? 'Kaydediliyor…' : 'Saving…'}
+          </p>
+        ) : message ? (
+          <p className={`text-xs ${isError ? 'text-red-400' : 'text-emerald-400'}`}>{message}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function AdminSettings({ tr: isTr }: { tr: boolean }) {
@@ -384,6 +553,10 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
     return <ReservationPolicyView isTr={isTr} onBack={() => setView('main')} />;
   }
 
+  if (view === 'mobile-design') {
+    return <MobileDesignView isTr={isTr} onBack={() => setView('main')} />;
+  }
+
   // ── Main settings view ─────────────────────────────────────────────────────
 
   const cards = [
@@ -397,6 +570,17 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
       badge: isTr ? 'Aktif' : 'Active',
       available: true,
       onClick: () => setView('appearance'),
+    },
+    {
+      id: 'mobile-design',
+      Icon: Smartphone,
+      title: isTr ? 'Mobil Görünüm' : 'Mobile Design',
+      desc: isTr
+        ? 'Mobil ziyaretçilerin göreceği tasarımı seçin (Yeni / Klasik).'
+        : 'Choose the design mobile visitors see (New / Classic).',
+      badge: isTr ? 'Yeni' : 'New',
+      available: true,
+      onClick: () => setView('mobile-design'),
     },
     {
       id: 'hotel-hours',

@@ -2,8 +2,9 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogIn, LogOut, UserRound, ChevronRight } from 'lucide-react';
+import { LogOut, UserRound, ChevronRight } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { ScreenHeader } from '../ScreenHeader';
 
 interface Me {
   email: string;
@@ -117,11 +118,8 @@ export function MobileProfile() {
   // ── Logged out → login ──
   return (
     <div className="space-y-6 px-4 py-6">
-      <div className="flex flex-col items-center gap-2 pt-4 text-center">
-        <span className="grid h-16 w-16 place-items-center rounded-full border border-hotel-peach/30 bg-hotel-peach/15">
-          <LogIn size={26} className="text-hotel-peach" />
-        </span>
-        <h1 className="font-serif text-3xl font-bold text-hotel-text-primary">{tr ? 'Giriş Yap' : 'Sign In'}</h1>
+      <div className="space-y-2.5">
+        <ScreenHeader eyebrow={tr ? 'Hesap' : 'Account'} title={tr ? 'Giriş Yap' : 'Sign In'} />
         <p className="max-w-xs font-hotel text-sm text-hotel-text-muted">
           {tr ? 'Rezervasyonlarını ve hesabını görmek için giriş yap.' : 'Sign in to view your reservations and account.'}
         </p>

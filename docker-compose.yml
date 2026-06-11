@@ -1,5 +1,5 @@
 services:
-  woodnest:
+  kutahya-garden-otel:
     build: .
     env_file:
       - .env
