@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
+import { dispatchKbsCikis, dispatchKbsGiris } from '@/lib/kbs/notify';
 import { sendMail } from '@/lib/mail';
 import { renderCheckinEmail, renderReviewRequestEmail } from '@/lib/mail/hotel-templates';
 import { awardCheckoutPoints, isLoyaltyEnabled } from '@/lib/loyalty/coupons';
@@ -234,6 +235,13 @@ export async function PATCH(request: NextRequest) {
         after: { status: updated.status, roomId: updated.room.id, roomStatus: updated.room.status },
       });
 
+      // KBS giriş bildirimi — yanıtı bloklamaz, sonuç KbsBildirim'de izlenir.
+      after(() =>
+        dispatchKbsGiris(updated.id).catch((error) =>
+          console.error('KBS giriş bildirimi hatası:', error),
+        ),
+      );
+
       return NextResponse.json({ ok: true, reservation: updated });
     } catch (error) {
       if (error instanceof RoomStatusConflictError) {
@@ -351,6 +359,13 @@ export async function PATCH(request: NextRequest) {
   } catch (mailError) {
     console.error('Review request email send failed.', mailError);
   }
+
+  // KBS çıkış bildirimi — yanıtı bloklamaz, sonuç KbsBildirim'de izlenir.
+  after(() =>
+    dispatchKbsCikis(updated.id).catch((error) =>
+      console.error('KBS çıkış bildirimi hatası:', error),
+    ),
+  );
 
   return NextResponse.json({ ok: true, reservation: updated });
 }

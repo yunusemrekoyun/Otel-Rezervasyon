@@ -190,6 +190,7 @@ model Reservation {
   hotelReview                 HotelReview?
   payments                    Payment[]
   guests                      ReservationGuest[]
+  kbsBildirimleri             KbsBildirim[]
   paymentStatus               String    @default("unpaid") @map("payment_status")
   paymentExpiresAt            DateTime? @map("payment_expires_at")
   createdAt                   DateTime  @default(now()) @map("created_at")
@@ -517,4 +518,28 @@ model PointsLedger {
 
   @@index([userId])
   @@map("points_ledger")
+}
+
+// KBS (Kimlik Bildirim Sistemi) — kolluğa gönderilen her misafir-işlem bildirimi.
+// guestId null ise rezervasyon sahibi (lead) bildirimidir.
+model KbsBildirim {
+  id             String      @id @default(cuid())
+  reservationId  String      @map("reservation_id")
+  reservation    Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  guestId        String?     @map("guest_id")
+  islemTipi      String      @map("islem_tipi") // giris | cikis
+  durum          String      @default("bekliyor") // bekliyor | gonderildi | hata | atlandi
+  hataKodu       Int?        @map("hata_kodu")
+  mesaj          String?
+  guestName      String?     @map("guest_name")
+  kimlikNo       String?     @map("kimlik_no") // maskeli saklanır
+  odaNo          String?     @map("oda_no")
+  denemeSayisi   Int         @default(0) @map("deneme_sayisi")
+  gonderimZamani DateTime?   @map("gonderim_zamani")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  @@index([reservationId])
+  @@index([durum])
+  @@map("kbs_bildirimleri")
 }

@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, type FormEvent } from 'react';
-import { Palette, ChevronLeft, ChevronRight, CreditCard, Bell, Server, CheckCircle2, Clock, Loader2, Ban, Smartphone } from 'lucide-react';
+import { Palette, ChevronLeft, ChevronRight, CreditCard, Bell, Server, CheckCircle2, Clock, Loader2, Ban, Smartphone, ShieldCheck, AlertTriangle, RotateCw } from 'lucide-react';
 import { useTheme, THEMES } from '@/theme/ThemeContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type View = 'main' | 'appearance' | 'hotel-hours' | 'reservation-policy' | 'mobile-design';
+type View = 'main' | 'appearance' | 'hotel-hours' | 'reservation-policy' | 'mobile-design' | 'kbs';
 
 // ── Hotel Hours sub-view ───────────────────────────────────────────────────────
 
@@ -449,6 +449,482 @@ function MobileDesignView({ isTr, onBack }: { isTr: boolean; onBack: () => void 
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+// ── KBS (Kimlik Bildirimi) sub-view ───────────────────────────────────────────
+
+interface KbsSettings {
+  enabled: boolean;
+  authority: 'egm' | 'jandarma';
+  endpoint: string;
+  defaultJandarmaEndpoint: string;
+  tesisKodu: string;
+  kullaniciTc: string;
+  sifreSet: boolean;
+  configured: boolean;
+  cryptoReady: boolean;
+}
+
+interface KbsBildirimRow {
+  id: string;
+  confirmationId: string;
+  islemTipi: string;
+  durum: string;
+  hataKodu: number | null;
+  mesaj: string | null;
+  guestName: string | null;
+  kimlikNo: string | null;
+  odaNo: string | null;
+  denemeSayisi: number;
+  gonderimZamani: string | null;
+  createdAt: string;
+}
+
+function KbsView({ isTr, onBack }: { isTr: boolean; onBack: () => void }) {
+  const [settings, setSettings] = useState<KbsSettings | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [testing, setTesting]   = useState(false);
+  const [toggling, setToggling] = useState(false);
+  const [message, setMessage]   = useState('');
+  const [isError, setIsError]   = useState(false);
+
+  const [authority, setAuthority]     = useState<'egm' | 'jandarma'>('egm');
+  const [endpoint, setEndpoint]       = useState('');
+  const [tesisKodu, setTesisKodu]     = useState('');
+  const [kullaniciTc, setKullaniciTc] = useState('');
+  const [sifre, setSifre]             = useState('');
+
+  const [bildirimler, setBildirimler] = useState<KbsBildirimRow[]>([]);
+  const [counts, setCounts] = useState<{ hata: number; gonderildi: number; bekliyor: number } | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+
+  const loadSettings = () =>
+    fetch('/api/settings/kbs', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) return;
+        setSettings(d.settings);
+        setAuthority(d.settings.authority);
+        setEndpoint(d.settings.endpoint ?? '');
+        setTesisKodu(d.settings.tesisKodu ?? '');
+        setKullaniciTc(d.settings.kullaniciTc ?? '');
+      })
+      .catch(() => undefined);
+
+  const loadBildirimler = () =>
+    fetch('/api/kbs/bildirimler?limit=10', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok) return;
+        setBildirimler(d.items);
+        setCounts(d.counts);
+      })
+      .catch(() => undefined);
+
+  useEffect(() => {
+    Promise.all([loadSettings(), loadBildirimler()]).finally(() => setLoading(false));
+  }, []);
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch('/api/settings/kbs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          authority,
+          endpoint,
+          tesisKodu,
+          kullaniciTc,
+          ...(sifre ? { sifre } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.message ?? 'Hata');
+      setSifre('');
+      await loadSettings();
+      setIsError(false);
+      setMessage(isTr ? 'Ayarlar kaydedildi. Şimdi bağlantıyı test edebilirsiniz.' : 'Settings saved. You can now test the connection.');
+    } catch (err) {
+      setIsError(true);
+      setMessage(err instanceof Error ? err.message : (isTr ? 'Kaydedilemedi.' : 'Could not save.'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTest() {
+    setTesting(true);
+    setMessage('');
+    try {
+      const res = await fetch('/api/settings/kbs/test', { method: 'POST', credentials: 'include' });
+      const data = await res.json();
+      setIsError(!data.ok);
+      setMessage(data.message ?? (data.ok ? 'Bağlantı başarılı.' : 'Bağlantı başarısız.'));
+    } catch {
+      setIsError(true);
+      setMessage(isTr ? 'Test isteği gönderilemedi.' : 'Could not send test request.');
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  async function handleToggle(next: boolean) {
+    setToggling(true);
+    setMessage('');
+    try {
+      const res = await fetch('/api/settings/kbs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ enabled: next }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.message ?? 'Hata');
+      await loadSettings();
+      setIsError(false);
+      setMessage(next
+        ? (isTr ? 'KBS bildirimi AKTİF — check-in/check-out işlemleri kolluğa bildirilecek.' : 'KBS notifications are ON.')
+        : (isTr ? 'KBS bildirimi kapatıldı.' : 'KBS notifications are OFF.'));
+    } catch (err) {
+      setIsError(true);
+      setMessage(err instanceof Error ? err.message : 'Hata');
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  async function handleRetry(id: string) {
+    setRetryingId(id);
+    try {
+      const res = await fetch('/api/kbs/bildirimler', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      setIsError(!data.ok);
+      setMessage(data.message ?? '');
+      await loadBildirimler();
+    } catch {
+      setIsError(true);
+      setMessage(isTr ? 'Tekrar deneme başarısız.' : 'Retry failed.');
+    } finally {
+      setRetryingId(null);
+    }
+  }
+
+  const inputCls = 'control-base px-4 py-3 text-sm w-full';
+  const labelCls = 'block text-[10px] text-subtle uppercase tracking-wider';
+  const enabled = settings?.enabled ?? false;
+
+  const durumChip = (durum: string) => {
+    const map: Record<string, { cls: string; tr: string; en: string }> = {
+      gonderildi: { cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25', tr: 'Gönderildi', en: 'Sent' },
+      hata:       { cls: 'bg-red-500/15 text-red-400 border-red-500/25',             tr: 'Hata',       en: 'Error' },
+      bekliyor:   { cls: 'bg-amber-500/15 text-amber-400 border-amber-500/25',       tr: 'Bekliyor',   en: 'Pending' },
+      atlandi:    { cls: 'bg-m-surface2 text-subtle border-m-border',                tr: 'Atlandı',    en: 'Skipped' },
+    };
+    const m = map[durum] ?? map.bekliyor;
+    return (
+      <span className={`inline-flex px-1.5 py-0.5 rounded-md border text-[9px] font-bold uppercase tracking-wide ${m.cls}`}>
+        {isTr ? m.tr : m.en}
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-5 max-w-3xl">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-xs text-subtle hover:text-main transition-colors"
+        >
+          <ChevronLeft size={14} />
+          {isTr ? 'Sistem Ayarları' : 'Settings'}
+        </button>
+        <span className="text-faint">/</span>
+        <span className="text-xs text-muted font-medium">KBS</span>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
+          <ShieldCheck size={18} className="text-brand-accent" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-main leading-none">
+            {isTr ? 'KBS — Kimlik Bildirim Sistemi' : 'KBS — Identity Notification'}
+          </h2>
+          <p className="text-[11px] text-subtle mt-0.5">
+            {isTr
+              ? 'Check-in/check-out yapan misafirler 1774 sayılı kanun gereği kolluğa otomatik bildirilir.'
+              : 'Guests are automatically reported to law enforcement (Turkish law no. 1774) on check-in/out.'}
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 size={18} className="animate-spin text-brand-accent/40" />
+        </div>
+      ) : (
+        <>
+          {/* Durum + etkinleştirme */}
+          <div className="surface-panel p-5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              {enabled
+                ? <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                : <AlertTriangle size={18} className="text-amber-400 shrink-0" />}
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-main">
+                  {enabled
+                    ? (isTr ? 'Entegrasyon aktif' : 'Integration active')
+                    : settings?.configured
+                      ? (isTr ? 'Kurulu — etkinleştirilmedi' : 'Configured — not enabled')
+                      : (isTr ? 'Kurulum bekleniyor' : 'Setup pending')}
+                </p>
+                <p className="text-[11px] text-subtle mt-0.5">
+                  {isTr
+                    ? 'Etkinleştirmeden önce bilgileri kaydedip "Bağlantıyı Test Et" ile doğrulayın.'
+                    : 'Save the credentials and run "Test Connection" before enabling.'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={toggling || (!enabled && !settings?.configured)}
+              onClick={() => handleToggle(!enabled)}
+              className={`relative w-12 h-6.5 rounded-full transition-colors shrink-0 disabled:opacity-40 ${
+                enabled ? 'bg-emerald-500/80' : 'bg-m-surface2 border border-m-border'
+              }`}
+              aria-label={isTr ? 'KBS aç/kapat' : 'Toggle KBS'}
+            >
+              <span
+                className={`absolute top-0.5 h-5.5 w-5.5 rounded-full bg-white shadow transition-all ${
+                  enabled ? 'right-0.5' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+
+          {!settings?.cryptoReady && (
+            <div className="surface-panel p-4 border border-red-500/30 flex items-start gap-2.5">
+              <AlertTriangle size={15} className="text-red-400 mt-0.5 shrink-0" />
+              <p className="text-[11px] text-muted leading-relaxed">
+                {isTr
+                  ? <>Sunucuda <code className="text-red-400">KBS_SECRET_KEY</code> tanımlı değil — şifre güvenli saklanamaz. Sunucu .env dosyasına <code className="text-subtle">openssl rand -hex 32</code> ile üretilen bir anahtar ekleyin ve uygulamayı yeniden başlatın.</>
+                  : <><code className="text-red-400">KBS_SECRET_KEY</code> is not set on the server — the password cannot be stored securely. Add a key generated with <code className="text-subtle">openssl rand -hex 32</code> to the server .env and restart.</>}
+              </p>
+            </div>
+          )}
+
+          {/* Kurulum formu */}
+          <form onSubmit={handleSave} className="surface-panel p-6 space-y-5">
+            <div className="space-y-2">
+              <label className={labelCls}>{isTr ? 'Yetki Alanı' : 'Authority'}</label>
+              <div className="grid grid-cols-2 gap-3">
+                {([
+                  { id: 'egm', title: isTr ? 'Polis (EGM)' : 'Police (EGM)', desc: isTr ? 'Şehir merkezi tesisleri' : 'City-centre properties' },
+                  { id: 'jandarma', title: 'Jandarma', desc: isTr ? 'Belediye sınırı dışı tesisler' : 'Properties outside city limits' },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setAuthority(opt.id)}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      authority === opt.id
+                        ? 'border-brand-accent/60 bg-brand-accent/10'
+                        : 'surface-card hover:border-m-border2'
+                    }`}
+                  >
+                    <p className="text-sm font-bold text-main">{opt.title}</p>
+                    <p className="text-[11px] text-subtle mt-0.5">{opt.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className={labelCls}>{isTr ? 'Web Servis Adresi' : 'Web Service URL'}</label>
+              <input
+                type="url"
+                value={endpoint}
+                onChange={e => setEndpoint(e.target.value)}
+                placeholder={authority === 'jandarma'
+                  ? settings?.defaultJandarmaEndpoint
+                  : 'https://… (EGM portalından alınız)'}
+                className={inputCls}
+              />
+              <p className="text-[10px] text-subtle">
+                {authority === 'jandarma'
+                  ? (isTr ? 'Boş bırakılırsa standart Jandarma adresi kullanılır.' : 'Leave empty to use the standard Jandarma endpoint.')
+                  : (isTr ? 'EGM web servis adresinizi kbs.egm.gov.tr → "Web Servis İşlemleri" sayfasından öğrenin.' : 'Get your EGM endpoint from kbs.egm.gov.tr → "Web Service Operations".')}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className={labelCls}>{isTr ? 'Tesis Kodu' : 'Facility Code'}</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={tesisKodu}
+                  onChange={e => setTesisKodu(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  className={inputCls}
+                />
+                <p className="text-[10px] text-subtle">
+                  {isTr ? 'Portalda tesis seçim alanında görünen 6 haneli kod.' : '6-digit code shown in the portal facility selector.'}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className={labelCls}>{isTr ? 'Yetkili TC Kimlik No' : 'Authorized User TC ID'}</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={11}
+                  value={kullaniciTc}
+                  onChange={e => setKullaniciTc(e.target.value.replace(/\D/g, ''))}
+                  placeholder="11111111111"
+                  className={inputCls}
+                />
+                <p className="text-[10px] text-subtle">
+                  {isTr ? 'Web servis yetkisi verilen kullanıcının TC kimlik numarası.' : 'TC ID of the user with web-service authorization.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className={labelCls}>{isTr ? 'Web Servis Şifresi' : 'Web Service Password'}</label>
+              <input
+                type="password"
+                value={sifre}
+                onChange={e => setSifre(e.target.value)}
+                autoComplete="new-password"
+                placeholder={settings?.sifreSet
+                  ? (isTr ? '•••••••• (kayıtlı — değiştirmek için yazın)' : '•••••••• (saved — type to replace)')
+                  : (isTr ? 'Portal → Web Servis İşlemleri → Şifre' : 'Portal → Web Service Operations → Password')}
+                className={inputCls}
+              />
+              <p className="text-[10px] text-subtle">
+                {isTr
+                  ? 'Şifre sunucuda şifreli saklanır ve bir daha görüntülenmez; yalnız değiştirilebilir.'
+                  : 'Stored encrypted on the server and never shown again; it can only be replaced.'}
+              </p>
+            </div>
+
+            {message && (
+              <p className={`text-xs ${isError ? 'text-red-400' : 'text-emerald-400'}`}>{message}</p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn-primary px-5 py-2.5 text-sm disabled:opacity-50"
+              >
+                {saving ? (isTr ? 'Kaydediliyor…' : 'Saving…') : (isTr ? 'Kaydet' : 'Save')}
+              </button>
+              <button
+                type="button"
+                onClick={handleTest}
+                disabled={testing || !settings?.configured}
+                className="control-base px-5 py-2.5 text-sm disabled:opacity-50 inline-flex items-center gap-2"
+              >
+                {testing && <Loader2 size={13} className="animate-spin" />}
+                {isTr ? 'Bağlantıyı Test Et' : 'Test Connection'}
+              </button>
+            </div>
+          </form>
+
+          {/* Son bildirimler */}
+          <div className="surface-panel p-6 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-main">{isTr ? 'Son Bildirimler' : 'Recent Notifications'}</h3>
+                {counts && (
+                  <p className="text-[11px] text-subtle mt-0.5">
+                    {isTr
+                      ? `${counts.gonderildi} gönderildi · ${counts.hata} hata · ${counts.bekliyor} bekliyor`
+                      : `${counts.gonderildi} sent · ${counts.hata} errors · ${counts.bekliyor} pending`}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => loadBildirimler()}
+                className="text-xs text-subtle hover:text-main transition-colors inline-flex items-center gap-1.5"
+              >
+                <RotateCw size={12} />
+                {isTr ? 'Yenile' : 'Refresh'}
+              </button>
+            </div>
+
+            {bildirimler.length === 0 ? (
+              <p className="text-xs text-subtle py-4 text-center">
+                {isTr ? 'Henüz bildirim yok — ilk check-in ile oluşur.' : 'No notifications yet — created on first check-in.'}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {bildirimler.map(b => (
+                  <div key={b.id} className="surface-card p-3 rounded-xl flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {durumChip(b.durum)}
+                        <span className="text-xs font-bold text-main truncate">{b.guestName ?? '—'}</span>
+                        <span className="text-[10px] text-subtle">
+                          {b.islemTipi === 'giris' ? (isTr ? 'Giriş' : 'Check-in') : (isTr ? 'Çıkış' : 'Check-out')}
+                          {b.odaNo ? ` · ${isTr ? 'Oda' : 'Room'} ${b.odaNo}` : ''}
+                          {b.kimlikNo ? ` · ${b.kimlikNo}` : ''}
+                          {` · #${b.confirmationId}`}
+                        </span>
+                      </div>
+                      {b.mesaj && (
+                        <p className={`text-[10px] mt-1 truncate ${b.durum === 'hata' ? 'text-red-400/90' : 'text-subtle'}`}>
+                          {b.hataKodu ? `[${b.hataKodu}] ` : ''}{b.mesaj}
+                        </p>
+                      )}
+                    </div>
+                    {b.durum === 'hata' && (
+                      <button
+                        type="button"
+                        disabled={retryingId === b.id}
+                        onClick={() => handleRetry(b.id)}
+                        className="control-base px-3 py-1.5 text-[11px] shrink-0 disabled:opacity-50 inline-flex items-center gap-1.5"
+                      >
+                        {retryingId === b.id
+                          ? <Loader2 size={11} className="animate-spin" />
+                          : <RotateCw size={11} />}
+                        {isTr ? 'Tekrar Dene' : 'Retry'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Kurulum rehberi */}
+          <div className="surface-panel p-5">
+            <h3 className="text-xs font-bold text-main uppercase tracking-wider">
+              {isTr ? 'Bilgileri nereden alacağım?' : 'Where do I find these?'}
+            </h3>
+            <ol className="mt-3 space-y-1.5 text-[11px] text-muted leading-relaxed list-decimal list-inside">
+              <li>{isTr ? <>e-Devlet ile <span className="text-main">kbs.egm.gov.tr</span> adresine girin.</> : <>Sign in to <span className="text-main">kbs.egm.gov.tr</span> via e-Devlet.</>}</li>
+              <li>{isTr ? <>Sol menüden <span className="text-main">"Web Servis İşlemleri"</span> sayfasını açın — Tesis Kodu ve Şifre burada görünür. (Menü yoksa bağlı emniyetten web servis yetkisi isteyin.)</> : <>Open <span className="text-main">"Web Service Operations"</span> — facility code and password are shown there.</>}</li>
+              <li>{isTr ? <>Aynı sayfada bu sunucunun statik IP adresini kaydedin — KBS yalnız kayıtlı IP'den gelen bildirimi kabul eder.</> : <>Register this server's static IP on the same page — KBS only accepts calls from registered IPs.</>}</li>
+              <li>{isTr ? <>Bilgileri buraya girip kaydedin, "Bağlantıyı Test Et" ile doğrulayın, sonra entegrasyonu etkinleştirin.</> : <>Save the credentials here, verify with "Test Connection", then enable the integration.</>}</li>
+            </ol>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function AdminSettings({ tr: isTr }: { tr: boolean }) {
   const [view, setView] = useState<View>('main');
   const { theme, setTheme, mode } = useTheme();
@@ -557,6 +1033,10 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
     return <MobileDesignView isTr={isTr} onBack={() => setView('main')} />;
   }
 
+  if (view === 'kbs') {
+    return <KbsView isTr={isTr} onBack={() => setView('main')} />;
+  }
+
   // ── Main settings view ─────────────────────────────────────────────────────
 
   const cards = [
@@ -603,6 +1083,17 @@ export function AdminSettings({ tr: isTr }: { tr: boolean }) {
       badge: null,
       available: true,
       onClick: () => setView('reservation-policy'),
+    },
+    {
+      id: 'kbs',
+      Icon: ShieldCheck,
+      title: isTr ? 'KBS — Kimlik Bildirimi' : 'KBS — ID Notification',
+      desc: isTr
+        ? 'Misafir giriş/çıkışlarının kolluğa otomatik bildirimi (1774 sayılı kanun).'
+        : 'Automatic guest check-in/out reporting to law enforcement.',
+      badge: isTr ? 'Yeni' : 'New',
+      available: true,
+      onClick: () => setView('kbs'),
     },
     {
       id: 'pricing',
