@@ -36,6 +36,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/node_modules/sharp ./node_modules/sharp
+COPY --from=builder --chown=node:node /app/node_modules/@img ./node_modules/@img
 
 # Create writable uploads directory for media storage
 RUN mkdir -p public/uploads/originals public/uploads/thumb public/uploads/medium public/uploads/large \

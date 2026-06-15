@@ -9,4 +9,9 @@ services:
       PORT: 3000
     ports:
       - "${PORT:-3000}:3000"
+    volumes:
+      - uploads_data:/app/public/uploads
     restart: unless-stopped
+
+volumes:
+  uploads_data:
