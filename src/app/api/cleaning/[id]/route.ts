@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
-import { prisma } from '@/lib/prisma';
+import { prisma, type PrismaTransactionClient } from '@/lib/prisma';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { writeAuditLog } from '@/lib/audit';
 
@@ -25,7 +24,7 @@ const cleaningUpdateSchema = z.object({
 
 // Restore a room to available once it has no remaining active cleaning tasks.
 async function maybeFreeRoom(
-  tx: Prisma.TransactionClient,
+  tx: PrismaTransactionClient,
   roomId: string,
   excludeTaskId: string,
 ) {

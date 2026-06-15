@@ -1,5 +1,4 @@
-import type { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma, type PrismaTransactionClient } from '@/lib/prisma';
 
 export const POINTS_PER_TRY = 10; // ₺10 spent = 1 point
 
@@ -57,7 +56,7 @@ export async function validateCoupon(userId: string, rawCode: string, subtotal: 
  * Consume a coupon after a successful payment. Percent coupons are single-use;
  * fixed/credit coupons decrement their balance and stay active until exhausted.
  */
-export async function consumeCoupon(tx: Prisma.TransactionClient, rawCode: string, discountApplied: number) {
+export async function consumeCoupon(tx: PrismaTransactionClient, rawCode: string, discountApplied: number) {
   const code = normalizeCode(rawCode);
   const coupon = await tx.coupon.findUnique({ where: { code } });
   if (!coupon || coupon.status !== 'active') return;
@@ -79,7 +78,7 @@ export async function consumeCoupon(tx: Prisma.TransactionClient, rawCode: strin
 }
 
 /** Reverse a coupon consumption (e.g. when the reservation that used it is cancelled). */
-export async function restoreCoupon(tx: Prisma.TransactionClient, rawCode: string, discountApplied: number) {
+export async function restoreCoupon(tx: PrismaTransactionClient, rawCode: string, discountApplied: number) {
   const code = normalizeCode(rawCode);
   const coupon = await tx.coupon.findUnique({ where: { code } });
   if (!coupon) return;
@@ -97,7 +96,7 @@ export async function restoreCoupon(tx: Prisma.TransactionClient, rawCode: strin
 
 /** Award loyalty points for a completed (checked-out) stay. Returns points granted. */
 export async function awardCheckoutPoints(
-  tx: Prisma.TransactionClient,
+  tx: PrismaTransactionClient,
   userId: string,
   reservationId: string,
   amount: number,

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
-import { prisma } from '@/lib/prisma';
+import { prisma, type PrismaTransactionClient } from '@/lib/prisma';
+import { maskPassport, maskTcKimlik } from '@/lib/pii';
 import { sendMail } from '@/lib/mail';
 import { renderReservationEmail } from '@/lib/mail/hotel-templates';
 import { writeAuditLog } from '@/lib/audit';
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
   const nights = nightsBetween(checkIn, checkOut);
 
-  async function createConfirmationId(tx: Prisma.TransactionClient) {
+  async function createConfirmationId(tx: PrismaTransactionClient) {
     for (let i = 0; i < 8; i += 1) {
       const confirmationId = Math.floor(10000000 + Math.random() * 90000000).toString();
       const exists = await tx.reservation.findUnique({ where: { confirmationId }, select: { id: true } });
@@ -262,7 +262,19 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json({ ok: true, reservations });
+    // Data minimization: staff view this list in bulk and the UI does not render
+    // identity numbers, so mask them in the payload. Customers viewing their own
+    // reservations still receive the full value (own data).
+    const isStaffViewer = auth.user.roleSlug === 'admin' || auth.user.roleSlug === 'personel';
+    const payload = isStaffViewer
+      ? reservations.map((r) => ({
+          ...r,
+          tcKimlikNo: maskTcKimlik(r.tcKimlikNo),
+          passportNo: maskPassport(r.passportNo),
+        }))
+      : reservations;
+
+    return NextResponse.json({ ok: true, reservations: payload });
   } catch (error) {
     console.error('Reservations fetch failed.', error);
     return NextResponse.json({ ok: false, message: 'Rezervasyonlar alınamadı.' }, { status: 503 });

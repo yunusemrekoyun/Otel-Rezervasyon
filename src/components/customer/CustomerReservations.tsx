@@ -80,7 +80,7 @@ function GuestInfoModal({ res, onClose, tr }: { res: Reservation; onClose: () =>
     { label: tr ? 'Cinsiyet'         : 'Gender',           value: res.gender },
     { label: tr ? 'Uyruk'            : 'Nationality',      value: res.nationality },
     { label: tr ? 'T.C. Kimlik No'   : 'National ID',      value: res.tcKimlikNo ? maskTc(res.tcKimlikNo) : null },
-    { label: tr ? 'Pasaport No'      : 'Passport No',      value: res.passportNo },
+    { label: tr ? 'Pasaport No'      : 'Passport No',      value: res.passportNo ? maskTc(res.passportNo) : null },
     { label: tr ? 'Pasaport Bitiş'   : 'Passport Expiry',  value: res.passportExpiry },
     { label: tr ? 'Şirket'           : 'Company',          value: res.companyName,      full: true },
     { label: tr ? 'Vergi No'         : 'Tax No',           value: res.taxNumber },

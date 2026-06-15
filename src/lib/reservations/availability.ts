@@ -1,9 +1,8 @@
-import type { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma, type PrismaTransactionClient } from '@/lib/prisma';
 
 export const BLOCKING_RESERVATION_STATUSES = ['cancelled'];
 
-type DbClient = typeof prisma | Prisma.TransactionClient;
+type DbClient = PrismaTransactionClient;
 
 export function parseDateOnly(value: string) {
   return new Date(`${value}T00:00:00.000Z`);

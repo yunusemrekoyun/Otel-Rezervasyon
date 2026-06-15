@@ -1,6 +1,7 @@
 import { jwtVerify } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
-import { ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME, ROLE_SLUGS, isRoleSlug } from '@/lib/auth/constants';
+import { ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME, isRoleSlug } from '@/lib/auth/constants';
+import { checkRateLimit, clientIpFromHeaders, tierForRequest } from '@/lib/rate-limit';
 
 function getProtectedRole(pathname: string) {
   const segment = pathname.split('/').filter(Boolean)[0];
@@ -28,7 +29,26 @@ async function verifyRoleFromAccessToken(token?: string) {
 }
 
 export async function middleware(request: NextRequest) {
-  const requestedRole = getProtectedRole(request.nextUrl.pathname);
+  const { pathname } = request.nextUrl;
+
+  // ── 1) Centralized rate limiting (single choke point) ──────────────────────
+  // Only sensitive API endpoints are classified; normal browsing/GETs return
+  // null and pass straight through, so real visitors are never throttled.
+  const tier = tierForRequest(pathname, request.method);
+  if (tier) {
+    const ip = clientIpFromHeaders(request.headers);
+    const { ok, retryAfter } = checkRateLimit(tier, ip);
+    if (!ok) {
+      return NextResponse.json(
+        { ok: false, message: 'Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin.' },
+        { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+      );
+    }
+    return NextResponse.next();
+  }
+
+  // ── 2) Role-based page protection ──────────────────────────────────────────
+  const requestedRole = getProtectedRole(pathname);
 
   if (!requestedRole) {
     return NextResponse.next();
@@ -53,6 +73,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/api/:path*',
     '/admin/:path*',
     '/personel/:path*',
     '/muhasebe/:path*',

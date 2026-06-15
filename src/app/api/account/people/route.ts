@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
-import { prisma } from '@/lib/prisma';
+import { prisma, type PrismaTransactionClient } from '@/lib/prisma';
 import {
   accountPersonSelect,
   buildPersonLabel,
@@ -69,7 +69,7 @@ function personKey(person: {
   ].join('|');
 }
 
-async function syncPeopleFromExistingReservations(tx: Prisma.TransactionClient, userId: string, email: string) {
+async function syncPeopleFromExistingReservations(tx: PrismaTransactionClient, userId: string, email: string) {
   const [people, user, reservations] = await Promise.all([
     tx.accountPerson.findMany({
       where: { userId },

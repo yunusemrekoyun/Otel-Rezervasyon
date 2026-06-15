@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
 import { writeAuditLog } from '@/lib/audit';
-import { prisma } from '@/lib/prisma';
+import { prisma, type PrismaTransactionClient } from '@/lib/prisma';
 import { initializeCheckoutForm, isIyzicoConfigured } from '@/lib/payments/iyzico';
 import { validateCoupon, consumeCoupon } from '@/lib/loyalty/coupons';
 import { sendReservationConfirmationEmail } from '@/lib/reservations/confirmation';
@@ -98,7 +97,7 @@ function iframeUrl(paymentPageUrl?: string | null) {
   }
 }
 
-async function createConfirmationId(tx: Prisma.TransactionClient) {
+async function createConfirmationId(tx: PrismaTransactionClient) {
   for (let i = 0; i < 8; i += 1) {
     const confirmationId = Math.floor(10000000 + Math.random() * 90000000).toString();
     const exists = await tx.reservation.findUnique({ where: { confirmationId }, select: { id: true } });

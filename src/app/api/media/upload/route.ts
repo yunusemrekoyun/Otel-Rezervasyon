@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { getAuthContextFromRequest } from '@/lib/auth/session';
-import { mediaConfig } from '@/lib/media/config';
+import { mediaConfig, extensionForMime } from '@/lib/media/config';
 import { saveFile } from '@/lib/media/storage';
 import { processImage } from '@/lib/media/processor';
 
@@ -53,8 +53,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename
-    const ext = file.name.split('.').pop() || 'bin';
+    // Extension is derived from the validated MIME type, never the user's
+    // filename (which could carry path separators / traversal).
+    const ext = extensionForMime(file.type);
+    if (!ext) {
+      return NextResponse.json(
+        { ok: false, message: 'Desteklenmeyen dosya formatı.' },
+        { status: 400 }
+      );
+    }
     const uniqueId = crypto.randomBytes(8).toString('hex');
     const fileName = `${uniqueId}.${ext}`;
 

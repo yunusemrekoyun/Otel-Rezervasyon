@@ -51,6 +51,23 @@ export function getMediaUrl(relativePath: string): string {
   return `/uploads/${relativePath}`;
 }
 
+// Derive the stored extension from the validated MIME type — never from the
+// user-supplied filename (which could inject path separators). Returns null for
+// a MIME that isn't on the allowlist.
+const MIME_EXTENSION: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov',
+};
+
+export function extensionForMime(mime: string): string | null {
+  return MIME_EXTENSION[mime] ?? null;
+}
+
 export function isImageMime(mime: string): boolean {
   return mediaConfig.allowedImageTypes.includes(mime as any);
 }

@@ -38,6 +38,20 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     where: { reservationId: id },
     orderBy: [{ isChild: 'asc' }, { createdAt: 'asc' }],
   });
+
+  // KVKK trail: full identity numbers are served here (check-in verification).
+  // Record who accessed which reservation's guest identities, when.
+  if (guests.some((g) => g.tcKimlikNo || g.passportNo)) {
+    await writeAuditLog({
+      request,
+      auth,
+      action: 'reservation.guests_identity_access',
+      entityType: 'reservation',
+      entityId: id,
+      summary: `Misafir kimlik bilgileri görüntülendi (${guests.length} kişi)`,
+    }).catch(() => undefined);
+  }
+
   return NextResponse.json({ ok: true, guests });
 }
 

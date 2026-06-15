@@ -12,6 +12,10 @@ const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
+// A real argon2 hash verified against when the account doesn't exist, so login
+// timing doesn't reveal whether an email is registered (user enumeration).
+const DUMMY_HASH = '$argon2id$v=19$m=65536,t=3,p=4$sjQOB0sayCaM3tNJAjt5Uw$5cl8eDYR1T7gMJycw02LOxzln+IZNCUJ2Xu1QaM0KzE';
+
 function invalidCredentials() {
   return NextResponse.json(
     { ok: false, message: 'Email veya şifre hatalı.' },
@@ -36,13 +40,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!user || !user.isActive) {
-      return invalidCredentials();
-    }
+    // Constant-ish timing: verify against a real hash even when the account is
+    // missing/inactive so the response time doesn't reveal whether the email
+    // exists. (The check-email endpoint is also rate-limited at the edge.)
+    const hashToCheck = user?.passwordHash ?? DUMMY_HASH;
+    const passwordMatches = await argon2.verify(hashToCheck, parsed.data.password).catch(() => false);
 
-    const passwordMatches = await argon2.verify(user.passwordHash, parsed.data.password).catch(() => false);
-
-    if (!passwordMatches) {
+    if (!user || !user.isActive || !passwordMatches) {
       return invalidCredentials();
     }
 
