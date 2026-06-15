@@ -75,11 +75,11 @@ export function Modal({
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               onClick={e => e.stopPropagation()}
-              className={`w-full ${SIZE[size]} modal-shell overflow-hidden`}
+              className={`w-full ${SIZE[size]} modal-shell flex flex-col overflow-hidden`}
             >
               {/* Modal header */}
               <div
-                className="px-6 py-4 border-b border-m-border flex items-start justify-between"
+                className="px-6 py-4 border-b border-m-border flex items-start justify-between shrink-0"
                 style={{
                   background: 'linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 9%, transparent) 0%, transparent 65%)',
                 }}
@@ -99,8 +99,9 @@ export function Modal({
                 </button>
               </div>
 
-              {/* Modal body */}
-              <div className="px-6 py-5">
+              {/* Modal body — scrolls internally so the submit row stays
+                  reachable even when the form is taller than the viewport. */}
+              <div className="px-6 py-5 overflow-y-auto min-h-0">
                 {children}
               </div>
             </motion.div>
