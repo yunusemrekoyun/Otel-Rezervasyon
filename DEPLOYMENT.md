@@ -35,7 +35,7 @@ referanstır.
 4. Build & başlat: `npm run build && npm run start`.
 5. Statik çıkış IP'sini KBS portalına kaydet (KBS kullanılacaksa) ve admin panelden "Bağlantıyı Test Et".
 6. iyzico **canlı** tek işlem testi + KBS canlı tek misafir testi.
-7. Reverse proxy'de HTTPS + `X-Forwarded-For` ilet (rate limiter ve oturum IP'si bunu kullanır).
+7. Reverse proxy'de HTTPS + `X-Forwarded-For` ilet (rate limiter ve oturum IP'si bunu kullanır). nginx varsayılan `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` yeterli — limiter **en sağdaki** (proxy'nin eklediği gerçek) IP'yi kullanır, böylece istemci sahte XFF göndererek limiti aşamaz. **Tek proxy** varsayımı; öne CDN (Cloudflare) konursa limiter onun client-IP başlığına göre güncellenmeli.
 
 ## 4. Güvenlik notları
 

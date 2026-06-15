@@ -88,10 +88,22 @@ export function checkRateLimit(tier: RateTier, ip: string): RateResult {
   return { ok: true, retryAfter: 0 };
 }
 
-/** Client IP from proxy headers (VPS sits behind a reverse proxy). */
+/**
+ * Client IP from proxy headers. Behind a single trusted reverse proxy (nginx
+ * with the default `$proxy_add_x_forwarded_for`), the RIGHTMOST X-Forwarded-For
+ * entry is the IP the proxy actually observed — i.e. the real client. The
+ * leftmost entries are client-supplied and therefore spoofable, so using them
+ * would let an attacker rotate the rate-limit key by sending a fake header.
+ *
+ * NOTE: assumes exactly one trusted proxy hop. If a CDN (e.g. Cloudflare) is
+ * later put in front, switch to its trusted client-IP header instead.
+ */
 export function clientIpFromHeaders(headers: Headers): string {
   const fwd = headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0]!.trim();
+  if (fwd) {
+    const parts = fwd.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1]!;
+  }
   return headers.get('x-real-ip')?.trim() || '0.0.0.0';
 }
 
