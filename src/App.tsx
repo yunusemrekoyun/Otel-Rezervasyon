@@ -235,10 +235,10 @@ export default function App() {
   // Video scrubbing reference and logic
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Video motion: glide toward the active section's anchor frame (time-based, so
-  // the speed is the same on any refresh rate) and keep a gentle forward drift
-  // once settled — the background stays subtly alive instead of freezing between
-  // sections, which reads far more naturally than the old snap-to-frame scrub.
+  // Video motion: glide toward the active section's anchor frame and HOLD there.
+  // The background is scroll-driven — it only advances when you move to another
+  // section, then freezes on that frame (no self-playing drift). Easing is
+  // time-based so the glide speed is identical on any refresh rate.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -251,7 +251,6 @@ export default function App() {
     video.addEventListener('loadedmetadata', updateTargetTime);
     updateTargetTime();
 
-    const DRIFT = 0.12;  // seconds of footage per real second while at rest
     const SETTLE = 0.7;  // glide time-constant when moving to a new section
     let last = performance.now();
 
@@ -263,15 +262,13 @@ export default function App() {
         const current = video.currentTime;
         const diff = targetTimeRef.current - current;
         // Exponential approach → smooth, no abrupt jumps regardless of frame rate.
-        let next = current + diff * (1 - Math.exp(-dt / SETTLE));
-        // Once settled on a section, let the anchor (and frame) drift gently forward.
-        if (Math.abs(diff) < 0.05) {
-          next = current + DRIFT * dt;
-          targetTimeRef.current = next;
+        // Below the threshold we stop touching currentTime so the frame stays put.
+        if (Math.abs(diff) > 0.002) {
+          let next = current + diff * (1 - Math.exp(-dt / SETTLE));
+          if (next >= video.duration) next -= video.duration;
+          if (next < 0) next = 0;
+          video.currentTime = next;
         }
-        if (next >= video.duration) next -= video.duration;
-        if (next < 0) next = 0;
-        video.currentTime = next;
       }
       rafRef.current = requestAnimationFrame(animateVideo);
     };
